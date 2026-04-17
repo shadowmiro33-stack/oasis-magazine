@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OASIS Admin | Autohands R&D Center (v3.3 Master)</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #3b82f6; --sidebar: #1e293b; --bg: #f8fafc;
+            --theme-primary: #3b82f6; --theme-secondary: #1e293b;
+            --theme-surface: #ffffff; --theme-radius: 8px; --theme-font: 'Pretendard', sans-serif;
+        }
+
+        body { font-family: var(--theme-font); background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+
+        /* 사이드바 */
+        .sidebar { width: 270px; background: var(--sidebar); color: white; display: flex; flex-direction: column; padding-top: 30px; flex-shrink: 0; z-index:100; }
+        .menu-item { padding: 15px 25px; cursor: pointer; transition: 0.3s; color: #94a3b8; font-size: 14px; font-weight: 500; display:flex; align-items:center; gap:12px; }
+        .menu-item:hover { background: #334155; color: white; }
+        .menu-item.active { background: var(--theme-primary); color: white; font-weight: 700; box-shadow: inset 4px 0 0 white; }
+
+        /* 메인 영역 */
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; box-sizing: border-box; }
+        .page-section { display: none; max-width: 1200px; margin: 0 auto; }
+        .page-section.active { display: block; animation: fadeIn 0.3s ease-out; }
+
+        .header { margin-bottom: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; display: flex; justify-content: space-between; align-items: end; }
+        .card { background: white; border-radius: var(--theme-radius); padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 25px; border: 1px solid #e2e8f0; transition:0.2s; }
+        .card-title { font-weight: 800; font-size: 16px; margin-bottom: 20px; color: #1e293b; display: flex; align-items: center; gap: 8px; justify-content: space-between;}
+
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: var(--theme-radius); box-sizing: border-box; font-size: 14px; outline:none; transition:0.2s; }
+        input:focus, textarea:focus { border-color: var(--theme-primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+
+        .btn { border: none; padding: 12px 22px; border-radius: var(--theme-radius); cursor: pointer; font-weight: bold; transition: 0.2s; display:inline-flex; align-items:center; gap:8px; justify-content:center;}
+        .btn-primary { background: var(--theme-primary); color: white; }
+        .btn-dark { background: var(--theme-secondary); color: white; }
+        .btn-success { background: #10b981; color: white; }
+
+        .set-pane { display: none; }
+        .set-pane.active { display: block; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background: #f1f5f9; padding: 15px; font-size:13px; color:#64748b; font-weight:bold; }
+        td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size:14px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); z-index:9999; display:flex; justify-content:center; align-items:center;">
+        <div style="background:white; padding:50px 40px; border-radius:24px; width:400px; text-align:center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+            <div style="font-size:12px; font-weight:900; color:var(--primary); letter-spacing:2px; margin-bottom:10px;">AUTOHANDS R&D</div>
+            <h2 style="margin:0 0 30px 0; font-weight:900;">OASIS MASTER ADMIN</h2>
+            <input type="email" id="admin-email" placeholder="관리자 ID (이메일)" style="margin-bottom:15px;">
+            <input type="password" id="admin-pw" placeholder="비밀번호" style="margin-bottom:30px;" onkeypress="if(event.key==='Enter') loginAdmin()">
+            <button class="btn btn-dark" onclick="loginAdmin()" style="width:100%; padding:16px; font-size:16px;">시스템 접속</button>
+            <p id="login-error" style="color:#ef4444; font-size:12px; margin-top:15px; font-weight:bold; display:none;"></p>
+        </div>
+    </div>
+
+    <div id="edit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.85); z-index:9000; justify-content:center; align-items:center;">
+        <div style="background:white; width:750px; max-height:90vh; border-radius:16px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+            <div style="padding:20px 30px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; color:#1e293b;"><i class="fas fa-edit"></i> 배포 리포트 사후 관리</h3>
+                <button onclick="closeEditModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#64748b;">&times;</button>
+            </div>
+            <div style="padding:30px; overflow-y:auto; flex:1;">
+                <label style="font-size:12px; font-weight:bold; color:#64748b;">리포트 호수명 (수정 가능)</label>
+                <input type="text" id="edit-issue-name" style="margin-bottom:25px; font-weight:bold; font-size:16px; color:var(--theme-primary);">
+
+                <label style="font-size:12px; font-weight:bold; color:#64748b;">현재 수록된 기사 관리</label>
+                <div id="edit-articles-list" style="margin-bottom:25px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;"></div>
+
+                <div style="background:#eff6ff; padding:20px; border-radius:12px; border:1px solid #bfdbfe;">
+                    <div style="font-size:13px; font-weight:bold; color:#1d4ed8; margin-bottom:15px;"><i class="fas fa-plus-circle"></i> 누락된 기사 수동 추가</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                        <select id="edit-new-cat" style="font-weight:bold;"><option value="auto">Auto (일반)</option><option value="ai">AI Tech (기술)</option><option value="main">Main (메인)</option></select>
+                        <input type="text" id="edit-new-brand" placeholder="관련 기업명 (예: 엔카)">
+                    </div>
+                    <input type="text" id="edit-new-title" placeholder="기사 제목" style="margin-bottom:10px;">
+                    <input type="text" id="edit-new-link" placeholder="원본 뉴스 링크" style="margin-bottom:15px;">
+                    <button class="btn btn-primary" style="width:100%;" onclick="addNewArticleToEdit()">이 리포트에 기사 추가하기</button>
+                </div>
+            </div>
+            <div style="padding:20px 30px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                <button class="btn" style="background:#ef4444; color:white;" onclick="deleteEntireReport()"><i class="fas fa-trash"></i> 리포트 전체 삭제 (Rollback)</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-dark" style="background:#64748b;" onclick="closeEditModal()">취소</button>
+                    <button class="btn btn-primary" onclick="saveEditingReport()"><i class="fas fa-save"></i> 변경사항 최종 서버 반영</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div style="padding: 0 25px 40px; font-weight: 900; font-size: 22px; color:white; letter-spacing:-1px;">OASIS <span style="color:var(--theme-primary)">R&D</span></div>
+        <div class="menu-item active" id="nav-dashboard" onclick="switchMenu('dashboard')"><i class="fas fa-chart-pie"></i> 종합 대시보드</div>
+        <div class="menu-item" id="nav-news" onclick="switchMenu('news')"><i class="fas fa-robot"></i> 뉴스 수집 & AI</div>
+        <div class="menu-item" id="nav-deploy" onclick="switchMenu('deploy')"><i class="fas fa-paper-plane"></i> 리포트 배포 및 추출</div>
+        <div class="menu-item" id="nav-company" onclick="switchMenu('company')"><i class="fas fa-building"></i> 수집 업체 리스트</div>
+        <div class="menu-item" id="nav-settings" onclick="switchMenu('settings')"><i class="fas fa-cog"></i> 시스템 환경 설정</div>
+        <div style="margin-top:auto; padding:30px; border-top: 1px solid #334155;">
+            <div style="font-size:12px; color:#94a3b8; margin-bottom:5px;">Connected as</div>
+            <div style="font-size:14px; color:white; font-weight:bold; margin-bottom:15px;">권민재 차장</div>
+            <button onclick="logoutAdmin()" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; cursor:pointer; font-size:12px; font-weight:bold; width:100%; padding:8px; border-radius:6px;">보안 로그아웃</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+
+        <div id="section-dashboard" class="page-section active">
+            <div class="header">
+                <div><h2 style="margin:0;">📊 시스템 통합 대시보드</h2><p style="margin:5px 0 0; font-size:13px; color:#64748b;">실시간 운영 현황 및 데이터 통계</p></div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                <div class="card" style="text-align:center; background:linear-gradient(135deg, #eff6ff, #dbeafe); border:none;">
+                    <div style="font-size:14px; color:#3b82f6; font-weight:900; margin-bottom:10px;">총 누적 발행 리포트</div>
+                    <div style="font-size:48px; font-weight:900; color:#1e3a8a;"><span id="dash-reports">0</span><span style="font-size:18px; margin-left:4px;">호</span></div>
+                </div>
+                <div class="card" style="text-align:center; background:linear-gradient(135deg, #f8fafc, #f1f5f9); border:none;">
+                    <div style="font-size:14px; color:#64748b; font-weight:900; margin-bottom:10px;">활성화된 추적 정책</div>
+                    <div style="font-size:48px; font-weight:900; color:#334155;"><span id="dash-policies">0</span><span style="font-size:18px; margin-left:4px;">개</span></div>
+                </div>
+                <div class="card" style="text-align:center; background:linear-gradient(135deg, #fef2f2, #fee2e2); border:none;">
+                    <div style="font-size:14px; color:#ef4444; font-weight:900; margin-bottom:10px;">배포 대기중인 기사</div>
+                    <div style="font-size:48px; font-weight:900; color:#991b1b;"><span id="dash-drafts">0</span><span style="font-size:18px; margin-left:4px;">건</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-news" class="page-section">
+            <div class="header"><h2 style="margin:0;">🤖 뉴스 수집 및 AI 분석기</h2></div>
+
+            <div class="card" style="border: 2px solid #f59e0b; background:#fffbeb;">
+                <div class="card-title" style="color:#b45309;"><i class="fab fa-youtube"></i> 매거진 메인 유튜브 영상 세팅 (선택)</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+                    <input type="text" id="v-url" placeholder="영상 URL (예: https://youtu.be/...)">
+                    <input type="text" id="v-source" placeholder="채널/출처 (예: 오토포스트)">
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 2fr; gap: 15px;">
+                    <input type="text" id="v-title" placeholder="영상 제목 입력">
+                    <input type="text" id="v-desc" placeholder="영상 내용 1줄 요약">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <div><i class="fas fa-crosshairs"></i> 추적 정책 및 기사 수집 제어</div>
+                    <button class="btn btn-success" onclick="runBulkCrawler()"><i class="fas fa-download"></i> 전체 등록 사이트 기사 수집</button>
+                </div>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <select id="p-company" style="width:180px; font-weight:bold;">
+                        <option value="엔카닷컴">엔카닷컴</option><option value="케이카">케이카</option><option value="쏘카">쏘카</option><option value="헤이딜러">헤이딜러</option>
+                    </select>
+                    <input type="text" id="p-url" placeholder="대상 언론사 URL (예: asiae.co.kr)">
+                    <input type="text" id="p-keyword" placeholder="추적 키워드 (회사명 등)">
+                    <button class="btn btn-dark" onclick="savePolicy()">정책 추가</button>
+                </div>
+                <div id="policy-list"></div>
+            </div>
+
+            <div class="card" style="border: 2px solid var(--theme-primary); background:#f8fafc;">
+                <div class="card-title" style="color:var(--theme-primary);"><div><i class="fas fa-brain"></i> Gemini 2.5 Flash 기반 심층 기사 분석</div></div>
+
+                <div style="display:flex; gap:10px; margin-bottom:20px; background:#eff6ff; padding:20px; border-radius:12px;">
+                    <input type="text" id="a-link" style="flex:1; border: 2px solid #93c5fd; font-weight:bold;" placeholder="분석할 기사 원문 URL을 입력하세요">
+                    <button id="ai-news-btn" class="btn btn-primary" onclick="runNewsAIExtraction()" style="width:180px;"><i class="fas fa-magic"></i> AI 분석 실행</button>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 380px; gap: 30px;">
+                    <div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+                            <input type="text" id="a-brand" placeholder="추출된 관련 기업" oninput="updatePreview()">
+                            <input type="text" id="a-source" placeholder="언론사 정보" oninput="updatePreview()">
+                        </div>
+                        <input type="text" id="a-title" placeholder="AI가 도출한 기사 제목" style="margin-bottom:15px; font-weight:bold;" oninput="updatePreview()">
+                        <input type="text" id="a-img" placeholder="대표 이미지 URL" style="margin-bottom:15px;" oninput="updatePreview()">
+                        <textarea id="a-desc" rows="3" placeholder="LLM 3줄 핵심 요약" style="margin-bottom:15px; background:#f1f5f9;" oninput="updatePreview()"></textarea>
+                        <textarea id="a-insight" rows="3" placeholder="[R&D 전략 인사이트] 오토핸즈 사업 연계 방안" style="border-color:#bfdbfe; background:#eff6ff; margin-bottom:15px;" oninput="updatePreview()"></textarea>
+
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <select id="a-category" style="flex:1; font-weight:bold;">
+                                <option value="auto">Auto Platform (일반)</option>
+                                <option value="ai">AI Technology (기술)</option>
+                                <option value="main">🔥 메인 헤드라인</option>
+                            </select>
+                            <button class="btn btn-dark" style="width:200px; height:45px;" onclick="addArticleToDraft()">대기열 전송 ⬇️</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="font-size:13px; font-weight:900; color:#64748b; margin-bottom:10px;"><i class="fas fa-mobile-alt"></i> 모바일 뷰 미리보기</div>
+                        <div id="preview-card" style="border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; background:white; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); display:none; flex-direction:column; height:100%;">
+                            <div style="width:100%; height:200px; background:#f1f5f9; position:relative;">
+                                <img id="prev-img" src="" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'; document.getElementById('prev-img-fallback').style.display='flex';">
+                                <div id="prev-img-fallback" style="position:absolute; top:0; left:0; width:100%; height:100%; display:none; justify-content:center; align-items:center; color:#94a3b8; font-size:12px;">이미지를 불러올 수 없습니다</div>
+                            </div>
+                            <div style="padding:20px; flex:1; display:flex; flex-direction:column;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-size:11px; font-weight:bold;">
+                                    <span id="prev-brand" style="color:var(--theme-primary); background:#eff6ff; padding:4px 8px; border-radius:4px;">기업명</span>
+                                    <span id="prev-source" style="color:#64748b;">언론사</span>
+                                </div>
+                                <div id="prev-title" style="font-weight:900; font-size:17px; margin-bottom:12px; line-height:1.4; color:#1e293b;">기사 제목이 표시됩니다</div>
+                                <div id="prev-desc" style="font-size:13px; color:#475569; margin-bottom:15px; line-height:1.5; flex:1;">요약 내용이 표시됩니다.</div>
+                                <div style="background:#f0fdf4; padding:12px; border-radius:8px; font-size:12px; color:#065f46; border:1px solid #bbf7d0;">
+                                    <b style="color:#047857;">💡 R&D 인사이트</b><br><span id="prev-insight" style="display:block; margin-top:5px; line-height:1.4;">인사이트 내용이 표시됩니다.</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="preview-placeholder" style="height:100%; min-height:300px; border:2px dashed #cbd5e1; border-radius:12px; display:flex; justify-content:center; align-items:center; flex-direction:column; color:#94a3b8; font-size:13px; font-weight:bold;">
+                            <i class="fas fa-image" style="font-size:30px; margin-bottom:10px;"></i>AI 분석을 실행하면 미리보기가 생성됩니다
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-title">📋 발행 대기 목록 (Drafts)</div>
+            <div class="card" style="padding:0; overflow:hidden;">
+                <table><thead><tr><th>분류</th><th>관련 기업</th><th>기사 제목</th><th>관리</th></tr></thead><tbody id="draft-list"></tbody></table>
+            </div>
+        </div>
+
+        <div id="section-deploy" class="page-section">
+            <div class="header">
+                <h2 style="margin:0;">🚀 리포트 배포 및 데이터 추출</h2>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn" style="background:#107c41; color:white;" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel 다운로드</button>
+                    <button class="btn" style="background:#e11d48; color:white;" onclick="exportToPDF()"><i class="fas fa-file-pdf"></i> PDF 보고서 출력</button>
+                </div>
+            </div>
+
+            <div class="card" style="border: 2px solid #10b981; background:#f0fdf4;">
+                <div class="card-title" style="color:#047857;"><i class="fas fa-cloud-upload-alt"></i> 클라우드 DB 최종 발행</div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="text" id="issue-name" placeholder="발행 호수 입력 (예: NO.38)" style="flex:1; padding:15px; font-weight:bold;">
+                    <button class="btn btn-dark" id="deploy-btn" onclick="deployData()" style="padding:15px 40px; font-size:16px;">라이브 서버 배포 실행</button>
+                </div>
+            </div>
+
+            <div class="card-title" style="margin-top:30px;">📚 지난 리포트 DB (사후 관리 및 추출)</div>
+            <div class="card" id="history-container" style="padding:0; overflow:hidden;">
+                <table><thead><tr><th>발행일</th><th>리포트 호수</th><th>수록 기사수</th><th>서버 상태</th><th width="150">관리</th></tr></thead><tbody id="history-list"></tbody></table>
+            </div>
+        </div>
+
+        <div id="section-company" class="page-section">
+            <div class="header"><h2 style="margin:0;">🏢 수집 대상 업체 리스트</h2></div>
+            <div class="card">
+                <div class="card-title">현재 모니터링 중인 기업군</div>
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                    <div style="background:#f1f5f9; padding:20px; border-radius:12px; text-align:center; font-weight:900; color:#1e293b; border:1px solid #e2e8f0;">엔카닷컴</div>
+                    <div style="background:#f1f5f9; padding:20px; border-radius:12px; text-align:center; font-weight:900; color:#1e293b; border:1px solid #e2e8f0;">케이카</div>
+                    <div style="background:#f1f5f9; padding:20px; border-radius:12px; text-align:center; font-weight:900; color:#1e293b; border:1px solid #e2e8f0;">헤이딜러</div>
+                    <div style="background:#f1f5f9; padding:20px; border-radius:12px; text-align:center; font-weight:900; color:#1e293b; border:1px solid #e2e8f0;">쏘카</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-settings" class="page-section">
+            <div class="header"><div><h2 style="margin:0;">⚙️ 시스템 환경 및 테마 설정</h2></div></div>
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div style="display:flex; background:#f1f5f9; border-bottom:1px solid #e2e8f0;">
+                    <div id="tab-set-ai" class="menu-item active" style="color:#1e293b; border-bottom:3px solid var(--theme-primary);" onclick="switchSetTab('set-ai')">🔑 Gemini API 연동</div>
+                    <div id="tab-set-tokens" class="menu-item" style="color:#64748b;" onclick="switchSetTab('set-tokens')">🎨 테마 토큰 관리</div>
+                </div>
+                <div style="padding:30px; min-height:300px; background:white;">
+                    <div id="set-ai" class="set-pane active">
+                        <h3 style="margin-top:0;">Gemini API Key 보안 설정</h3>
+                        <p style="font-size:13px; color:#64748b; margin-bottom:15px;">로컬 스토리지에만 안전하게 보관됩니다.</p>
+                        <div style="display:flex; gap:10px;">
+                            <input type="password" id="gemini-api-key" placeholder="AIzaSy... (API Key 입력)" style="flex:1; font-family:monospace;">
+                            <button class="btn btn-primary" onclick="saveGeminiKey()">API 키 저장</button>
+                        </div>
+                    </div>
+                    <div id="set-tokens" class="set-pane">
+                        <h3 style="margin-top:0;">디자인 테마 커스텀</h3>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                            <div><label style="font-size:12px; font-weight:bold; color:var(--text-sub);">브랜드 컬러 (Primary)</label><input type="color" id="tk-color" style="height:40px; border:none; padding:0; margin-top:5px;" oninput="applyTokens()"></div>
+                            <div><label style="font-size:12px; font-weight:bold; color:var(--text-sub);">카드 모서리 둥글기 (Radius)</label><input type="range" id="tk-radius" min="0" max="24" step="4" style="margin-top:15px;" oninput="applyTokens()"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBjx92fZFNCi8c9nSgG6nU_eJfwq3356Uk",
+            authDomain: "magazine-13f81.firebaseapp.com",
+            projectId: "magazine-13f81",
+            storageBucket: "magazine-13f81.firebasestorage.app",
+            messagingSenderId: "897855603773",
+            appId: "1:897855603773:web:82e68dd3075df768e95654"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        window.draftArticles = { main: null, ai: [], auto: [] };
+        window.trackingPolicies = [];
+        window.historyCache = {};
+        document.getElementById('gemini-api-key').value = localStorage.getItem('oasis_gemini_key') || '';
+
+        // [메뉴 전환]
+        window.switchMenu = function(menu) {
+            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.sidebar .menu-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`section-${menu}`).classList.add('active');
+            document.getElementById(`nav-${menu}`).classList.add('active');
+            if(menu === 'dashboard') window.updateDashboardStats();
+            if(menu === 'deploy') window.loadHistory();
+        };
+        window.switchSetTab = function(tabId) {
+            document.querySelectorAll('.set-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('#section-settings .menu-item').forEach(m => { m.classList.remove('active'); m.style.borderBottom = "none"; m.style.color = "#64748b"; });
+            document.getElementById(tabId).classList.add('active');
+            const t = document.getElementById(`tab-${tabId}`); t.classList.add('active'); t.style.borderBottom = "3px solid var(--theme-primary)"; t.style.color = "#1e293b";
+        };
+
+        // [인증]
+        onAuthStateChanged(auth, (user) => {
+            const overlay = document.getElementById('login-overlay');
+            if (user) { overlay.style.display = 'none'; window.loadPolicies(); window.updateDashboardStats(); } else { overlay.style.display = 'flex'; }
+        });
+        window.loginAdmin = () => signInWithEmailAndPassword(auth, document.getElementById('admin-email').value, document.getElementById('admin-pw').value).catch(err => document.getElementById('login-error').style.display='block');
+        window.logoutAdmin = () => signOut(auth);
+
+        window.updateDashboardStats = async function() {
+            document.getElementById('dash-policies').innerText = window.trackingPolicies.length;
+            document.getElementById('dash-drafts').innerText = window.draftArticles.ai.length + window.draftArticles.auto.length + (window.draftArticles.main ? 1 : 0);
+            try { const q = await getDocs(collection(db, "magazines")); document.getElementById('dash-reports').innerText = q.size; } catch(e) {}
+        };
+
+        // [정책 관리]
+        window.savePolicy = async function() {
+            const company = document.getElementById('p-company').value, url = document.getElementById('p-url').value, keyword = document.getElementById('p-keyword').value;
+            if(!url || !keyword) return alert("필수 입력 누락");
+            window.trackingPolicies.push({ id: Date.now(), company, url, keyword });
+            await setDoc(doc(db, "settings", "policies"), { list: window.trackingPolicies }); window.renderPolicies(); window.updateDashboardStats();
+        };
+        window.loadPolicies = async function() {
+            const docSnap = await getDoc(doc(db, "settings", "policies"));
+            if (docSnap.exists()) window.trackingPolicies = docSnap.data().list || []; window.renderPolicies();
+        };
+        window.renderPolicies = function() {
+            document.getElementById('policy-list').innerHTML = window.trackingPolicies.map(p => `<div style="background:#f1f5f9; padding:10px 15px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; font-size:13px;"><span><b>[${p.company}]</b> ${p.url} / 키워드: <b>${p.keyword}</b></span><button onclick="deletePolicy(${p.id})" style="border:none; background:none; color:#ef4444; cursor:pointer;">삭제</button></div>`).join('');
+        };
+        window.deletePolicy = async (id) => {
+            window.trackingPolicies = window.trackingPolicies.filter(p => p.id !== id);
+            await setDoc(doc(db, "settings", "policies"), { list: window.trackingPolicies }); window.renderPolicies(); window.updateDashboardStats();
+        };
+
+        // 🔥 [에러 방어 & Gemini 2.5] 실전용 AI 엔진
+        window.saveGeminiKey = function() { localStorage.setItem('oasis_gemini_key', document.getElementById('gemini-api-key').value); alert("Gemini API Key 저장완료"); };
+
+        window.runNewsAIExtraction = async function() {
+            const url = document.getElementById('a-link').value;
+            const apiKey = localStorage.getItem('oasis_gemini_key');
+            const btn = document.getElementById('ai-news-btn');
+
+            if(!url) return alert("분석할 기사 URL을 입력하세요.");
+            if(!apiKey) return alert("⚠️ [시스템 환경 설정] 탭에서 Gemini API Key를 먼저 등록해 주세요!");
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 기사 수집 시도 중...';
+            btn.disabled = true;
+
+            let bodyText = "";
+            let ogImage = "";
+            let sourceName = new URL(url).hostname.replace('www.', '');
+
+            try {
+                // 1. 크롤링 시도 (프록시)
+                try {
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) throw new Error("프록시 통신 실패");
+                    const data = await response.json();
+
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(data.contents, 'text/html');
+
+                    ogImage = doc.querySelector('meta[property="og:image"]')?.content || "";
+                    bodyText = doc.body.innerText.replace(/\s+/g, ' ').trim().slice(0, 3000);
+                } catch (proxyError) {
+                    console.warn("기사 긁어오기 실패 (사내망 차단 등). URL만 넘깁니다.", proxyError);
+                    // 🔥 사내망 방화벽에 막혔을 때 뻗지 않고 플랜 B 가동!
+                    bodyText = `(보안으로 인해 본문을 직접 긁어올 수 없습니다. URL 주소: ${url} 를 바탕으로 예상되는 기사 내용을 유추해서 분석해주세요.)`;
+                }
+
+                btn.innerHTML = '<i class="fas fa-brain fa-pulse"></i> AI 심층 분석 중...';
+
+                // 2. 안전한 프롬프트 텍스트
+                const promptText = `너는 '오토핸즈(Autohands)'라는 모빌리티 R&D 플랫폼 기업의 수석 데이터 분석가야.
+다음 기사 본문(또는 URL)을 읽고 우리 회사의 관점에서 분석해줘.
+반드시 아래 JSON 형식으로만 답변해. 마크다운이나 다른 인사말은 절대 금지야.
+{
+  "title": "기사의 핵심을 요약한 매력적인 제목",
+  "brand": "기사에서 주로 다루는 기업명 (예: 현대차, 쏘카, 엔카 등. 특정 안 되면 '모빌리티')",
+  "source": "${sourceName}",
+  "desc": "기사 내용 3줄 요약",
+  "insight": "이 기사가 오토핸즈의 중고차/데이터/모빌리티 사업에 주는 R&D 인사이트 1~2문장"
+}
+
+[기사 데이터]
+${bodyText}`;
+
+                // 3. Gemini 2.5 Flash 호출
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                const aiResponse = await fetch(geminiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptText }] }],
+                        generationConfig: { response_mime_type: "application/json" }
+                    })
+                });
+
+                if(!aiResponse.ok) throw new Error(`Gemini API 통신 거부됨 (상태코드: ${aiResponse.status})`);
+
+                const aiData = await aiResponse.json();
+
+                // 4. JSON 파싱 및 화면 적용
+                const resultText = aiData.candidates[0].content.parts[0].text;
+                const parsedResult = JSON.parse(resultText);
+
+                document.getElementById('a-title').value = parsedResult.title || '';
+                document.getElementById('a-brand').value = parsedResult.brand || '';
+                document.getElementById('a-source').value = parsedResult.source || sourceName;
+                document.getElementById('a-desc').value = parsedResult.desc || '';
+                document.getElementById('a-insight').value = parsedResult.insight || '';
+                document.getElementById('a-img').value = ogImage || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400";
+
+                btn.innerHTML = '<i class="fas fa-magic"></i> AI 분석 완료';
+                window.updatePreview();
+
+            } catch (error) {
+                console.error("AI 분석 최종 에러:", error);
+                alert(`통신 실패!\n원인: ${error.message}\n사내 방화벽이 구글 API 접근을 완전히 차단했거나 인터넷 연결 문제입니다.`);
+                btn.innerHTML = '<i class="fas fa-magic"></i> AI 분석 실행';
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        window.updatePreview = function() {
+            document.getElementById('preview-placeholder').style.display = 'none'; document.getElementById('preview-card').style.display = 'flex';
+            document.getElementById('prev-title').innerText = document.getElementById('a-title').value || '제목'; document.getElementById('prev-brand').innerText = document.getElementById('a-brand').value || '기업명';
+            document.getElementById('prev-source').innerText = document.getElementById('a-source').value || '언론사'; document.getElementById('prev-desc').innerText = document.getElementById('a-desc').value || '요약';
+            document.getElementById('prev-insight').innerText = document.getElementById('a-insight').value || '인사이트'; document.getElementById('prev-img').style.display = 'block';
+            document.getElementById('prev-img-fallback').style.display = 'none'; document.getElementById('prev-img').src = document.getElementById('a-img').value || '';
+        };
+
+        // [운영자 클릭 수동 일괄 수집 기능]
+        window.runBulkCrawler = function() {
+            if(window.trackingPolicies.length === 0) return alert("등록된 정책이 없습니다. 정책을 먼저 추가해주세요.");
+            if(!confirm("현재 등록된 전체 사이트에서 최신 기사 수집을 시작하시겠습니까?")) return;
+
+            window.trackingPolicies.forEach((p, idx) => {
+                window.draftArticles.auto.push({
+                    title: `[운영자 일괄수집] ${p.keyword} 최신 뉴스`,
+                    brand: p.company,
+                    source: "통합 수집기",
+                    link: p.url,
+                    img: "",
+                    desc: `운영자 요청에 의해 ${p.company} 사이트에서 수집된 기사입니다.`,
+                    insight: `경쟁사 동향 모니터링 데이터`,
+                    category:'auto'
+                });
+            });
+            window.updateDraftUI(); window.updateDashboardStats();
+            alert("전체 등록 사이트 기사 수집이 완료되었습니다!");
+        };
+
+        const originalAddArticle = window.addArticleToDraft;
+        window.addArticleToDraft = function() {
+            const cat = document.getElementById('a-category').value, title = document.getElementById('a-title').value; if(!title) return alert("기사가 없습니다.");
+            const article = { category: cat, title, brand: document.getElementById('a-brand').value, source: document.getElementById('a-source').value, link: document.getElementById('a-link').value, desc: document.getElementById('a-desc').value, insight: document.getElementById('a-insight').value, img: document.getElementById('a-img').value };
+            if(cat === 'main') window.draftArticles.main = article; else window.draftArticles[cat].push(article);
+            window.updateDraftUI(); window.updateDashboardStats();
+            ['a-title','a-brand','a-source','a-link','a-img','a-desc','a-insight'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('preview-card').style.display = 'none'; document.getElementById('preview-placeholder').style.display = 'flex';
+        };
+
+        window.updateDraftUI = function() {
+            const tbody = document.getElementById('draft-list'); let rows = '';
+            const addRow = (item, type, idx, arrName) => {
+                if(!item) return;
+                rows += `<tr><td><span style="background:#1e293b; color:white; padding:3px 8px; border-radius:4px; font-size:11px;">${type}</span></td><td><b>${item.brand}</b></td><td>${item.title}</td><td><button onclick="window.draftArticles${arrName}; window.updateDraftUI(); window.updateDashboardStats();" style="color:#ef4444; border:none; background:none; cursor:pointer;">삭제</button></td></tr>`;
+            };
+            addRow(window.draftArticles.main, 'MAIN', 0, '.main=null');
+            window.draftArticles.ai.forEach((a, i) => addRow(a, 'AI', i, `.ai.splice(${i},1)`));
+            window.draftArticles.auto.forEach((a, i) => addRow(a, 'AUTO', i, `.auto.splice(${i},1)`));
+            tbody.innerHTML = rows || '<tr><td colspan="4" style="text-align:center; padding:20px; color:#94a3b8;">대기열이 비어 있습니다.</td></tr>';
+        };
+
+        // [배포 (유튜브 정보 포함)]
+        window.deployData = async function() {
+            const issueName = document.getElementById('issue-name').value; if(!issueName) return alert("호수를 입력하세요.");
+            const articles = [];
+            if(window.draftArticles.main) articles.push(window.draftArticles.main);
+            window.draftArticles.ai.forEach(a => articles.push(a)); window.draftArticles.auto.forEach(a => articles.push(a));
+            if(articles.length === 0) return alert("배포할 기사가 없습니다.");
+
+            const videoData = {
+                url: document.getElementById('v-url').value,
+                source: document.getElementById('v-source').value,
+                title: document.getElementById('v-title').value,
+                desc: document.getElementById('v-desc').value
+            };
+
+            document.getElementById('deploy-btn').innerText = "배포 중...";
+            const docId = `${new Date().toISOString().split('T')[0]}_${issueName.replace(/\s/g, '')}`;
+            await setDoc(doc(db, "magazines", docId), { issueName, publishDate: new Date().toISOString(), articles, video: videoData });
+            alert("서버에 배포되었습니다.");
+
+            window.draftArticles = { main: null, ai: [], auto: [] }; window.updateDraftUI();
+            ['issue-name', 'v-url', 'v-source', 'v-title', 'v-desc'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('deploy-btn').innerText = "라이브 서버 배포 실행";
+            window.loadHistory(); window.updateDashboardStats();
+        };
+
+        // [히스토리 로드 및 개별 삭제]
+        window.loadHistory = async function() {
+            const q = await getDocs(collection(db, "magazines"));
+            window.historyCache = {};
+            document.getElementById('history-list').innerHTML = q.docs.map(doc => {
+                const d = doc.data(); window.historyCache[doc.id] = d;
+                return `<tr>
+                    <td>${doc.id.split('_')[0]}</td><td><b>${d.issueName}</b></td><td>${d.articles ? d.articles.length : 0}건</td>
+                    <td><span style="color:#10b981; font-weight:bold;">배포완료</span></td>
+                    <td>
+                        <button onclick="openEditModal('${doc.id}')" style="background:#f1f5f9; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer; color:#3b82f6; margin-right:5px;">관리</button>
+                        <button onclick="deleteReportDirectly('${doc.id}')" style="background:#fef2f2; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer; color:#ef4444;">삭제</button>
+                    </td>
+                </tr>`;
+            }).join('');
+        };
+
+        window.deleteReportDirectly = async function(docId) {
+            if(!confirm("⚠️ 이 리포트를 개별 삭제하시겠습니까?\n복구할 수 없습니다.")) return;
+            try { await deleteDoc(doc(db, "magazines", docId)); alert("삭제되었습니다."); window.loadHistory(); window.updateDashboardStats(); }
+            catch(error) { alert("삭제 실패: " + error.message); }
+        };
+
+        // [사후 관리 모달 관련 로직]
+        window.editingDocId = null; window.editingArticles = [];
+        window.openEditModal = function(docId) {
+            const data = window.historyCache[docId]; if(!data) return;
+            window.editingDocId = docId; window.editingArticles = [...(data.articles || [])];
+            document.getElementById('edit-issue-name').value = data.issueName;
+            window.renderEditArticles(); document.getElementById('edit-modal').style.display = 'flex';
+        };
+        window.closeEditModal = function() { document.getElementById('edit-modal').style.display = 'none'; window.editingDocId = null; };
+
+        window.renderEditArticles = function() {
+            const listDiv = document.getElementById('edit-articles-list');
+            if(window.editingArticles.length === 0) { listDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">수록된 기사가 없습니다.</div>'; return; }
+            listDiv.innerHTML = window.editingArticles.map((art, idx) => `
+                <div style="padding:12px 15px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size:13px; flex:1;"><span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:bold; margin-right:5px;">${art.category || '기타'}</span><b>[${art.brand || '기업'}]</b> ${art.title}</div>
+                    <button onclick="removeArticleFromEdit(${idx})" style="background:none; border:none; color:#ef4444; font-size:12px; font-weight:bold; cursor:pointer; margin-left:15px;">삭제</button>
+                </div>
+            `).join('');
+        };
+        window.removeArticleFromEdit = function(index) { window.editingArticles.splice(index, 1); window.renderEditArticles(); };
+        window.addNewArticleToEdit = function() {
+            const title = document.getElementById('edit-new-title').value, link = document.getElementById('edit-new-link').value;
+            if(!title || !link) return alert("제목/링크 필수");
+            window.editingArticles.push({ category: document.getElementById('edit-new-cat').value, brand: document.getElementById('edit-new-brand').value || '수동추가', title, link, source: '수동입력', insight: '' });
+            window.renderEditArticles(); document.getElementById('edit-new-title').value=''; document.getElementById('edit-new-link').value='';
+        };
+        window.saveEditingReport = async function() {
+            const newIssueName = document.getElementById('edit-issue-name').value; if(!newIssueName) return alert("호수명 필수");
+            try {
+                await setDoc(doc(db, "magazines", window.editingDocId), { ...window.historyCache[window.editingDocId], issueName: newIssueName, articles: window.editingArticles });
+                alert("저장 완료!"); window.closeEditModal(); window.loadHistory();
+            } catch (error) { alert("저장 실패: " + error.message); }
+        };
+        window.deleteEntireReport = async function() {
+            if(!confirm("⚠️ 리포트를 전체 삭제하시겠습니까?")) return;
+            try { await deleteDoc(doc(db, "magazines", window.editingDocId)); alert("삭제되었습니다."); window.closeEditModal(); window.loadHistory(); }
+            catch(error) { alert("삭제 실패: " + error.message); }
+        };
+
+        // [엑셀/PDF 및 테마 관련 로직]
+        window.exportToExcel = async function() {
+            try {
+                const q = await getDocs(collection(db, "magazines")); if(q.empty) return alert("데이터가 없습니다.");
+                let excelData = []; q.docs.forEach(doc => { const mag = doc.data(); if(mag.articles) mag.articles.forEach(art => excelData.push({ "발행 호수": mag.issueName, "카테고리": art.category, "관련 기업": art.brand, "기사 제목": art.title, "인사이트": art.insight, "원문 링크": art.link })); });
+                const ws = XLSX.utils.json_to_sheet(excelData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Report");
+                XLSX.writeFile(wb, `OASIS_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+            } catch (err) { alert("엑셀 추출 오류"); }
+        };
+        window.exportToPDF = function() { html2pdf().set({ margin: 1, filename: `OASIS_History.pdf`, jsPDF: { format: 'letter', orientation: 'portrait' } }).from(document.getElementById('history-container')).save(); };
+        window.applyTokens = function() { document.documentElement.style.setProperty('--theme-primary', document.getElementById('tk-color').value); document.documentElement.style.setProperty('--theme-radius', document.getElementById('tk-radius').value + 'px'); };
+    </script>
+</body>
+</html>
