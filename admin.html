@@ -367,89 +367,51 @@
         // 🔥 [에러 방어 & Gemini 2.5] 실전용 AI 엔진
         window.saveGeminiKey = function() { localStorage.setItem('oasis_gemini_key', document.getElementById('gemini-api-key').value); alert("Gemini API Key 저장완료"); };
 
+// 🔥 [최종 넷플리파이 서버 연동 로직] 프록시 에러, 방화벽 에러 원천 차단!
         window.runNewsAIExtraction = async function() {
-            const url = document.getElementById('a-link').value;
-            const apiKey = localStorage.getItem('oasis_gemini_key');
+            const url = document.getElementById('a-link').value; 
+            const apiKey = localStorage.getItem('oasis_gemini_key'); 
             const btn = document.getElementById('ai-news-btn');
-
-            if(!url) return alert("분석할 기사 URL을 입력하세요.");
+            
+            // ⭐️ 브라우저가 직접 안 뛰고 넷플리파이 뒷단 서버로 명령을 내림!
+            const backendUrl = '/.netlify/functions/analyze';
+            
+            if(!url) return alert("분석할 기사 URL을 입력하세요."); 
             if(!apiKey) return alert("⚠️ [시스템 환경 설정] 탭에서 Gemini API Key를 먼저 등록해 주세요!");
 
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 기사 수집 시도 중...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 넷플리파이 서버에서 수집/분석 중...'; 
             btn.disabled = true;
 
-            let bodyText = "";
-            let ogImage = "";
-            let sourceName = new URL(url).hostname.replace('www.', '');
-
             try {
-                // 1. 크롤링 시도 (프록시)
-                try {
-                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-                    const response = await fetch(proxyUrl);
-                    if (!response.ok) throw new Error("프록시 통신 실패");
-                    const data = await response.json();
-
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(data.contents, 'text/html');
-
-                    ogImage = doc.querySelector('meta[property="og:image"]')?.content || "";
-                    bodyText = doc.body.innerText.replace(/\s+/g, ' ').trim().slice(0, 3000);
-                } catch (proxyError) {
-                    console.warn("기사 긁어오기 실패 (사내망 차단 등). URL만 넘깁니다.", proxyError);
-                    // 🔥 사내망 방화벽에 막혔을 때 뻗지 않고 플랜 B 가동!
-                    bodyText = `(보안으로 인해 본문을 직접 긁어올 수 없습니다. URL 주소: ${url} 를 바탕으로 예상되는 기사 내용을 유추해서 분석해주세요.)`;
-                }
-
-                btn.innerHTML = '<i class="fas fa-brain fa-pulse"></i> AI 심층 분석 중...';
-
-                // 2. 안전한 프롬프트 텍스트
-                const promptText = `너는 '오토핸즈(Autohands)'라는 모빌리티 R&D 플랫폼 기업의 수석 데이터 분석가야.
-다음 기사 본문(또는 URL)을 읽고 우리 회사의 관점에서 분석해줘.
-반드시 아래 JSON 형식으로만 답변해. 마크다운이나 다른 인사말은 절대 금지야.
-{
-  "title": "기사의 핵심을 요약한 매력적인 제목",
-  "brand": "기사에서 주로 다루는 기업명 (예: 현대차, 쏘카, 엔카 등. 특정 안 되면 '모빌리티')",
-  "source": "${sourceName}",
-  "desc": "기사 내용 3줄 요약",
-  "insight": "이 기사가 오토핸즈의 중고차/데이터/모빌리티 사업에 주는 R&D 인사이트 1~2문장"
-}
-
-[기사 데이터]
-${bodyText}`;
-
-                // 3. Gemini 2.5 Flash 호출
-                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-                const aiResponse = await fetch(geminiUrl, {
+                // 넷플리파이 서버로 URL과 API 키 전달
+                const response = await fetch(backendUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: promptText }] }],
-                        generationConfig: { response_mime_type: "application/json" }
-                    })
+                    body: JSON.stringify({ url: url, apiKey: apiKey })
                 });
 
-                if(!aiResponse.ok) throw new Error(`Gemini API 통신 거부됨 (상태코드: ${aiResponse.status})`);
+                if (!response.ok) {
+                    const errData = await response.text();
+                    throw new Error(errData || "백엔드 통신 에러");
+                }
+                
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
 
-                const aiData = await aiResponse.json();
-
-                // 4. JSON 파싱 및 화면 적용
-                const resultText = aiData.candidates[0].content.parts[0].text;
-                const parsedResult = JSON.parse(resultText);
-
-                document.getElementById('a-title').value = parsedResult.title || '';
-                document.getElementById('a-brand').value = parsedResult.brand || '';
-                document.getElementById('a-source').value = parsedResult.source || sourceName;
-                document.getElementById('a-desc').value = parsedResult.desc || '';
-                document.getElementById('a-insight').value = parsedResult.insight || '';
-                document.getElementById('a-img').value = ogImage || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400";
-
-                btn.innerHTML = '<i class="fas fa-magic"></i> AI 분석 완료';
+                // 결과 화면 적용
+                document.getElementById('a-title').value = data.title || ''; 
+                document.getElementById('a-brand').value = data.brand || ''; 
+                document.getElementById('a-source').value = data.source || '';
+                document.getElementById('a-desc').value = data.desc || ''; 
+                document.getElementById('a-insight').value = data.insight || ''; 
+                document.getElementById('a-img').value = data.img || '';
+                
+                btn.innerHTML = '<i class="fas fa-magic"></i> AI 분석 완료'; 
                 window.updatePreview();
 
             } catch (error) {
-                console.error("AI 분석 최종 에러:", error);
-                alert(`통신 실패!\n원인: ${error.message}\n사내 방화벽이 구글 API 접근을 완전히 차단했거나 인터넷 연결 문제입니다.`);
+                console.error("서버 우회 분석 에러:", error);
+                alert(`통신 실패!\n원인: ${error.message}`);
                 btn.innerHTML = '<i class="fas fa-magic"></i> AI 분석 실행';
             } finally {
                 btn.disabled = false;
