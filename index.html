@@ -63,9 +63,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        // 🔥 getDocs와 collection, query 함수를 추가로 불러옵니다
+        import { getFirestore, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // ⚠️ 주의: 차장님의 파이어베이스 열쇠로 반드시 교체해 주세요!
         const firebaseConfig = {
           apiKey: "AIzaSyBjx92fZFNCi8c9nSgG6nU_eJfwq3356Uk",
           authDomain: "magazine-13f81.firebaseapp.com",
@@ -134,10 +134,19 @@
             content.innerHTML = `<div class="py-20 text-center text-blue-500 font-bold"><i class="fas fa-spinner fa-spin mr-2"></i>클라우드 서버에서 리포트를 불러오는 중...</div>`;
 
             try {
-                const docRef = doc(db, "magazines", date);
-                const docSnap = await getDoc(docRef);
+                // 🔥 수정 1: 날짜가 포함된 문서 ID를 싹 다 뒤져서 해당 날짜의 리포트를 찾습니다.
+                const q = query(collection(db, "magazines"));
+                const querySnapshot = await getDocs(q);
+                
+                let targetData = null;
+                querySnapshot.forEach((doc) => {
+                    // 문서 ID가 선택한 날짜(예: 2026-04-17)로 시작하면 당첨!
+                    if (doc.id.startsWith(date)) {
+                        targetData = doc.data();
+                    }
+                });
 
-                if (!docSnap.exists()) {
+                if (!targetData) {
                     content.innerHTML = `
                         <div class="py-24 text-center">
                             <i class="fas fa-newspaper text-6xl text-gray-200 mb-6"></i>
@@ -148,39 +157,44 @@
                     return;
                 }
 
-                const data = docSnap.data();
-                document.getElementById('display-issue').textContent = data.issue;
+                // 🔥 수정 2: 어드민이 issueName으로 보낸 호수 데이터를 받아옵니다.
+                document.getElementById('display-issue').textContent = targetData.issueName || '';
 
-                const mainInsightHtml = (data.main && data.main.insight) ? `
+                // 🔥 수정 3: 하나의 큰 상자(articles)에 담긴 기사들을 프론트엔드용으로 3분할 합니다.
+                const allArticles = targetData.articles || [];
+                const mainData = allArticles.find(a => a.category === 'main');
+                const aiData = allArticles.filter(a => a.category === 'ai');
+                const autoData = allArticles.filter(a => a.category === 'auto');
+
+                const mainInsightHtml = (mainData && mainData.insight) ? `
                     <div class="mt-6 bg-blue-50/50 p-6 rounded-2xl border-l-4 border-blue-600">
                         <p class="text-sm font-black text-blue-900 mb-2"><i class="fas fa-lightbulb text-yellow-500 mr-2"></i>R&D 기술 고찰점</p>
-                        <p class="text-sm text-gray-800 leading-relaxed font-medium">${data.main.insight}</p>
+                        <p class="text-sm text-gray-800 leading-relaxed font-medium">${mainData.insight}</p>
                     </div>` : '';
 
-                // 비디오 및 메인 영역 방어 로직 추가
-                const videoHtml = data.video ? `
+                const videoHtml = targetData.video && targetData.video.url ? `
                     <section class="mb-16 bg-black rounded-3xl overflow-hidden p-8 text-white grid grid-cols-1 lg:grid-cols-3 gap-10 items-center shadow-lg">
                         <div class="lg:col-span-2 aspect-video rounded-2xl overflow-hidden bg-gray-900 shadow-2xl">
-                            <iframe class="w-full h-full" src="${window.getYoutubeEmbed(data.video.url)}" frameborder="0" allowfullscreen></iframe>
+                            <iframe class="w-full h-full" src="${window.getYoutubeEmbed(targetData.video.url)}" frameborder="0" allowfullscreen></iframe>
                         </div>
                         <div>
-                            <span class="text-red-500 font-bold text-sm uppercase tracking-widest"><i class="fab fa-youtube mr-2"></i>[${data.video.brand || ''}] ${data.video.source || ''}</span>
-                            <h2 class="text-3xl font-black mt-4 mb-4 leading-tight">${data.video.title || ''}</h2>
-                            <p class="text-gray-400 text-sm leading-relaxed">${data.video.desc || ''}</p>
+                            <span class="text-red-500 font-bold text-sm uppercase tracking-widest"><i class="fab fa-youtube mr-2"></i>[${targetData.video.brand || ''}] ${targetData.video.source || ''}</span>
+                            <h2 class="text-3xl font-black mt-4 mb-4 leading-tight">${targetData.video.title || ''}</h2>
+                            <p class="text-gray-400 text-sm leading-relaxed">${targetData.video.desc || ''}</p>
                         </div>
                     </section>` : '';
 
-                const mainHtml = data.main ? `
+                const mainHtml = mainData ? `
                     <section class="mb-24">
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                            <div class="rounded-3xl overflow-hidden shadow-xl cursor-pointer hover-scale" onclick="smartOpen('${data.main.link}')">
-                                <img src="${data.main.img || 'https://via.placeholder.com/800x500'}" class="w-full h-[500px] object-cover bg-gray-200">
+                            <div class="rounded-3xl overflow-hidden shadow-xl cursor-pointer hover-scale" onclick="smartOpen('${mainData.link}')">
+                                <img src="${mainData.img || 'https://via.placeholder.com/800x500'}" class="w-full h-[500px] object-cover bg-gray-200">
                             </div>
                             <div>
-                                <span class="bg-blue-900 text-white px-3 py-1 text-xs font-bold rounded mb-4 inline-block tracking-widest">OASIS HEADLINE ${data.main.isImportant ? '🔥' : ''}</span>
-                                <h2 class="text-4xl font-black leading-tight mb-6 tracking-tighter"><span class="text-blue-600">[${data.main.brand || ''}]</span> ${data.main.title || ''}</h2>
-                                <p class="text-lg text-gray-600 mb-6 leading-relaxed">${data.main.desc || ''}</p>
-                                <button type="button" onclick="smartOpen('${data.main.link}')" class="font-bold text-lg border-b-2 border-black pb-1 hover:text-blue-600 transition">본문 읽기 →</button>
+                                <span class="bg-blue-900 text-white px-3 py-1 text-xs font-bold rounded mb-4 inline-block tracking-widest">OASIS HEADLINE</span>
+                                <h2 class="text-4xl font-black leading-tight mb-6 tracking-tighter"><span class="text-blue-600">[${mainData.brand || ''}]</span> ${mainData.title || ''}</h2>
+                                <p class="text-lg text-gray-600 mb-6 leading-relaxed">${mainData.desc || ''}</p>
+                                <button type="button" onclick="smartOpen('${mainData.link}')" class="font-bold text-lg border-b-2 border-black pb-1 hover:text-blue-600 transition">본문 읽기 →</button>
                                 ${mainInsightHtml}
                             </div>
                         </div>
@@ -206,10 +220,9 @@
                     document.getElementById(id).innerHTML = items.map(item => `
                         <div class="group bg-white rounded-3xl shadow-sm border border-gray-100 p-6 transition hover:shadow-lg">
                             <div class="flex gap-6 cursor-pointer items-center" onclick="smartOpen('${item.link}')">
-                                <img src="${item.img || 'https://via.placeholder.com/150'}" class="w-28 h-28 rounded-2xl object-cover bg-gray-200 flex-shrink-0 shadow-sm">
+                                <img src="${item.img || 'https://via.placeholder.com/150'}" class="w-28 h-28 rounded-2xl object-cover bg-gray-200 flex-shrink-0 shadow-sm" onerror="this.src='https://via.placeholder.com/150'">
                                 <div class="flex flex-col justify-center flex-grow">
                                     <span class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                                        ${item.isImportant ? '<span class="text-red-500 mr-1 font-black">🔥 중요</span> | ' : ''}
                                         ${item.source || ''}
                                     </span>
                                     <h4 class="font-bold text-lg group-hover:text-blue-600 leading-snug transition tracking-tight">
@@ -226,8 +239,8 @@
                         </div>`).join('');
                 };
 
-                renderItems(data.ai, 'ai-list');
-                renderItems(data.auto, 'auto-list');
+                renderItems(aiData, 'ai-list');
+                renderItems(autoData, 'auto-list');
 
             } catch (error) {
                 console.error("Firebase 통신 에러:", error);
@@ -243,7 +256,7 @@
             const today = `${year}-${month}-${day}`;
 
             document.getElementById('date-picker').value = today;
-            loadReport(today); // 오늘 날짜 기준으로 먼저 불러오기 시도
+            loadReport(today);
         };
     </script>
 </body>
