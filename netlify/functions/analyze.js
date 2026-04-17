@@ -13,19 +13,16 @@ exports.handler = async function(event, context) {
         });
         if (!res.ok) throw new Error("웹페이지 접속 실패 (보안 차단 또는 없는 주소)");
         
-        // 🔥 바로 이 부분이 삭제되어서 에러가 났던 겁니다!
         const html = await res.text(); 
 
         // 정규식으로 이미지와 텍스트만 가볍게 추출
         const ogImageMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
-        
-        // [업데이트] 가짜 이미지 띄우지 말고, 없으면 그냥 빈칸으로 둬서 프론트엔드 기본 이미지가 뜨게 함
         const ogImage = ogImageMatch ? ogImageMatch[1] : ""; 
         
         let bodyText = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] || "";
         bodyText = bodyText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().slice(0, 3000);
         
-        // [업데이트] 언론사 방화벽에 막혀 본문이 너무 짧게(빈 깡통) 긁히면 AI가 소설 쓰기 전에 강제 에러 처리!
+        // 언론사 방화벽에 막혀 본문이 너무 짧게(빈 깡통) 긁히면 에러 처리
         if (bodyText.length < 50) {
             throw new Error("언론사 보안으로 인해 기사 본문 수집이 차단되었습니다. (수동 추가를 이용해주세요)");
         }
@@ -56,12 +53,16 @@ ${bodyText}`;
             })
         });
 
-        if (!aiResponse.ok) throw new Error("Gemini API 통신 에러");
+        // API 거절 시 상세 사유 출력
+        if (!aiResponse.ok) {
+            const errorDetails = await aiResponse.text();
+            throw new Error(`구글 API 거절 (상태코드 ${aiResponse.status}): ${errorDetails}`);
+        }
         
         const aiData = await aiResponse.json();
         const resultText = aiData.candidates[0].content.parts[0].text;
         
-        // 3. 분석 결과를 브라우저(프론트엔드)로 깔끔하게 리턴
+        // 3. 분석 결과를 브라우저(프론트엔드)로 리턴
         const parsedResult = JSON.parse(resultText);
         parsedResult.img = ogImage;
 
@@ -76,42 +77,4 @@ ${bodyText}`;
             body: JSON.stringify({ error: error.message })
         };
     }
-// ... (위쪽 기사 긁어오는 코드는 그대로 둡니다) ...
-
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        const aiResponse = await fetch(geminiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: { response_mime_type: "application/json" }
-            })
-        });
-
-        // 🔥 [여기서부터 수정됨] 구글이 뱉어낸 진짜 에러 메시지를 족집게처럼 잡아냅니다!
-        if (!aiResponse.ok) {
-            const errorDetails = await aiResponse.text();
-            console.error("Gemini API 거절 상세 내용:", errorDetails);
-            throw new Error(`구글 API 거절 (상태코드 ${aiResponse.status}): ${errorDetails}`);
-        }
-        
-        const aiData = await aiResponse.json();
-        const resultText = aiData.candidates[0].content.parts[0].text;
-        
-        // 3. 분석 결과를 브라우저(프론트엔드)로 깔끔하게 리턴
-        const parsedResult = JSON.parse(resultText);
-        parsedResult.img = ogImage;
-
-        return {
-            statusCode: 200,
-            body: JSON.stringify(parsedResult)
-        };
-
-    } catch (error) {
-        return {
-            statusCode: 500, // 넷플리파이가 프론트로 500 에러를 던질 때, 상세 사유를 같이 보냄
-            body: JSON.stringify({ error: error.message })
-        };
-    }
-};
 };
