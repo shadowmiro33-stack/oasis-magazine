@@ -1,4 +1,3 @@
-// netlify/functions/analyze.js
 exports.handler = async function(event, context) {
     // POST 요청만 받음
     if (event.httpMethod !== "POST") {
@@ -7,25 +6,32 @@ exports.handler = async function(event, context) {
 
     try {
         const { url, apiKey } = JSON.parse(event.body);
-// ... [원본 코드 절대 유지 구역: 상단 설정 및 fetch 로직] ...
+
+        // 1. 방화벽 밖(넷플리파이 서버)에서 대상 뉴스 사이트 본문 긁어오기
+        const res = await fetch(url, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+        });
+        if (!res.ok) throw new Error("웹페이지 접속 실패 (보안 차단 또는 없는 주소)");
+        
+        // 🔥 바로 이 부분이 삭제되어서 에러가 났던 겁니다!
+        const html = await res.text(); 
 
         // 정규식으로 이미지와 텍스트만 가볍게 추출
         const ogImageMatch = html.match(/<meta\s+property="og:image"\s+content="([^"]+)"/i);
         
-        // 🔥 [고도화 기능 1] 가짜 이미지 띄우지 말고, 없으면 그냥 빈칸으로 둬서 프론트엔드 기본 이미지가 뜨게 함
+        // [업데이트] 가짜 이미지 띄우지 말고, 없으면 그냥 빈칸으로 둬서 프론트엔드 기본 이미지가 뜨게 함
         const ogImage = ogImageMatch ? ogImageMatch[1] : ""; 
         
         let bodyText = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] || "";
         bodyText = bodyText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim().slice(0, 3000);
         
-        // 🔥 [고도화 기능 2] 언론사 방화벽에 막혀 본문이 너무 짧게(빈 깡통) 긁히면 AI가 소설 쓰기 전에 강제 에러 처리!
+        // [업데이트] 언론사 방화벽에 막혀 본문이 너무 짧게(빈 깡통) 긁히면 AI가 소설 쓰기 전에 강제 에러 처리!
         if (bodyText.length < 50) {
             throw new Error("언론사 보안으로 인해 기사 본문 수집이 차단되었습니다. (수동 추가를 이용해주세요)");
         }
 
         const sourceName = new URL(url).hostname.replace('www.', '');
 
-        // ... [원본 코드 절대 유지 구역: Gemini API 호출 로직] ...
         // 2. 서버에서 구글 Gemini API로 직접 통신
         const promptText = `너는 '오토핸즈(Autohands)'의 수석 데이터 분석가야.
 다음 기사 본문을 읽고 우리 회사의 관점에서 분석해줘.
