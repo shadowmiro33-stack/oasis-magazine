@@ -76,4 +76,42 @@ ${bodyText}`;
             body: JSON.stringify({ error: error.message })
         };
     }
+// ... (위쪽 기사 긁어오는 코드는 그대로 둡니다) ...
+
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const aiResponse = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: { response_mime_type: "application/json" }
+            })
+        });
+
+        // 🔥 [여기서부터 수정됨] 구글이 뱉어낸 진짜 에러 메시지를 족집게처럼 잡아냅니다!
+        if (!aiResponse.ok) {
+            const errorDetails = await aiResponse.text();
+            console.error("Gemini API 거절 상세 내용:", errorDetails);
+            throw new Error(`구글 API 거절 (상태코드 ${aiResponse.status}): ${errorDetails}`);
+        }
+        
+        const aiData = await aiResponse.json();
+        const resultText = aiData.candidates[0].content.parts[0].text;
+        
+        // 3. 분석 결과를 브라우저(프론트엔드)로 깔끔하게 리턴
+        const parsedResult = JSON.parse(resultText);
+        parsedResult.img = ogImage;
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify(parsedResult)
+        };
+
+    } catch (error) {
+        return {
+            statusCode: 500, // 넷플리파이가 프론트로 500 에러를 던질 때, 상세 사유를 같이 보냄
+            body: JSON.stringify({ error: error.message })
+        };
+    }
+};
 };
