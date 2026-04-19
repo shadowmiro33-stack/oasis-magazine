@@ -53,7 +53,16 @@
     </style>
 </head>
 <body>
-
+<div id="preview-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+        <div style="background:#f8fafc; width:90%; max-width:1000px; height:85vh; border-radius:16px; display:flex; flex-direction:column; overflow:hidden;">
+            <div style="padding:20px; background:white; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; color:#1e293b;"><i class="fas fa-desktop"></i> 매거진 프론트엔드 미리보기 (Draft)</h3>
+                <button onclick="document.getElementById('preview-modal').style.display='none'" style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+            <div id="preview-modal-content" style="padding:30px; overflow-y:auto; flex:1; background:#f1f5f9;">
+                </div>
+        </div>
+    </div>
     <div id="login-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); z-index:9999; display:flex; justify-content:center; align-items:center;">
         <div style="background:white; padding:50px 40px; border-radius:24px; width:400px; text-align:center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
             <div style="font-size:12px; font-weight:900; color:var(--primary); letter-spacing:2px; margin-bottom:10px;">AUTOHANDS R&D</div>
@@ -138,16 +147,19 @@
         <div id="section-news" class="page-section">
             <div class="header"><h2 style="margin:0;">🤖 뉴스 수집 및 AI 분석기</h2></div>
 
-            <div class="card" style="border: 2px solid #f59e0b; background:#fffbeb;">
-                <div class="card-title" style="color:#b45309;"><i class="fab fa-youtube"></i> 매거진 메인 유튜브 영상 세팅 (선택)</div>
+           <div class="card" style="border: 2px solid #f59e0b; background:#fffbeb;">
+                <div class="card-title" style="color:#b45309;">
+                    <div><i class="fab fa-youtube"></i> 매거진 메인 유튜브 자동 세팅</div>
+                    <button class="btn btn-dark" onclick="fetchYoutubeMeta()" style="background:#f59e0b; font-size:12px; padding:8px 15px;">정보 불러오기</button>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="v-url" placeholder="유튜브 링크를 붙여넣으세요 (예: https://youtu.be/...)">
+                </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
-                    <input type="text" id="v-url" placeholder="영상 URL (예: https://youtu.be/...)">
-                    <input type="text" id="v-source" placeholder="채널/출처 (예: 오토포스트)">
+                    <input type="text" id="v-title" placeholder="영상 제목 (자동 입력)">
+                    <input type="text" id="v-source" placeholder="채널명 (자동 입력)">
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 2fr; gap: 15px;">
-                    <input type="text" id="v-title" placeholder="영상 제목 입력">
-                    <input type="text" id="v-desc" placeholder="영상 내용 1줄 요약">
-                </div>
+                <input type="text" id="v-desc" placeholder="영상에 대한 짧은 코멘트를 입력하세요 (선택)">
             </div>
 
             <div class="card">
@@ -156,9 +168,7 @@
                     <button class="btn btn-success" onclick="runBulkCrawler()"><i class="fas fa-download"></i> 전체 등록 사이트 기사 수집</button>
                 </div>
                 <div style="display:flex; gap:10px; margin-bottom:15px;">
-                    <select id="p-company" style="width:180px; font-weight:bold;">
-                        <option value="엔카닷컴">엔카닷컴</option><option value="케이카">케이카</option><option value="쏘카">쏘카</option><option value="헤이딜러">헤이딜러</option>
-                    </select>
+                    <select id="company-select" style="padding: 12px; border-radius: 8px; border: 1px solid #bfdbfe; font-weight: bold; width: 150px; cursor: pointer;"></select>
                     <input type="text" id="p-url" placeholder="대상 언론사 URL (예: asiae.co.kr)">
                     <input type="text" id="p-keyword" placeholder="추적 키워드 (회사명 등)">
                     <button class="btn btn-dark" onclick="savePolicy()">정책 추가</button>
@@ -235,12 +245,14 @@
                     <button class="btn" style="background:#e11d48; color:white;" onclick="exportToPDF()"><i class="fas fa-file-pdf"></i> PDF 보고서 출력</button>
                 </div>
             </div>
-
-            <div class="card" style="border: 2px solid #10b981; background:#f0fdf4;">
+<div class="card" style="border: 2px solid #10b981; background:#f0fdf4;">
                 <div class="card-title" style="color:#047857;"><i class="fas fa-cloud-upload-alt"></i> 클라우드 DB 최종 발행</div>
                 <div style="display:flex; gap:10px; align-items:center;">
                     <input type="text" id="issue-name" placeholder="발행 호수 입력 (예: NO.38)" style="flex:1; padding:15px; font-weight:bold;">
-                    <button class="btn btn-dark" id="deploy-btn" onclick="deployData()" style="padding:15px 40px; font-size:16px;">라이브 서버 배포 실행</button>
+                    
+                    <button class="btn btn-primary" onclick="openReportPreview()" style="padding:15px 30px; font-size:16px; background:#3b82f6;"><i class="fas fa-eye"></i> 1. 배포 전 미리보기</button>
+                    
+                    <button class="btn btn-dark" id="deploy-btn" onclick="deployData()" style="padding:15px 30px; font-size:16px;">🚀 2. 라이브 서버 배포</button>
                 </div>
             </div>
 
@@ -251,17 +263,20 @@
         </div>
 
         <div id="section-company" class="page-section">
-            <div class="header"><h2 style="margin:0;">🏢 수집 대상 업체 리스트</h2></div>
-            <div class="card">
-                <div class="card-title">현재 모니터링 중인 기업군</div>
-                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
-                    <div style="background:#f1f5f9; padding:20px; border-radius:12px; text-align:center; font-weight:900; color:#1e293b; border:1px solid #e2e8f0;">엔카닷컴</div>
-                    <div style="background:#f1f5f9; padding:20px; border-radius:12px; text-align:center; font-weight:900; color:#1e293b; border:1px solid #e2e8f0;">케이카</div>
-                    <div style="background:#f1f5f9; padding:20px; border-radius:12px; text-align:center; font-weight:900; color:#1e293b; border:1px solid #e2e8f0;">헤이딜러</div>
-                    <div style="background:#f1f5f9; padding:20px; border-radius:12px; text-align:center; font-weight:900; color:#1e293b; border:1px solid #e2e8f0;">쏘카</div>
+            <div class="card" style="border: 2px solid #3b82f6; background:#eff6ff; margin-bottom: 30px;">
+                <div class="card-title" style="color:#1d4ed8;">
+                    <i class="fas fa-building"></i> 🏢 모니터링 대상 업체 및 키워드 관리
                 </div>
+                
+                <div style="display:flex; gap:10px; margin-bottom: 20px;">
+                    <input type="text" id="new-company-name" placeholder="기업명 (예: 엔카닷컴)" style="flex:1; padding:12px; border-radius:8px; border:1px solid #bfdbfe; font-weight:bold;">
+                    <input type="text" id="new-company-keywords" placeholder="추적 키워드 쉼표 구분 (예: 엔카, 중고차, 매입)" style="flex:2; padding:12px; border-radius:8px; border:1px solid #bfdbfe;">
+                    <button onclick="addCompany()" class="btn btn-primary" style="background:#2563eb; padding:0 25px; border-radius:8px; font-weight:bold;">➕ 추가</button>
+                </div>
+
+                <div id="company-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+                    </div>
             </div>
-        </div>
 
         <div id="section-settings" class="page-section">
             <div class="header"><div><h2 style="margin:0;">⚙️ 시스템 환경 및 테마 설정</h2></div></div>
@@ -293,6 +308,142 @@
     </div>
 
     <script type="module">
+        // 🔥 1. 초기 데이터 세팅 (저장된 데이터가 없으면 기본값 세팅)
+        window.targetCompanies = JSON.parse(localStorage.getItem('oasis_companies')) || [
+            { name: '엔카닷컴', keywords: '엔카, 중고차, 직영' },
+            { name: '케이카', keywords: '케이카, Kcar, 내차사기' },
+            { name: '헤이딜러', keywords: '헤이딜러, 피알앤디, 내차팔기' },
+            { name: '쏘카', keywords: '쏘카, 카셰어링, 모빌리티' }
+        ];
+
+        // 🔥 2. 화면에 업체 카드들을 예쁘게 그려주는 함수
+window.renderCompanies = function() {
+    const list = document.getElementById('company-list');
+    const selectBox = document.getElementById('company-select');
+    
+    // 드롭다운 메뉴 실시간 동기화 (기업명 리스트를 옵션으로 변환)
+    if(selectBox) {
+        selectBox.innerHTML = window.targetCompanies.map(c => 
+            `<option value="${c.name}">${c.name}</option>`
+        ).join('');
+    }
+
+    // 카드 리스트 렌더링 (기존 로직)
+    if(!list) return;
+    if(window.targetCompanies.length === 0) {
+        list.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:20px; color:#94a3b8; font-weight:bold;">등록된 업체가 없습니다. 위에서 추가해주세요.</div>`;
+        return;
+    }
+    list.innerHTML = window.targetCompanies.map((c, index) => `
+        <div style="background:white; border:1px solid #bfdbfe; border-radius:12px; padding:15px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 6px rgba(0,0,0,0.02);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="font-weight:900; font-size:16px; color:#1e3a8a;">${c.name}</span>
+                <button onclick="deleteCompany(${index})" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fas fa-times-circle"></i></button>
+            </div>
+            <div style="font-size:12px; color:#475569; background:#f8fafc; padding:8px 10px; border-radius:8px;">
+                <span style="color:#3b82f6; font-weight:bold;"># 키워드:</span> ${c.keywords || '없음'}
+            </div>
+        </div>`).join('');
+};
+
+        // 🔥 3. 새 업체 추가 함수
+        window.addCompany = function() {
+            const name = document.getElementById('new-company-name').value.trim();
+            const keywords = document.getElementById('new-company-keywords').value.trim();
+            
+            if(!name) return alert('기업명을 입력해주세요!');
+            
+            // 데이터 추가 후 브라우저에 저장
+            window.targetCompanies.push({ name, keywords });
+            localStorage.setItem('oasis_companies', JSON.stringify(window.targetCompanies));
+            
+            // 입력창 비우기
+            document.getElementById('new-company-name').value = '';
+            document.getElementById('new-company-keywords').value = '';
+            
+            renderCompanies(); // 화면 새로고침
+        };
+
+        // 🔥 4. 업체 삭제 함수
+        window.deleteCompany = function(index) {
+            if(confirm(`[${window.targetCompanies[index].name}] 모니터링 업체를 삭제하시겠습니까?`)) {
+                window.targetCompanies.splice(index, 1);
+                localStorage.setItem('oasis_companies', JSON.stringify(window.targetCompanies));
+                renderCompanies(); // 화면 새로고침
+            }
+        };
+
+        // 페이지 로딩 시 업체 리스트 렌더링 실행
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCompanies();
+        });
+// 🔥 [고도화] 유튜브 링크만으로 제목/채널명 자동 추출
+        window.fetchYoutubeMeta = async function() {
+            const url = document.getElementById('v-url').value;
+            if(!url) return alert("유튜브 링크를 먼저 입력해주세요!");
+
+            // 유튜브 공식 정보 추출 API 호출 (CORS 허용됨)
+            const oembedUrl = `https://noembed.com/embed?url=${url}`;
+            
+            try {
+                const response = await fetch(oembedUrl);
+                const data = await response.json();
+
+                if (data.title) {
+                    document.getElementById('v-title').value = data.title;
+                    document.getElementById('v-source').value = data.author_name;
+                    alert("영상 정보를 성공적으로 가져왔습니다! 🎉");
+                } else {
+                    throw new Error("정보를 찾을 수 없습니다.");
+                }
+            } catch (error) {
+                alert("유튜브 정보를 가져오는데 실패했습니다. 주소를 확인해주세요.");
+            }
+        };
+
+        // 🔥 [고도화 기능 추가] 발행 전 데이터 긁어모아서 렌더링하기
+        window.openReportPreview = function() {
+            const vUrl = document.getElementById('v-url').value;
+            const vTitle = document.getElementById('v-title').value;
+            const vSource = document.getElementById('v-source').value;
+            const issueName = document.getElementById('issue-name').value || "미정";
+
+            let html = `<div style="max-width:800px; margin:0 auto; background:white; padding:40px; border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.05);">`;
+            html += `<h1 style="text-align:center; color:#2563eb; font-weight:900; margin-bottom:30px;">[${issueName}] OASIS 리포트 (미리보기)</h1>`;
+            
+            // 영상 체크
+            if(vUrl) {
+                html += `<div style="background:#000; color:white; padding:20px; border-radius:12px; margin-bottom:30px;">
+                            <span style="color:#ef4444; font-weight:bold; font-size:12px;">▶ YOUTUBE (${vSource})</span>
+                            <h3 style="margin:10px 0;">${vTitle}</h3>
+                            <div style="color:#94a3b8; font-size:13px;">${vUrl} (실제 프론트에서는 영상이 재생됩니다)</div>
+                         </div>`;
+            } else {
+                html += `<div style="padding:15px; background:#fef2f2; color:#ef4444; border-radius:8px; margin-bottom:30px; font-size:13px; font-weight:bold;">⚠️ 등록된 유튜브 영상이 없습니다.</div>`;
+            }
+
+            // 기사 체크
+            const renderPrevs = (arr, title) => {
+                if(!arr || arr.length===0) return '';
+                let list = `<h3 style="border-bottom:2px solid #1e293b; padding-bottom:10px; margin-top:30px;">${title}</h3>`;
+                arr.forEach(a => {
+                    list += `<div style="padding:15px; border-bottom:1px solid #e2e8f0;">
+                                <div style="font-size:12px; color:#64748b; font-weight:bold; margin-bottom:5px;">[${a.brand}] ${a.source}</div>
+                                <div style="font-weight:bold; font-size:16px;">${a.title}</div>
+                                <div style="font-size:13px; color:#475569; margin-top:5px;">${a.desc}</div>
+                             </div>`;
+                });
+                return list;
+            };
+
+            html += renderPrevs(window.draftArticles.main ? [window.draftArticles.main] : [], '🔥 MAIN HEADLINE');
+            html += renderPrevs(window.draftArticles.ai, '🤖 AI TECHNOLOGY');
+            html += renderPrevs(window.draftArticles.auto, '🚗 AUTO PLATFORM');
+            
+            html += `</div>`;
+            document.getElementById('preview-modal-content').innerHTML = html;
+            document.getElementById('preview-modal').style.display = 'flex';
+        };
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -569,6 +720,175 @@
         };
         window.exportToPDF = function() { html2pdf().set({ margin: 1, filename: `OASIS_History.pdf`, jsPDF: { format: 'letter', orientation: 'portrait' } }).from(document.getElementById('history-container')).save(); };
         window.applyTokens = function() { document.documentElement.style.setProperty('--theme-primary', document.getElementById('tk-color').value); document.documentElement.style.setProperty('--theme-radius', document.getElementById('tk-radius').value + 'px'); };
+    window.filterAndAddArticles = function(newItems) {
+    // 1. 이미 배포했던 기사들 URL (LocalStorage 활용)
+    const deployedUrls = JSON.parse(localStorage.getItem('oasis_deployed_history') || '[]');
+    
+    // 2. 현재 대기 목록에 떠 있는 기사들 URL
+    const currentUrls = [
+        ...(window.draftArticles.main ? [window.draftArticles.main.link] : []),
+        ...window.draftArticles.ai.map(a => a.link),
+        ...window.draftArticles.auto.map(a => a.link)
+    ];
+
+    let addCount = 0;
+    newItems.forEach(item => {
+        // 배포된 적 있거나 현재 목록에 있으면 제외
+        if (deployedUrls.includes(item.link) || currentUrls.includes(item.link)) return;
+
+        if (item.category === 'ai') window.draftArticles.ai.push(item);
+        else window.draftArticles.auto.push(item);
+        addCount++;
+    });
+
+    if(addCount > 0) window.renderArticleList(); // 목록 즉시 갱신
+};
+// 🔥 [고도화] 1. 중복 체크 및 기사 추가 함수
+window.filterAndAddArticles = function(newItems) {
+    // 이미 배포된 URL 히스토리 (localStorage) + 현재 목록에 있는 URL 합치기
+    const deployedHistory = JSON.parse(localStorage.getItem('oasis_deployed_history') || '[]');
+    const currentLinks = [
+        ...(window.draftArticles.main ? [window.draftArticles.main.link] : []),
+        ...window.draftArticles.ai.map(a => a.link),
+        ...window.draftArticles.auto.map(a => a.link)
+    ];
+
+    let count = 0;
+    newItems.forEach(item => {
+        // 🚫 중복 필터링 (배포된 적 있거나 현재 목록에 있으면 제외)
+        if (deployedHistory.includes(item.link) || currentLinks.includes(item.link)) return;
+
+        if (item.category === 'ai') window.draftArticles.ai.push(item);
+        else window.draftArticles.auto.push(item);
+        count++;
+    });
+
+    if (count > 0) {
+        window.renderArticleList(); // 목록 즉시 갱신
+        console.log(`${count}개의 새 기사 수집됨`);
+    }
+};
+
+// 🔥 [고도화] 2. 목록 렌더링 (썸네일 무조건 나오게 하기)
+window.renderArticleList = function() {
+    const list = document.getElementById('article-list');
+    if (!list) return;
+
+    const all = [
+        ...(window.draftArticles.main ? [window.draftArticles.main] : []),
+        ...window.draftArticles.ai,
+        ...window.draftArticles.auto
+    ];
+
+    if (all.length === 0) {
+        list.innerHTML = `<div style="text-align:center; padding:50px; color:#cbd5e1; border:2px dashed #e2e8f0; border-radius:20px;">수집된 기사가 없습니다.</div>`;
+        return;
+    }
+
+    list.innerHTML = all.map((a, index) => {
+        // 🖼️ 썸네일 체크: 없으면 자동차 기본 이미지로 방어
+        const thumbImg = a.img && a.img.includes('http') ? a.img : 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300';
+        
+        return `
+        <div class="card" style="display:flex; gap:15px; padding:15px; align-items:center; border:1px solid #e2e8f0; background:white; border-radius:15px; transition: all 0.2s hover:shadow-md;">
+            <div style="width:100px; height:70px; border-radius:10px; overflow:hidden; background:#f1f5f9; flex-shrink:0; border:1px solid #f1f5f9;">
+                <img src="${thumbImg}" style="width:100%; height:100%; object-fit:cover;">
+            </div>
+            
+            <div style="flex:1; min-width:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="font-size:11px; font-weight:900; color:#3b82f6; background:#eff6ff; padding:2px 8px; border-radius:6px;">[${a.brand}]</span>
+                    <span style="font-size:10px; color:#94a3b8; font-weight:bold;">${a.source}</span>
+                </div>
+                <div style="font-weight:900; font-size:15px; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${a.title}">${a.title}</div>
+            </div>
+
+            <div style="display:flex; gap:6px;">
+                <button onclick="setMainArticle(${index})" class="btn" style="padding:6px 12px; font-size:11px; background:#f59e0b; font-weight:bold;">메인</button>
+                <button onclick="deleteArticle(${index})" class="btn" style="padding:6px 12px; font-size:11px; background:#ef4444; font-weight:bold;">삭제</button>
+            </div>
+        </div>`;
+    }).join('');
+};
+window.updateDualPreview = function(data) {
+    const pcBox = document.getElementById('pc-preview-box');
+    const mobileBox = document.getElementById('preview-box');
+    if(!data) return;
+
+    // 썸네일 포함된 공통 레이아웃
+    const imgHtml = `<img src="${data.img}" style="width:100%; height:160px; object-fit:cover; border-radius:8px; margin-bottom:12px;">`;
+
+    if (pcBox) pcBox.innerHTML = `<div style="display:flex; gap:15px;">
+        <div style="width:40%;">${imgHtml}</div>
+        <div style="flex:1;">/* 제목 및 내용 */</div>
+    </div>`;
+
+    if (mobileBox) mobileBox.innerHTML = `${imgHtml}<div>/* 제목 및 내용 */</div>`;
+};
+// 🔥 핵심 1: 중복 기사 필터링 및 추가
+window.filterAndAddArticles = function(newItems) {
+    const deployedHistory = JSON.parse(localStorage.getItem('oasis_history') || '[]');
+    const currentLinks = [
+        ...(window.draftArticles.main ? [window.draftArticles.main.link] : []),
+        ...window.draftArticles.ai.map(a => a.link),
+        ...window.draftArticles.auto.map(a => a.link)
+    ];
+
+    let addedCount = 0;
+    newItems.forEach(item => {
+        // 이미 배포했거나 목록에 있으면 절대 추가 안 함 (중복 차단)
+        if (deployedHistory.includes(item.link) || currentLinks.includes(item.link)) return;
+
+        if (item.category === 'ai') window.draftArticles.ai.push(item);
+        else window.draftArticles.auto.push(item);
+        addedCount++;
+    });
+
+    if (addedCount > 0) window.renderArticleList(); // 목록 갱신
+};
+
+// 🔥 핵심 2: 목록에서 썸네일 보여주기
+window.renderArticleList = function() {
+    const list = document.getElementById('article-list');
+    const all = [
+        ...(window.draftArticles.main ? [window.draftArticles.main] : []),
+        ...window.draftArticles.ai,
+        ...window.draftArticles.auto
+    ];
+
+    list.innerHTML = all.map((a, index) => {
+        // 🖼️ 썸네일이 없으면 자동차 기본 이미지라도 노출 (엑박 방지)
+        const thumb = a.img && a.img.includes('http') ? a.img : 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300';
+        
+        return `
+        <div class="card" onclick="selectDraft(${index})" style="display:flex; gap:12px; padding:12px; align-items:center; border:1px solid #e2e8f0; background:white; border-radius:12px; cursor:pointer;">
+            <img src="${thumb}" style="width:70px; height:50px; object-fit:cover; border-radius:6px; flex-shrink:0;">
+            <div style="flex:1; min-width:0;">
+                <div style="font-size:10px; font-weight:bold; color:#3b82f6;">[${a.brand}]</div>
+                <div style="font-weight:bold; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#1e293b;">${a.title}</div>
+            </div>
+            <button onclick="deleteArticle(${index}); event.stopPropagation();" style="color:#ef4444; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button>
+        </div>`;
+    }).join('');
+};
+// 🔥 핵심 3: 목록에서 기사 클릭 시 미리보기(PC/모바일) 동시 업데이트
+window.selectDraft = function(index) {
+    const all = [
+        ...(window.draftArticles.main ? [window.draftArticles.main] : []),
+        ...window.draftArticles.ai,
+        ...window.draftArticles.auto
+    ];
+    const data = all[index];
+    
+    // 1. 왼쪽 입력 폼에 데이터 채우기 (그래야 편집 가능)
+    document.getElementById('a-title').value = data.title;
+    document.getElementById('a-desc').value = data.desc || '';
+    document.getElementById('a-img').value = data.img || '';
+    document.getElementById('a-insight').value = data.insight || '';
+
+    // 2. 오른쪽 미리보기(노트북/폰) 즉시 업데이트
+    window.updateDualPreview(data);
+};
     </script>
 </body>
 </html>
