@@ -2,70 +2,93 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>OASIS (오.아.시.스) - Autohands R&D Magazine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OASIS 매거진 | Autohands R&D</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f9fafb; word-break: keep-all; }
-        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .hover-scale { transition: transform 0.3s ease; }
-        .hover-scale:hover { transform: translateY(-4px); }
+        /*깔끔하고 트렌디한 폰트 (Pretendard) */
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            background-color: #f4f6f8; 
+            color: #1a1b1e;
+            word-break: keep-all;
+        }
 
+        /* 카드 호버(마우스 올렸을 때) 이펙트 */
+        .article-card { transition: all 0.2s ease-in-out; border: 1px solid #e9ecef; }
+        .article-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0,0,0,0.1); border-color: #cbd5e1; }
+        
+        /* 텍스트 줄임표 처리 */
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* 포인트 컬러 (오토핸즈 블루 + 뉴닉 엑센트) */
+        .text-brand { color: #2563eb; }
+        .bg-brand { background-color: #2563eb; }
+        .accent-tag { background: #ff6b6b; color: white; }
+
+        /* 모달 (기사 원문 뷰어) */
         #article-modal { display: none; }
         #article-modal.active { display: flex; }
     </style>
 </head>
-<body>
-    <div class="max-w-6xl mx-auto px-6 py-12">
-        <header class="flex justify-between items-end border-b-4 border-black pb-5 mb-12">
-            <div>
-                <h2 class="text-blue-600 font-bold uppercase text-sm tracking-widest mb-1">Autohands R&D Center</h2>
-                <div class="flex items-baseline gap-3">
-                    <h1 class="text-5xl font-black tracking-tighter uppercase text-blue-900">OASIS</h1>
-                    <span class="text-3xl font-bold text-gray-800 tracking-tight">오.아.시.스</span>
+<body class="antialiased selection:bg-blue-200">
+
+    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="location.reload()">
+                <div class="bg-brand text-white font-black text-xl w-10 h-10 flex items-center justify-center rounded-lg shadow-md">O</div>
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight text-gray-900 leading-none">OASIS <span class="text-brand">R&D</span></h1>
+                    <p class="text-[11px] font-bold text-gray-400 mt-1 uppercase tracking-widest">Autohands Mobility Insight</p>
                 </div>
-                <p class="text-gray-500 font-medium mt-2 tracking-tight text-lg">
-                    <i class="fas fa-quote-left text-gray-300 mr-2 text-sm"></i>오토핸즈가 아침에 시작하는 스마트 리포트 (Beta)
-                </p>
             </div>
-            <div class="text-right flex flex-col items-end gap-2">
-                <input type="date" id="date-picker" class="border-2 border-black rounded-lg px-3 py-1.5 font-bold text-sm shadow-sm cursor-pointer hover:bg-gray-50" onchange="loadReport(this.value)">
-                <p id="display-issue" class="font-bold text-lg text-blue-600"></p>
+            <div class="flex items-center gap-4 bg-gray-100 p-1.5 rounded-xl border border-gray-200">
+                <input type="date" id="date-picker" class="bg-transparent border-none text-sm font-bold text-gray-700 cursor-pointer outline-none px-2" onchange="loadReport(this.value)">
+                <span id="display-issue" class="bg-white text-brand px-3 py-1 rounded-lg text-sm font-black shadow-sm">NO. --</span>
             </div>
-        </header>
-
-        <div id="magazine-content">
-            <div class="py-20 text-center text-gray-400 font-bold">오아시스 서버에서 데이터를 가져오는 중...</div>
         </div>
-    </div>
+    </nav>
 
-    <div id="article-modal" class="fixed inset-0 bg-black/80 z-[100] items-center justify-center p-4" onclick="clickOutsideModal(event)">
-        <div class="bg-white w-[95vw] max-w-[1600px] h-[95vh] rounded-2xl overflow-hidden flex flex-col relative shadow-2xl" onclick="event.stopPropagation()">
-            <div class="p-3 border-b flex justify-between items-center bg-gray-50">
-                <span class="text-sm font-bold text-gray-600 ml-3">OASIS 원문 리포트 뷰어</span>
-                <button type="button" onclick="closeArticle()" class="w-10 h-10 flex items-center justify-center bg-gray-200 text-gray-800 rounded-lg hover:bg-black hover:text-white transition">
-                    <i class="fas fa-times text-lg"></i>
+    <main class="max-w-7xl mx-auto px-6 py-12" id="magazine-content">
+        <div class="flex flex-col items-center justify-center py-32">
+            <i class="fas fa-circle-notch fa-spin text-5xl text-brand mb-4"></i>
+            <p class="text-gray-500 font-bold text-lg">최신 인사이트 리포트를 구성하고 있습니다...</p>
+        </div>
+    </main>
+
+    <div id="article-modal" class="fixed inset-0 bg-gray-900/90 z-[100] items-center justify-center p-4 backdrop-blur-sm" onclick="clickOutsideModal(event)">
+        <div class="bg-white w-full max-w-6xl h-[90vh] rounded-2xl overflow-hidden flex flex-col shadow-2xl relative transition-all" onclick="event.stopPropagation()">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                <div class="flex items-center gap-2 text-gray-600 font-bold text-sm">
+                    <i class="fas fa-newspaper"></i> 원문 브라우저
+                </div>
+                <button type="button" onclick="closeArticle()" class="w-8 h-8 flex items-center justify-center bg-gray-200 text-gray-600 rounded-full hover:bg-gray-800 hover:text-white transition">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
             <iframe id="article-frame" src="" class="w-full h-full border-none bg-white"></iframe>
-
             <div id="fallback-ui" class="w-full h-full flex flex-col items-center justify-center bg-gray-50 hidden">
-                <i class="fas fa-shield-alt text-6xl text-gray-300 mb-6"></i>
-                <h3 class="text-2xl font-black text-gray-800 mb-2">보안 정책이 적용된 언론사입니다</h3>
-                <p class="text-gray-500 mb-8 text-center">해당 기사는 외부 뷰어를 차단하고 있습니다.<br>아래 버튼을 눌러 새 창에서 안전하게 읽어주세요.</p>
-                <button type="button" id="fallback-btn" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200">
-                    새 창에서 기사 열기 <i class="fas fa-external-link-alt ml-2"></i>
-                </button>
+                <div class="bg-white p-10 rounded-3xl shadow-sm text-center border border-gray-100 max-w-lg">
+                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl text-gray-400"><i class="fas fa-lock"></i></div>
+                    <h3 class="text-xl font-black text-gray-800 mb-3">해당 언론사는 외부 뷰어를 차단합니다</h3>
+                    <p class="text-gray-500 text-sm mb-8 line-relaxed">보안 정책(X-Frame-Options)으로 인해 새 창에서만 읽을 수 있습니다.</p>
+                    <button id="fallback-btn" class="w-full bg-gray-900 text-white py-4 rounded-xl font-bold hover:bg-brand transition shadow-lg">
+                        새 창에서 안전하게 읽기 <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        // 🔥 getDocs와 collection, query 함수를 추가로 불러옵니다
         import { getFirestore, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // 🔥 파이어베이스 설정 유지
         const firebaseConfig = {
           apiKey: "AIzaSyBjx92fZFNCi8c9nSgG6nU_eJfwq3356Uk",
           authDomain: "magazine-13f81.firebaseapp.com",
@@ -79,182 +102,169 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const blockedSites = [
-            'naver.com', 'daum.net', 'chosun.com', 'joongang.co.kr', 'donga.com',
-            'mk.co.kr', 'hankyung.com', 'sedaily.com', 'fnnews.com', 'edaily.co.kr',
-            'etnews.com', 'zdnet.co.kr', 'bloter.net', 'ddaily.co.kr', 'aitimes.com',
-            'yna.co.kr', 'newsis.com', 'news1.kr', 'ajunews.com', 'bizwatch.co.kr',
-            'motorgraph.com', 'autodiary.kr', 'carguy.kr', 'autotribune.co.kr'
-        ];
+        // 아이프레임 차단되는 언론사 목록
+        const blockedSites = ['naver.com','daum.net','chosun.com','joongang.co.kr','donga.com','mk.co.kr','hankyung.com','etnews.com','yna.co.kr','autotribune.co.kr'];
 
         window.smartOpen = function(url) {
             if(!url) return;
             const isBlocked = blockedSites.some(site => url.includes(site));
-            const modal = document.getElementById('article-modal');
-            const frame = document.getElementById('article-frame');
-            const fallback = document.getElementById('fallback-ui');
-            const fallbackBtn = document.getElementById('fallback-btn');
-
-            modal.classList.add('active');
+            document.getElementById('article-modal').classList.add('active');
             document.body.style.overflow = 'hidden';
 
             if (isBlocked) {
-                frame.style.display = 'none';
-                fallback.style.display = 'flex';
-                fallbackBtn.onclick = () => { window.open(url, '_blank'); closeArticle(); };
+                document.getElementById('article-frame').style.display = 'none';
+                document.getElementById('fallback-ui').style.display = 'flex';
+                document.getElementById('fallback-btn').onclick = () => { window.open(url, '_blank'); closeArticle(); };
             } else {
-                frame.style.display = 'block';
-                fallback.style.display = 'none';
-                frame.src = url;
+                document.getElementById('article-frame').style.display = 'block';
+                document.getElementById('fallback-ui').style.display = 'none';
+                document.getElementById('article-frame').src = url;
             }
         }
-
-        window.closeArticle = function() {
-            document.getElementById('article-modal').classList.remove('active');
-            document.getElementById('article-frame').src = "about:blank";
-            document.body.style.overflow = 'auto';
+        
+        window.closeArticle = function() { 
+            document.getElementById('article-modal').classList.remove('active'); 
+            document.getElementById('article-frame').src = "about:blank"; 
+            document.body.style.overflow = 'auto'; 
+        }
+        
+        window.clickOutsideModal = function(e) { 
+            if(e.target.id === 'article-modal') closeArticle(); 
         }
 
-        window.clickOutsideModal = function(event) {
-            if (event.target.id === 'article-modal') {
-                closeArticle();
-            }
-        }
-
+        // 🔥 무적의 유튜브 URL 변환기
         window.getYoutubeEmbed = function(url) {
-            if (!url) return '';
+            if(!url) return '';
             let id = '';
-            if (url.includes('youtu.be/')) id = url.split('youtu.be/')[1].split('?')[0];
-            else if (url.includes('v=')) id = url.split('v=')[1].split('&')[0];
-            return `https://www.youtube.com/embed/${id}`;
+            
+            if (url.includes('youtu.be/')) {
+                id = url.split('youtu.be/')[1].split('?')[0];
+            } else if (url.includes('v=')) {
+                id = url.split('v=')[1].split('&')[0];
+            } else if (url.includes('embed/')) {
+                id = url.split('embed/')[1].split('?')[0];
+            }
+            
+            if (!id) return '';
+            return `https://www.youtube.com/embed/${id}?autoplay=0&rel=0`;
         }
 
         window.loadReport = async function(date) {
             const content = document.getElementById('magazine-content');
-            content.innerHTML = `<div class="py-20 text-center text-blue-500 font-bold"><i class="fas fa-spinner fa-spin mr-2"></i>클라우드 서버에서 리포트를 불러오는 중...</div>`;
-
+            
             try {
-                // 🔥 수정 1: 날짜가 포함된 문서 ID를 싹 다 뒤져서 해당 날짜의 리포트를 찾습니다.
                 const q = query(collection(db, "magazines"));
                 const querySnapshot = await getDocs(q);
-                
                 let targetData = null;
-                querySnapshot.forEach((doc) => {
-                    // 문서 ID가 선택한 날짜(예: 2026-04-17)로 시작하면 당첨!
-                    if (doc.id.startsWith(date)) {
-                        targetData = doc.data();
-                    }
-                });
+                querySnapshot.forEach((doc) => { if (doc.id.startsWith(date)) targetData = doc.data(); });
 
                 if (!targetData) {
-                    content.innerHTML = `
-                        <div class="py-24 text-center">
-                            <i class="fas fa-newspaper text-6xl text-gray-200 mb-6"></i>
-                            <h3 class="text-2xl font-black text-gray-400 mb-2">${date} 리포트가 아직 발행되지 않았습니다.</h3>
-                            <p class="text-gray-400">우측 상단에서 다른 날짜를 선택해 주세요.</p>
-                        </div>`;
+                    content.innerHTML = `<div class="flex flex-col items-center justify-center py-32 text-center"><div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center text-4xl mb-6">🏜️</div><h2 class="text-2xl font-black text-gray-800 mb-2">${date}</h2><p class="text-gray-500 font-medium">아직 발행된 오아시스 리포트가 없습니다.</p></div>`;
                     document.getElementById('display-issue').textContent = "NO DATA";
                     return;
                 }
 
-                // 🔥 수정 2: 어드민이 issueName으로 보낸 호수 데이터를 받아옵니다.
-                document.getElementById('display-issue').textContent = targetData.issueName || '';
+                document.getElementById('display-issue').textContent = targetData.issueName || 'NEW';
 
-                // 🔥 수정 3: 하나의 큰 상자(articles)에 담긴 기사들을 프론트엔드용으로 3분할 합니다.
                 const allArticles = targetData.articles || [];
                 const mainData = allArticles.find(a => a.category === 'main');
                 const aiData = allArticles.filter(a => a.category === 'ai');
                 const autoData = allArticles.filter(a => a.category === 'auto');
 
-                const mainInsightHtml = (mainData && mainData.insight) ? `
-                    <div class="mt-6 bg-blue-50/50 p-6 rounded-2xl border-l-4 border-blue-600">
-                        <p class="text-sm font-black text-blue-900 mb-2"><i class="fas fa-lightbulb text-yellow-500 mr-2"></i>R&D 기술 고찰점</p>
-                        <p class="text-sm text-gray-800 leading-relaxed font-medium">${mainData.insight}</p>
-                    </div>` : '';
-
-                const videoHtml = targetData.video && targetData.video.url ? `
-                    <section class="mb-16 bg-black rounded-3xl overflow-hidden p-8 text-white grid grid-cols-1 lg:grid-cols-3 gap-10 items-center shadow-lg">
-                        <div class="lg:col-span-2 aspect-video rounded-2xl overflow-hidden bg-gray-900 shadow-2xl">
-                            <iframe class="w-full h-full" src="${window.getYoutubeEmbed(targetData.video.url)}" frameborder="0" allowfullscreen></iframe>
+                // 1. 영상 섹션 (🔥 KBS 차단 우회 referrerpolicy 적용 완료)
+                const embedUrl = targetData.video ? window.getYoutubeEmbed(targetData.video.url) : '';
+                const videoHtml = embedUrl ? `
+                    <section class="mb-16">
+                        <div class="bg-gray-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
+                            <div class="w-full md:w-2/3 aspect-video bg-black relative">
+                                <iframe class="absolute top-0 left-0 w-full h-full" src="${embedUrl}" frameborder="0" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                            </div>
+                            <div class="w-full md:w-1/3 p-8 flex flex-col justify-center">
+                                <span class="text-red-500 font-black text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fab fa-youtube text-lg"></i> ${targetData.video.source || 'YouTube'}</span>
+                                <h2 class="text-2xl font-bold text-white leading-snug mb-4">${targetData.video.title}</h2>
+                                <p class="text-gray-400 text-sm line-clamp-3 leading-relaxed">${targetData.video.desc}</p>
+                            </div>
                         </div>
-                        <div>
-                            <span class="text-red-500 font-bold text-sm uppercase tracking-widest"><i class="fab fa-youtube mr-2"></i>[${targetData.video.brand || ''}] ${targetData.video.source || ''}</span>
-                            <h2 class="text-3xl font-black mt-4 mb-4 leading-tight">${targetData.video.title || ''}</h2>
-                            <p class="text-gray-400 text-sm leading-relaxed">${targetData.video.desc || ''}</p>
-                        </div>
-                    </section>` : '';
+                    </section>
+                ` : '';
 
+                // 2. 메인 기사 섹션
                 const mainHtml = mainData ? `
-                    <section class="mb-24">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                            <div class="rounded-3xl overflow-hidden shadow-xl cursor-pointer hover-scale" onclick="smartOpen('${mainData.link}')">
-                                <img src="${mainData.img || 'https://via.placeholder.com/800x500'}" class="w-full h-[500px] object-cover bg-gray-200">
+                    <section class="mb-16 cursor-pointer group" onclick="smartOpen('${mainData.link}')">
+                        <div class="flex items-center gap-2 mb-6">
+                            <span class="w-2 h-8 bg-brand rounded-full"></span>
+                            <h2 class="text-2xl font-black tracking-tight text-gray-900">오늘의 딥다이브</h2>
+                        </div>
+                        <div class="bg-white rounded-3xl overflow-hidden article-card flex flex-col lg:flex-row">
+                            <div class="w-full lg:w-1/2 h-[300px] lg:h-[400px] relative overflow-hidden">
+                                <img src="${mainData.img || 'https://images.unsplash.com/photo-1504868584819-f8e8b4bffa41'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                <span class="absolute bottom-6 left-6 accent-tag px-3 py-1 rounded-md text-xs font-bold shadow-md">HOT ISSUE</span>
                             </div>
-                            <div>
-                                <span class="bg-blue-900 text-white px-3 py-1 text-xs font-bold rounded mb-4 inline-block tracking-widest">OASIS HEADLINE</span>
-                                <h2 class="text-4xl font-black leading-tight mb-6 tracking-tighter"><span class="text-blue-600">[${mainData.brand || ''}]</span> ${mainData.title || ''}</h2>
-                                <p class="text-lg text-gray-600 mb-6 leading-relaxed">${mainData.desc || ''}</p>
-                                <button type="button" onclick="smartOpen('${mainData.link}')" class="font-bold text-lg border-b-2 border-black pb-1 hover:text-blue-600 transition">본문 읽기 →</button>
-                                ${mainInsightHtml}
+                            <div class="w-full lg:w-1/2 p-10 flex flex-col justify-center bg-white">
+                                <div class="text-sm font-bold text-brand mb-3">[${mainData.brand}] ${mainData.source}</div>
+                                <h3 class="text-3xl font-black text-gray-900 leading-tight mb-5 group-hover:text-brand transition">${mainData.title}</h3>
+                                <p class="text-gray-600 text-base leading-relaxed mb-8">${mainData.desc}</p>
+                                ${mainData.insight ? `
+                                <div class="bg-blue-50/50 p-5 rounded-xl border border-blue-100">
+                                    <div class="flex items-center gap-2 text-brand font-bold text-xs mb-2"><i class="fas fa-lightbulb text-yellow-500"></i> R&D Insight</div>
+                                    <p class="text-sm text-gray-800 font-medium leading-relaxed">${mainData.insight}</p>
+                                </div>` : ''}
                             </div>
                         </div>
-                    </section>` : '';
+                    </section>
+                ` : '';
 
+                // 3. 서브 기사 렌더링 함수
+                const renderCards = (items) => {
+                    if(!items || items.length === 0) return `<div class="col-span-full py-10 text-center text-gray-400 font-medium text-sm border-2 border-dashed border-gray-200 rounded-2xl">수집된 뉴스가 없습니다.</div>`;
+                    return items.map(item => `
+                        <article class="bg-white rounded-2xl p-6 article-card cursor-pointer flex flex-col h-full" onclick="smartOpen('${item.link}')">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider">[${item.brand}]</span>
+                                <span class="text-gray-400 text-[10px] font-bold">${item.source}</span>
+                            </div>
+                            <h4 class="text-lg font-bold text-gray-900 leading-snug mb-3 group-hover:text-brand transition line-clamp-2">${item.title}</h4>
+                            <p class="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-6 flex-grow">${item.desc}</p>
+                            ${item.insight ? `
+                            <div class="mt-auto bg-gray-50 p-4 rounded-xl border-t-2 border-brand/20">
+                                <p class="text-[11px] font-bold text-brand mb-1 flex items-center gap-1"><i class="fas fa-check-circle"></i> Insight</p>
+                                <p class="text-xs text-gray-700 font-medium line-clamp-2">${item.insight}</p>
+                            </div>` : ''}
+                        </article>
+                    `).join('');
+                };
+
+                // 최종 조합
                 content.innerHTML = `
                     ${videoHtml}
                     ${mainHtml}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-16">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mt-10">
                         <div>
-                            <h3 class="text-3xl font-black mb-8 border-b-4 border-black pb-3 uppercase tracking-tighter">AI Technology</h3>
-                            <div id="ai-list" class="space-y-6"></div>
+                            <div class="flex items-center gap-2 mb-6 border-b-2 border-gray-800 pb-3">
+                                <h2 class="text-xl font-black text-gray-900 tracking-tight">AI TECH 브리핑</h2>
+                                <span class="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">${aiData.length}</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">${renderCards(aiData)}</div>
                         </div>
                         <div>
-                            <h3 class="text-3xl font-black mb-8 border-b-4 border-black pb-3 uppercase tracking-tighter">Auto Platform</h3>
-                            <div id="auto-list" class="space-y-6"></div>
+                            <div class="flex items-center gap-2 mb-6 border-b-2 border-gray-800 pb-3">
+                                <h2 class="text-xl font-black text-gray-900 tracking-tight">AUTO PLATFORM 동향</h2>
+                                <span class="bg-gray-800 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">${autoData.length}</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">${renderCards(autoData)}</div>
                         </div>
                     </div>
                 `;
 
-                const renderItems = (items, id) => {
-                    if(!items || items.length === 0) return;
-                    document.getElementById(id).innerHTML = items.map(item => `
-                        <div class="group bg-white rounded-3xl shadow-sm border border-gray-100 p-6 transition hover:shadow-lg">
-                            <div class="flex gap-6 cursor-pointer items-center" onclick="smartOpen('${item.link}')">
-                                <img src="${item.img || 'https://via.placeholder.com/150'}" class="w-28 h-28 rounded-2xl object-cover bg-gray-200 flex-shrink-0 shadow-sm" onerror="this.src='https://via.placeholder.com/150'">
-                                <div class="flex flex-col justify-center flex-grow">
-                                    <span class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                                        ${item.source || ''}
-                                    </span>
-                                    <h4 class="font-bold text-lg group-hover:text-blue-600 leading-snug transition tracking-tight">
-                                        <span class="text-blue-600 mr-1">[${item.brand || ''}]</span>${item.title || ''}
-                                    </h4>
-                                    <p class="text-sm text-gray-500 line-clamp-2 mt-2">${item.desc || ''}</p>
-                                </div>
-                            </div>
-                            ${item.insight ? `
-                            <div class="mt-5 bg-gray-50 p-4 rounded-2xl border-l-4 border-blue-400">
-                                <p class="text-xs font-bold text-blue-800 mb-1">💡 R&D 기술 고찰점</p>
-                                <p class="text-xs text-gray-700 leading-relaxed font-medium">${item.insight}</p>
-                            </div>` : ''}
-                        </div>`).join('');
-                };
-
-                renderItems(aiData, 'ai-list');
-                renderItems(autoData, 'auto-list');
-
             } catch (error) {
-                console.error("Firebase 통신 에러:", error);
-                content.innerHTML = `<div class="py-20 text-center text-red-500 font-bold">네트워크 통신 중 오류가 발생했습니다. 개발자 도구를 확인해 주세요.</div>`;
+                content.innerHTML = `<div class="py-20 text-center text-red-500 font-bold bg-red-50 rounded-3xl"><i class="fas fa-exclamation-triangle text-3xl mb-3"></i><br>데이터를 불러오는 중 오류가 발생했습니다.</div>`;
             }
         }
 
         window.onload = () => {
             const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const today = `${year}-${month}-${day}`;
-
+            const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             document.getElementById('date-picker').value = today;
             loadReport(today);
         };
