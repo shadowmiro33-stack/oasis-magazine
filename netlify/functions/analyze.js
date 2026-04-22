@@ -1,5 +1,5 @@
 exports.handler = async function(event, context) {
-    // 1. CORS 처리 (프론트와 백엔드 통신 허용)
+    // 1. CORS 처리
     const headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type',
@@ -11,15 +11,15 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        // 2. 프론트엔드(admin.html)에서 보낸 기사 URL과 API 키 수신
+        // 2. 파라미터 및 키 수신
         const body = JSON.parse(event.body);
         const targetUrl = body.url;
         const apiKey = body.apiKey || process.env.GEMINI_API_KEY;
 
         if (!targetUrl) throw new Error("분석할 기사 URL이 전달되지 않았습니다.");
-        if (!apiKey) throw new Error("Gemini API Key가 없습니다. 시스템 관리 탭에서 키를 저장해주세요.");
+        if (!apiKey) throw new Error("Gemini API Key가 없습니다. 시스템 관리 탭에서 키를 저장하거나 넷리파이 환경변수에 등록해주세요.");
 
-        // 3. 기사 원문 스크래핑 (언론사의 Bot 차단을 막기 위해 크롬 브라우저인 척 위장)
+        // 3. 기사 스크래핑 (우회)
         const htmlResponse = await fetch(targetUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -30,14 +30,14 @@ exports.handler = async function(event, context) {
         
         const htmlText = await htmlResponse.text();
         
-        // 4. HTML에서 불필요한 태그 날리고 순수 텍스트만 추출 (토큰 절약을 위해 5000자 컷)
+        // 4. 본문 추출 및 정제
         const bodyText = htmlText.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '')
                                  .replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, '')
                                  .replace(/<[^>]+>/g, ' ')
                                  .replace(/\s+/g, ' ')
                                  .substring(0, 5000);
 
-        // 5. R&D 맞춤형 Gemini 프롬프트 작성
+        // 5. 프롬프트
         const prompt = `
         다음은 모빌리티/경제 관련 뉴스 기사의 내용입니다. 이 내용을 분석하여 반드시 JSON 형식으로만 응답해주세요.
         
@@ -53,8 +53,8 @@ exports.handler = async function(event, context) {
         ${bodyText}
         `;
 
-        // 6. Gemini 1.5 Flash 모델 호출 (REST API 방식)
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        // 6. 🔥 오류 수정: Gemini 2.5 Flash 모델로 엔드포인트 정상화
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
         const geminiRes = await fetch(geminiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -72,7 +72,7 @@ exports.handler = async function(event, context) {
         const geminiData = await geminiRes.json();
         const resultText = geminiData.candidates[0].content.parts[0].text;
         
-        // 7. 결과 파싱 후 프론트엔드로 반환
+        // 7. 반환
         const resultJson = JSON.parse(resultText);
 
         return {
@@ -83,7 +83,6 @@ exports.handler = async function(event, context) {
 
     } catch (error) {
         console.error("AI 분석 백엔드 에러:", error);
-        // 에러 발생 시 프론트엔드로 에러 메시지를 예쁘게 포장해서 넘겨줌 (500 에러 처리)
         return {
             statusCode: 500,
             headers,
