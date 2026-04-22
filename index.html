@@ -11,16 +11,19 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
+
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         
         body { font-family: 'Pretendard', sans-serif; background-color: #f4f6f8; color: #1a1b1e; word-break: keep-all; }
         
-        /* 카드 호버(마우스 오버) 이펙트 */
         .article-card { transition: all 0.2s ease-in-out; border: 1px solid #e9ecef; }
         .article-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0,0,0,0.1); border-color: #cbd5e1; }
         
-        /* 텍스트 줄임표 처리 (CSS 표준 적용) */
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
@@ -33,6 +36,10 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 🔥 커스텀 캘린더 테마 미세 조정 (오토핸즈 톤앤매너) */
+        .flatpickr-calendar { font-family: 'Pretendard', sans-serif !important; border-radius: 12px !important; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1) !important; border: 1px solid #e2e8f0 !important; }
+        .flatpickr-day.selected { background: #2563eb !important; border-color: #2563eb !important; }
     </style>
 </head>
 <body class="antialiased selection:bg-blue-200">
@@ -49,7 +56,7 @@
             <div class="flex items-center gap-4">
                 <div id="dummy-badge" class="hidden bg-red-100 text-red-600 font-bold text-[11px] px-2 py-1 rounded">미리보기 모드</div>
                 <div class="flex items-center gap-2 bg-gray-100 p-1.5 rounded-xl border border-gray-200">
-                    <input type="date" id="date-picker" class="bg-transparent border-none text-sm font-bold text-gray-700 cursor-pointer outline-none px-2" onchange="loadReport(this.value)">
+                    <input type="text" id="date-picker" class="bg-transparent border-none text-[14px] font-black text-gray-700 cursor-pointer outline-none px-2 w-[110px] text-center" readonly>
                     <span id="display-issue" class="bg-white text-brand px-3 py-1 rounded-lg text-sm font-black shadow-sm">NO. --</span>
                 </div>
                 <button onclick="openSubModal()" class="bg-gray-900 text-white text-[13px] font-black px-4 py-2.5 rounded-xl hover:bg-brand transition shadow-sm hidden md:flex items-center gap-2">
@@ -57,12 +64,29 @@
                 </button>
             </div>
         </div>
-        <div class="max-w-7xl mx-auto px-6 h-12 flex items-center gap-6 text-[15px] font-bold text-gray-400 overflow-x-auto hide-scrollbar">
-            <button onclick="renderMainDashboard()" class="menu-tab text-gray-900 border-b-2 border-gray-900 h-full flex items-center">전체보기</button>
-            <button onclick="showCategoryList('autohands', '🏢 오토핸즈 NOW')" class="menu-tab hover:text-gray-900 h-full flex items-center transition">오토핸즈 소식</button>
-            <button onclick="showCategoryList('auto', '🚗 AUTO PLATFORM 동향')" class="menu-tab hover:text-gray-900 h-full flex items-center transition">오토 플랫폼</button>
-            <button onclick="showCategoryList('ai', '🤖 AI/테크 트렌드')" class="menu-tab hover:text-gray-900 h-full flex items-center transition">AI/테크</button>
-            <button onclick="showCategoryList('security', '🛡️ 정보 보안 및 IT 이슈')" class="menu-tab hover:text-gray-900 h-full flex items-center transition">정보 보안</button>
+        
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center gap-2 text-[13px] font-bold text-gray-500 overflow-x-auto hide-scrollbar whitespace-nowrap">
+            <button onclick="renderMainDashboard()" class="menu-tab bg-[#1e293b] text-white px-5 py-2.5 rounded-full flex items-center gap-2 transition shadow-md">
+                <i class="fas fa-home text-[11px]"></i> OVERVIEW
+            </button>
+            
+            <div class="h-4 w-[1px] bg-gray-200 mx-2"></div>
+            
+            <button onclick="showCategoryList('macro', '🌐 MACRO VIEW (거시경제)')" class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
+                MACRO VIEW <span class="text-[10px] font-medium ml-1.5 text-gray-400">경제</span>
+            </button>
+            <button onclick="showCategoryList('platform', '🛒 BIZ & PLATFORM (비즈니스)')" class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
+                BIZ & PLATFORM <span class="text-[10px] font-medium ml-1.5 text-gray-400">비즈</span>
+            </button>
+            <button onclick="showCategoryList('auto', '🚗 AUTO TRACK (모빌리티)')" class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
+                AUTO TRACK <span class="text-[10px] font-medium ml-1.5 text-gray-400">산업</span>
+            </button>
+            <button onclick="showCategoryList('ai', '🤖 AI STRATEGY (인공지능)')" class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
+                AI STRATEGY <span class="text-[10px] font-medium ml-1.5 text-blue-500">AI</span>
+            </button>
+            <button onclick="showCategoryList('security', '🛡️ INFO-SECURE (정보보안)')" class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
+                INFO-SECURE <span class="text-[10px] font-medium ml-1.5 text-gray-400">보안</span>
+            </button>
         </div>
     </nav>
 
@@ -73,13 +97,11 @@
         </div>
     </main>
 
-<section class="max-w-7xl mx-auto px-6 mb-24 mt-24" id="subscribe-banner-section">
+    <section class="max-w-7xl mx-auto px-6 mb-24 mt-24" id="subscribe-banner-section">
         <div class="relative bg-[#2563eb] rounded-3xl flex flex-col md:flex-row items-center justify-between p-8 md:p-12 shadow-2xl mt-16 md:mt-0">
-            
             <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 md:translate-x-0 md:left-8 w-56 md:w-72 z-10" style="margin-bottom: -10px;">
                 <img src="./bear.png" alt="OASIS Bear" class="w-full h-auto drop-shadow-2xl scale-125 md:scale-150 origin-bottom hover:scale-[1.35] md:hover:scale-[1.6] transition-transform duration-500">
             </div>
-
             <div class="z-20 w-full md:pl-80 text-center md:text-left mt-48 md:mt-0 mb-8 md:mb-0">
                 <h2 class="text-2xl md:text-[28px] font-black text-white leading-snug mb-3 tracking-tight drop-shadow-md">
                     뉴스... 어떤 것부터 봐야 할지 막막한가요?
@@ -88,7 +110,6 @@
                     쏟아지는 뉴스 속, R&D에 꼭 필요한 모빌리티 소식만 정리해 드려요.
                 </p>
             </div>
-
             <div class="z-20 flex-shrink-0">
                 <button onclick="openSubModal()" class="bg-gray-900 text-white font-black text-[16px] px-8 py-4 rounded-xl hover:bg-black hover:-translate-y-1 transition-all shadow-xl whitespace-nowrap flex items-center gap-2 border border-gray-700">
                     이메일로 뉴스 받기
@@ -108,10 +129,12 @@
                     <div class="w-16 h-16 bg-blue-50 rounded-full border border-blue-100 overflow-hidden flex-shrink-0 pt-2"><img src="./bear.png" class="w-full h-full object-contain"></div>
                     <div><p class="text-brand text-[12px] font-black tracking-wider uppercase mb-1">Step 1</p><p class="text-xl font-black text-gray-900 tracking-tight">어떤 인사이트를 중점적으로 받아보시겠어요?</p></div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
-                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🚗</div><div class="font-black text-gray-900 text-sm">오토 플랫폼</div></label>
-                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🤖</div><div class="font-black text-gray-900 text-sm">AI / 테크</div></label>
-                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🛡️</div><div class="font-black text-gray-900 text-sm">정보 보안</div></label>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
+                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🌐</div><div class="font-black text-gray-900 text-sm">경제</div></label>
+                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🛒</div><div class="font-black text-gray-900 text-sm">비즈니스</div></label>
+                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🚗</div><div class="font-black text-gray-900 text-sm">모빌리티</div></label>
+                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🤖</div><div class="font-black text-gray-900 text-sm">인공지능</div></label>
+                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🛡️</div><div class="font-black text-gray-900 text-sm">정보보안</div></label>
                 </div>
                 <div class="mb-8">
                     <p class="text-brand text-[12px] font-black tracking-wider uppercase mb-2">Step 2</p>
@@ -143,12 +166,13 @@
     <footer class="bg-gray-100 border-t border-gray-200 py-16">
         <div class="max-w-7xl mx-auto px-6 text-center">
             <h2 class="text-2xl font-black text-gray-400 mb-2">AUTOHANDS R&D</h2>
-            <p class="text-sm text-gray-400 font-bold">Data-driven Mobility Platform<br>본 보고서는 기업부설연구소에서 관리 중입니다..</p>
+            <p class="text-sm text-gray-400 font-bold">Data-driven Mobility Platform<br>본 보고서는 기업부설연구소에서 관리 중입니다.</p>
         </div>
     </footer>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, query, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, query, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyBjx92fZFNCi8c9nSgG6nU_eJfwq3356Uk",
@@ -162,7 +186,6 @@
         const blockedSites = ['naver.com','daum.net','chosun.com','joongang.co.kr','donga.com','mk.co.kr','hankyung.com','etnews.com','yna.co.kr','autotribune.co.kr'];
         window.currentArticles = []; window.currentVideo = null; window.currentMain = null; window.currentCampaign = null;
 
-        // 구독 모달 처리
         window.openSubModal = function() { document.getElementById('subscribe-modal').classList.add('active'); document.body.style.overflow = 'hidden'; }
         window.closeSubModal = function() { document.getElementById('subscribe-modal').classList.remove('active'); document.body.style.overflow = 'auto'; }
         window.submitSubscribe = async function() {
@@ -176,7 +199,6 @@
             } catch (error) { alert("구독 에러: " + error.message); }
         }
 
-        // 보안 뷰어 처리
         window.smartOpen = function(url) {
             if(!url || url === '#') return alert("해당 컨텐츠는 원문이 존재하지 않습니다.");
             document.getElementById('article-modal').classList.add('active'); document.body.style.overflow = 'hidden';
@@ -194,46 +216,46 @@
             if (url.includes('youtu.be/')) id = url.split('youtu.be/')[1].split('?')[0]; else if (url.includes('v=')) id = url.split('v=')[1].split('&')[0]; else if (url.includes('embed/')) id = url.split('embed/')[1].split('?')[0];
             return id ? `https://www.youtube.com/embed/${id}?autoplay=0&rel=0` : '';
         }
-const getDummyData = () => ({
-            /* 🔥 원본 코드에서 절대 바뀌면 안 되는 부분: 기존 미리보기 메타 데이터 유지 */
+
+        const getDummyData = () => ({
             issueName: "Preview",
             video: { url: "https://www.youtube.com/watch?v=kY2bE5XU418", title: "AI 모빌리티 트렌드", desc: "자율주행과 AI 융합 인사이트", source: "오토핸즈" },
-            
-            /* 🔥 고도화 기능: 미리보기 모드에서도 캠페인 배너가 노출되도록 더미 데이터 추가 */
             campaign: { securityImg: "./bear.png" }, 
-            
             articles: [
-                /* 🔥 원본 코드에서 절대 바뀌면 안 되는 부분: 기존 기사 더미 데이터 유지 */
                 { category: 'main', title: "글로벌 중고차 수출 플랫폼 사업 고도화", desc: "B2B 수출 시장의 투명성을 높일 프로젝트.", insight: "스테이블 코인 연동 검토.", brand: "오토핸즈", source: "R&D 기획실", img: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800", link: "#" },
-                { category: 'autohands', title: "카멜레온 프로젝트 워크샵 성료", desc: "해외 딜러망 연계 워크샵 진행.", brand: "오토핸즈", source: "사내소식", img: "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=400", link: "#", isImportant: true },
+                { category: 'platform', title: "카멜레온 프로젝트 워크샵 성료", desc: "해외 딜러망 연계 워크샵 진행.", brand: "오토핸즈", source: "사내소식", img: "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=400", link: "#", isImportant: true },
                 { category: 'auto', title: "비대면 거래 누적 이용자 돌파", desc: "중고차 시장 디지털 전환 가속화 동향.", brand: "엔카", source: "모빌리티뉴스", img: "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400", link: "#", isImportant: true },
+                { category: 'macro', title: "금리 인하에 따른 자동차 소비 심리 분석", desc: "글로벌 거시경제 지표 및 전망.", brand: "경제", source: "매크로리포트", img: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400", link: "#" },
                 { category: 'ai', title: "AI 에이전트 경쟁 격화", desc: "자율형 AI 에이전트 동향.", brand: "AI", source: "테크", img: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=400", link: "#" },
                 { category: 'security', title: "망분리 완화 제로 트러스트 프레임워크", desc: "클라우드 활용을 위한 필수 보안 요소.", brand: "보안", source: "보안뉴스", img: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400", link: "#" }
             ]
         });
-        // 네비게이션 탭 CSS 업데이트
+
         const updateTabUI = (activeText) => {
             document.querySelectorAll('.menu-tab').forEach(tab => {
-                if (tab.innerText.includes(activeText) || (activeText === '전체보기' && tab.innerText === '전체보기')) {
-                    tab.classList.add('text-gray-900', 'border-b-2', 'border-gray-900'); tab.classList.remove('text-gray-400');
+                const isOverview = activeText === '전체보기' && tab.innerText.includes('OVERVIEW');
+                const isMatch = tab.innerText.includes(activeText);
+
+                if (isOverview || isMatch) {
+                    tab.classList.add('bg-[#1e293b]', 'text-white', 'shadow-md');
+                    tab.classList.remove('text-gray-500', 'hover:bg-gray-100', 'border', 'border-transparent');
                 } else {
-                    tab.classList.remove('text-gray-900', 'border-b-2', 'border-gray-900'); tab.classList.add('text-gray-400');
+                    tab.classList.remove('bg-[#1e293b]', 'text-white', 'shadow-md');
+                    tab.classList.add('text-gray-500', 'hover:bg-gray-100', 'border', 'border-transparent');
                 }
             });
         };
 
-const generateCardHtml = (item) => {
-            /* 🔥 고도화 기능: 보안 캠페인 배너 전용 렌더링 (사용자 요청 '광고' 라벨 뱃지 추가) */
+        const generateCardHtml = (item) => {
             if (item.isCampaign) {
                 return `
-                    <article class="bg-white rounded-2xl article-card cursor-pointer flex flex-col h-full min-h-[250px] relative overflow-hidden border border-gray-200" onclick="smartOpen('#')">
+                    <div class="bg-white rounded-2xl flex flex-col h-full min-h-[250px] relative overflow-hidden border border-gray-200 shadow-sm">
                         <img src="${item.img}" class="w-full h-full object-cover absolute inset-0">
                         <div class="absolute top-4 left-4 bg-black/60 text-white text-[11px] font-black px-2 py-1 rounded-md tracking-widest z-10 backdrop-blur-sm shadow-sm border border-white/20">캠페인</div>
-                    </article>
+                    </div>
                 `;
             }
             
-            /* 🔥 원본 코드에서 절대 바뀌면 안 되는 부분: 일반 기사 렌더링 로직 */
             const thumb = item.img && item.img.includes('http') ? item.img : 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400';
             const badgeHtml = item.isImportant ? `<span class="accent-tag px-2 py-0.5 rounded text-[10px] font-black tracking-widest mr-2 shadow-sm animate-pulse">HOT</span>` : '';
             
@@ -265,6 +287,7 @@ const generateCardHtml = (item) => {
         window.renderMainDashboard = function() {
             const content = document.getElementById('magazine-content');
             document.getElementById('subscribe-banner-section').style.display = 'block';
+            updateTabUI('전체보기');
 
             const getCat = (cat) => window.currentArticles.filter(a => a.category === cat && !a.isCampaign);
             
@@ -291,7 +314,7 @@ const generateCardHtml = (item) => {
             const mainHtml = window.currentMain ? `
                 <section class="mb-16 cursor-pointer group" onclick="smartOpen('${window.currentMain.link}')">
                     <div class="flex items-center gap-2 mb-6">
-                        <span class="w-2 h-8 bg-brand rounded-full"></span><h2 class="text-2xl font-black tracking-tight text-gray-900">오늘의 딥다이브</h2>
+                        <span class="w-2 h-8 bg-brand rounded-full"></span><h2 class="text-2xl font-black tracking-tight text-gray-900">오늘의 1면 딥다이브</h2>
                     </div>
                     <div class="bg-white rounded-3xl overflow-hidden article-card flex flex-col lg:flex-row">
                         <div class="w-full lg:w-1/2 h-[300px] lg:h-[400px] relative overflow-hidden">
@@ -334,91 +357,104 @@ const generateCardHtml = (item) => {
             };
 
             let finalHtml = videoHtml + mainHtml;
-            finalHtml += renderGridWithMore(getCat('autohands'), '🏢 오토핸즈 NOW', 'autohands');
-            finalHtml += renderGridWithMore(getCat('auto'), '🚗 AUTO PLATFORM 동향', 'auto');
-            finalHtml += renderGridWithMore(getCat('ai'), '🤖 AI/테크 트렌드', 'ai');
-            finalHtml += renderGridWithMore(securityItems, '🛡️ 정보 보안 및 IT 이슈', 'security');
+            finalHtml += renderGridWithMore(getCat('macro'), '🌐 MACRO VIEW', 'macro');
+            finalHtml += renderGridWithMore(getCat('platform'), '🛒 BIZ & PLATFORM', 'platform');
+            finalHtml += renderGridWithMore(getCat('auto'), '🚗 AUTO TRACK', 'auto');
+            finalHtml += renderGridWithMore(getCat('ai'), '🤖 AI STRATEGY', 'ai');
+            finalHtml += renderGridWithMore(securityItems, '🛡️ INFO-SECURE', 'security');
             content.innerHTML = finalHtml;
         };
 
-        window.showCategoryList = function(categoryKey, title) {
+// 🔥 고도화 기능: 특정 날짜가 아닌 DB 전체 히스토리에서 해당 카테고리 기사 모아보기
+        window.showCategoryList = async function(categoryKey, title) {
             document.getElementById('subscribe-banner-section').style.display = 'none';
-            updateTabUI(title.replace(/[^가-힣a-zA-Z\s]/g, '').trim().split(' ')[0]);
+            const tabName = title.split(' (')[0].split(' ').slice(1).join(' '); 
+            updateTabUI(tabName);
             
             const content = document.getElementById('magazine-content');
-            let items = window.currentArticles.filter(a => a.category === categoryKey);
             
-            if(categoryKey === 'security' && window.currentCampaign && window.currentCampaign.securityImg) {
-                items.unshift({ isCampaign: true, img: window.currentCampaign.securityImg, link: '#' });
-            }
-
-            let html = `
-                <div class="mb-12 flex justify-between items-end pb-4 border-b-2 border-gray-800">
-                    <div class="flex items-center gap-4">
-                        <button onclick="renderMainDashboard()" class="w-10 h-10 bg-white shadow-sm border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-900 hover:text-white transition cursor-pointer text-lg"><i class="fas fa-arrow-left"></i></button>
-                        <h2 class="text-[28px] font-black text-gray-900">${title}</h2>
-                    </div>
-                    <span class="text-brand bg-blue-50 px-3 py-1 rounded-md font-bold text-[14px]">총 ${items.length}건</span>
+            // 1. 로딩 스피너 노출 (전체 데이터를 불러오기 때문)
+            content.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-32">
+                    <i class="fas fa-circle-notch fa-spin text-5xl text-brand mb-4"></i>
+                    <p class="text-gray-500 font-bold text-lg">전체 발행 히스토리에서 기사를 수집하고 있습니다...</p>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">`;
-            
-            items.forEach(item => { html += generateCardHtml(item); });
-            if(items.length === 0) html += `<div class="col-span-full py-20 text-center text-gray-400 font-bold">등록된 기사가 없습니다.</div>`;
-            
-            content.innerHTML = html + `</div>`; 
-            window.scrollTo({ top: 0, behavior: 'smooth' }); 
+            `;
+
+            try {
+                // 2. 파이어베이스의 모든 매거진(리포트) 문서를 가져옵니다.
+                const q = query(collection(db, "magazines"));
+                const querySnapshot = await getDocs(q);
+                
+                let allItems = [];
+                
+                // 3. 모든 호수(문서)를 돌면서 선택한 카테고리 기사만 쏙쏙 뽑아냅니다.
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const articles = data.articles || [];
+                    const issueDate = doc.id; // 날짜 기준 정렬을 위해 문서 ID 저장
+                    
+                    const filtered = articles.filter(a => a.category === categoryKey);
+                    filtered.forEach(item => {
+                        item.issueDate = issueDate; 
+                        allItems.push(item);
+                    });
+                });
+
+                // 4. 최신 기사가 위로 오도록 발행일(문서 ID) 기준 내림차순 정렬
+                allItems.sort((a, b) => b.issueDate.localeCompare(a.issueDate));
+
+                // 5. 정보 보안 카테고리일 경우 가장 위에 캠페인 배너 삽입
+                if(categoryKey === 'security' && window.currentCampaign && window.currentCampaign.securityImg) {
+                    allItems.unshift({ isCampaign: true, img: window.currentCampaign.securityImg, link: '#' });
+                }
+
+                // 6. 렌더링 시작
+                let html = `
+                    <div class="mb-12 flex justify-between items-end pb-4 border-b-2 border-gray-800">
+                        <div class="flex items-center gap-4">
+                            <button onclick="renderMainDashboard()" class="w-10 h-10 bg-white shadow-sm border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-900 hover:text-white transition cursor-pointer text-lg"><i class="fas fa-arrow-left"></i></button>
+                            <div>
+                                <h2 class="text-[28px] font-black text-gray-900 leading-tight">${title}</h2>
+                                <p class="text-gray-500 font-bold text-sm mt-1">지금까지 발행된 전체 아카이브</p>
+                            </div>
+                        </div>
+                        <span class="text-brand bg-blue-50 px-3 py-1 rounded-md font-bold text-[14px]">총 ${allItems.length}건</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">`;
+                
+                allItems.forEach(item => { html += generateCardHtml(item); });
+                
+                if(allItems.length === 0) {
+                    html += `<div class="col-span-full py-20 text-center text-gray-400 font-bold">등록된 기사가 없습니다.</div>`;
+                }
+                
+                content.innerHTML = html + `</div>`; 
+                window.scrollTo({ top: 0, behavior: 'smooth' }); 
+
+            } catch (error) {
+                console.error("전체 기사 로드 실패:", error);
+                content.innerHTML = `<div class="py-20 text-center text-gray-500 font-bold">기사를 불러오는 중 오류가 발생했습니다.</div>`;
+            }
         };
+
+        // 🔥 고도화 기능: 브라우저 기본 달력을 대체하고, Flatpickr로 주말 차단 및 하단 버튼 삭제
+        window.lastValidDate = "";
 
         window.loadReport = async function(date) {
             const content = document.getElementById('magazine-content');
             try {
-                const q = query(collection(db, "magazines")); 
-                const querySnapshot = await getDocs(q); 
-                let targetData = null;
-                
-                querySnapshot.forEach((doc) => { if (doc.id.startsWith(date)) targetData = doc.data(); });
-                
-                if (!targetData) { 
-                    targetData = getDummyData(); 
-                    document.getElementById('dummy-badge').classList.remove('hidden'); 
-                } else { 
-                    document.getElementById('dummy-badge').classList.add('hidden'); 
-                }
-
-                document.getElementById('display-issue').textContent = targetData.issueName;
-                window.currentArticles = targetData.articles || [];
-                window.currentMain = window.currentArticles.find(a => a.category === 'main');
-                window.currentVideo = targetData.video;
-                window.currentCampaign = targetData.campaign;
-
-                renderMainDashboard();
-            } catch (error) { 
-                content.innerHTML = `<div class="py-20 text-center text-gray-500 font-bold bg-gray-50 rounded-2xl">데이터를 불러오는 중 오류가 발생했습니다.</div>`; 
-            }
-        }
-
-        window.onload = () => {
-            const now = new Date(); 
-            const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            document.getElementById('date-picker').value = today; 
-            loadReport(today);
-        };
-        /* 🔥 원본 코드에서 절대 바뀌면 안 되는 부분: 파이어베이스 DB 데이터 패치 기본 틀 */
-        window.loadMagazineData = async function(targetDate) {
-            try {
-                let docRef = doc(db, "magazines", targetDate);
+                let docRef = doc(db, "magazines", date);
                 let snap = await getDoc(docRef);
-
-                /* 🔥 고도화 기능: 오늘 날짜 데이터가 없으면 '가장 최근 배포된 실제 리포트'를 가져와서 스테이징 서버처럼 노출 */
+                
                 if (!snap.exists()) {
-                    console.log("선택한 날짜의 데이터가 없습니다. DB에서 가장 최근 데이터를 탐색합니다.");
-                    // 파이어베이스 인덱스 에러를 방지하기 위해 전체를 가져와 문서 ID(날짜) 기준 내림차순 정렬
+                    console.log("선택한 날짜의 데이터가 없어 가장 최근 데이터를 탐색합니다.");
                     const q = query(collection(db, "magazines"));
                     const recentSnap = await getDocs(q);
                     
                     if (!recentSnap.empty) {
                         const sortedDocs = recentSnap.docs.sort((a, b) => b.id.localeCompare(a.id));
-                        snap = sortedDocs[0]; // 가장 최신 데이터로 대체
+                        snap = sortedDocs[0]; 
                     }
                 }
 
@@ -428,20 +464,60 @@ const generateCardHtml = (item) => {
                     window.currentMain = window.currentArticles.find(a => a.category === 'main');
                     window.currentVideo = data.video || null;
                     window.currentCampaign = data.campaign || null;
-                } else {
-                    // DB가 아예 최초 상태(텅 빈 상태)일 때만 더미 데이터 노출
-                    const dummy = getDummyData();
+                    
+                    if(document.getElementById('dummy-badge')) document.getElementById('dummy-badge').classList.add('hidden'); 
+                    if(document.getElementById('display-issue')) document.getElementById('display-issue').textContent = data.issueName || snap.id;
+                } else { 
+                    console.log("DB에 리포트가 없어 기본 더미 데이터를 노출합니다.");
+                    const dummy = getDummyData(); 
                     window.currentArticles = dummy.articles;
                     window.currentMain = dummy.articles.find(a => a.category === 'main');
                     window.currentVideo = dummy.video;
                     window.currentCampaign = dummy.campaign;
+                    
+                    if(document.getElementById('dummy-badge')) document.getElementById('dummy-badge').classList.remove('hidden'); 
                 }
 
                 window.renderMainDashboard();
-            } catch (error) {
+            } catch (error) { 
                 console.error("데이터 로드 실패:", error);
+                if(content) content.innerHTML = `<div class="py-20 text-center text-gray-500 font-bold">데이터 로딩 중 오류가 발생했습니다.</div>`; 
             }
         };
+
+        window.initDashboard = function() {
+            const now = new Date();
+            
+            if (now.getDay() === 0) now.setDate(now.getDate() - 2); 
+            else if (now.getDay() === 6) now.setDate(now.getDate() - 1); 
+
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            window.lastValidDate = todayStr;
+
+            const pickerEl = document.getElementById('date-picker');
+            
+            if(pickerEl) {
+                // 🔥 Flatpickr 적용: 네이티브 달력을 버리고 커스텀 달력으로 완벽 제어
+                flatpickr(pickerEl, {
+                    locale: "ko",              // 한글 UI
+                    defaultDate: todayStr,     // 기본값
+                    maxDate: "today",          // 미래 날짜 딤(Dim) 처리
+                    disable: [
+                        function(date) {
+                            // 토/일요일 딤(Dim) 처리 및 선택 불가
+                            return (date.getDay() === 0 || date.getDay() === 6);
+                        }
+                    ],
+                    onChange: function(selectedDates, dateStr, instance) {
+                        window.lastValidDate = dateStr;
+                        window.loadReport(dateStr);
+                    }
+                });
+            }
+            window.loadReport(todayStr);
+        };
+
+        window.initDashboard();
     </script>
 </body>
 </html>
