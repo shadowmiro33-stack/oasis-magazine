@@ -170,35 +170,31 @@
         </div>
     </footer>
 
-    <script type="module">
+<script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, query, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, setDoc, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
-          apiKey: "AIzaSyBjx92fZFNCi8c9nSgG6nU_eJfwq3356Uk",
-          authDomain: "magazine-13f81.firebaseapp.com",
-          projectId: "magazine-13f81",
-          storageBucket: "magazine-13f81.firebasestorage.app"
+            apiKey: "AIzaSyBjx92fZFNCi8c9nSgG6nU_eJfwq3356Uk",
+            authDomain: "magazine-13f81.firebaseapp.com",
+            projectId: "magazine-13f81",
+            storageBucket: "magazine-13f81.firebasestorage.app",
+            messagingSenderId: "897855603773",
+            appId: "1:897855603773:web:82e68dd3075df768e95654"
         };
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         const blockedSites = ['naver.com','daum.net','chosun.com','joongang.co.kr','donga.com','mk.co.kr','hankyung.com','etnews.com','yna.co.kr','autotribune.co.kr'];
-        window.currentArticles = []; window.currentVideo = null; window.currentMain = null; window.currentCampaign = null;
+        
+        window.currentArticles = [];
+        window.currentMain = null;
+        window.currentVideo = null;
+        window.currentCampaign = null;
+        window.lastValidDate = "";
 
-        window.openSubModal = function() { document.getElementById('subscribe-modal').classList.add('active'); document.body.style.overflow = 'hidden'; }
-        window.closeSubModal = function() { document.getElementById('subscribe-modal').classList.remove('active'); document.body.style.overflow = 'auto'; }
-        window.submitSubscribe = async function() {
-            const email = document.getElementById('sub-email').value;
-            if(!email || !email.includes('@')) return alert('정확한 이메일 주소를 입력해주세요!');
-            try { 
-                await setDoc(doc(db, "subscribers", email), { email: email, subscribeDate: new Date().toISOString(), status: "active" }); 
-                alert(`🎉 [${email}] 구독이 완료되었습니다!`); 
-                document.getElementById('sub-email').value = ''; 
-                closeSubModal(); 
-            } catch (error) { alert("구독 에러: " + error.message); }
-        }
-
+        // URL 및 모달 유틸리티
         window.smartOpen = function(url) {
             if(!url || url === '#') return alert("해당 컨텐츠는 원문이 존재하지 않습니다.");
             document.getElementById('article-modal').classList.add('active'); document.body.style.overflow = 'hidden';
@@ -208,34 +204,47 @@
             } else { 
                 document.getElementById('article-frame').style.display = 'block'; document.getElementById('fallback-ui').style.display = 'none'; document.getElementById('article-frame').src = url; 
             }
-        }
-        window.closeArticle = function() { document.getElementById('article-modal').classList.remove('active'); document.getElementById('article-frame').src = "about:blank"; document.body.style.overflow = 'auto'; }
+        };
+        window.closeArticle = function() { document.getElementById('article-modal').classList.remove('active'); document.getElementById('article-frame').src = "about:blank"; document.body.style.overflow = 'auto'; };
         
         window.getYoutubeEmbed = function(url) {
             if(!url) return ''; let id = '';
             if (url.includes('youtu.be/')) id = url.split('youtu.be/')[1].split('?')[0]; else if (url.includes('v=')) id = url.split('v=')[1].split('&')[0]; else if (url.includes('embed/')) id = url.split('embed/')[1].split('?')[0];
             return id ? `https://www.youtube.com/embed/${id}?autoplay=0&rel=0` : '';
-        }
+        };
 
-        const getDummyData = () => ({
-            issueName: "Preview",
-            video: { url: "https://www.youtube.com/watch?v=kY2bE5XU418", title: "AI 모빌리티 트렌드", desc: "자율주행과 AI 융합 인사이트", source: "오토핸즈" },
-            campaign: { securityImg: "./bear.png" }, 
-            articles: [
-                { category: 'main', title: "글로벌 중고차 수출 플랫폼 사업 고도화", desc: "B2B 수출 시장의 투명성을 높일 프로젝트.", insight: "스테이블 코인 연동 검토.", brand: "오토핸즈", source: "R&D 기획실", img: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800", link: "#" },
-                { category: 'platform', title: "카멜레온 프로젝트 워크샵 성료", desc: "해외 딜러망 연계 워크샵 진행.", brand: "오토핸즈", source: "사내소식", img: "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=400", link: "#", isImportant: true },
-                { category: 'auto', title: "비대면 거래 누적 이용자 돌파", desc: "중고차 시장 디지털 전환 가속화 동향.", brand: "엔카", source: "모빌리티뉴스", img: "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400", link: "#", isImportant: true },
-                { category: 'macro', title: "금리 인하에 따른 자동차 소비 심리 분석", desc: "글로벌 거시경제 지표 및 전망.", brand: "경제", source: "매크로리포트", img: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400", link: "#" },
-                { category: 'ai', title: "AI 에이전트 경쟁 격화", desc: "자율형 AI 에이전트 동향.", brand: "AI", source: "테크", img: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=400", link: "#" },
-                { category: 'security', title: "망분리 완화 제로 트러스트 프레임워크", desc: "클라우드 활용을 위한 필수 보안 요소.", brand: "보안", source: "보안뉴스", img: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400", link: "#" }
-            ]
-        });
+        window.openSubModal = () => { document.getElementById('subscribe-modal').classList.add('active'); document.body.style.overflow = 'hidden'; };
+        window.closeSubModal = () => { document.getElementById('subscribe-modal').classList.remove('active'); document.body.style.overflow = 'auto'; };
 
-        const updateTabUI = (activeText) => {
+        // 구독 신청
+        window.submitSubscribe = async function() {
+            const email = document.getElementById('sub-email').value;
+            const checkboxes = document.querySelectorAll('#subscribe-modal input[type="checkbox"]');
+            const interests = [];
+            const labels = ["거시경제", "비즈니스", "모빌리티", "인공지능", "정보보안"];
+            checkboxes.forEach((cb, idx) => { if(cb.checked) interests.push(labels[idx]); });
+
+            if(!email || !email.includes('@')) return alert('정확한 이메일 주소를 입력해주세요!');
+            if(interests.length === 0) return alert('최소 하나 이상의 관심 분야를 선택해주세요!');
+
+            try { 
+                await setDoc(doc(db, "subscribers", email), { 
+                    email: email, 
+                    subscribeDate: new Date().toISOString(), 
+                    interests: interests,
+                    status: "active" 
+                }); 
+                alert(`🎉 구독이 완료되었습니다!\n관심 분야: ${interests.join(', ')}`); 
+                document.getElementById('sub-email').value = ''; 
+                window.closeSubModal(); 
+            } catch (error) { alert("구독 에러: " + error.message); }
+        };
+
+        // UI 탭 업데이트
+        window.updateTabUI = (activeText) => {
             document.querySelectorAll('.menu-tab').forEach(tab => {
                 const isOverview = activeText === '전체보기' && tab.innerText.includes('OVERVIEW');
                 const isMatch = tab.innerText.includes(activeText);
-
                 if (isOverview || isMatch) {
                     tab.classList.add('bg-[#1e293b]', 'text-white', 'shadow-md');
                     tab.classList.remove('text-gray-500', 'hover:bg-gray-100', 'border', 'border-transparent');
@@ -246,12 +255,13 @@
             });
         };
 
-        const generateCardHtml = (item) => {
+        // 개별 카드 생성 (Insight CSS 고도화 포함)
+        window.generateCardHtml = function(item) {
             if (item.isCampaign) {
                 return `
-                    <div class="bg-white rounded-2xl flex flex-col h-full min-h-[250px] relative overflow-hidden border border-gray-200 shadow-sm">
+                    <div class="bg-white rounded-2xl flex flex-col h-full min-h-[250px] relative overflow-hidden border border-gray-200 shadow-sm cursor-pointer" onclick="smartOpen('${item.link}')">
                         <img src="${item.img}" class="w-full h-full object-cover absolute inset-0">
-                        <div class="absolute top-4 left-4 bg-black/60 text-white text-[11px] font-black px-2 py-1 rounded-md tracking-widest z-10 backdrop-blur-sm shadow-sm border border-white/20">캠페인</div>
+                        <div class="absolute top-4 left-4 bg-black/60 text-white text-[11px] font-black px-2 py-1 rounded-md tracking-widest z-10 backdrop-blur-sm shadow-sm border border-white/20">보안 캠페인</div>
                     </div>
                 `;
             }
@@ -275,31 +285,30 @@
                     <h4 class="text-lg font-bold text-gray-900 leading-snug mb-3 group-hover:text-brand transition line-clamp-2">${item.title}</h4>
                     <p class="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-5 flex-grow">${item.desc}</p>
                     
-${item.insight ? `
-            <div class="mt-auto bg-blue-50/70 p-3 rounded-xl border-t-2 border-brand/10">
-                <p class="text-[10px] font-black text-brand mb-1 uppercase tracking-tighter">💡 R&D Insight</p>
-                <p class="text-[11px] text-gray-700 font-bold leading-snug line-clamp-2">
-                    ${item.insight}
-                </p>
-            </div>` : ''}
+                    ${item.insight ? `
+                    <div class="mt-auto bg-blue-50/70 p-3 rounded-xl border-t-2 border-brand/10">
+                        <p class="text-[10px] font-black text-brand mb-1 uppercase tracking-tighter">💡 R&D Insight</p>
+                        <p class="text-[11px] text-gray-700 font-bold leading-snug line-clamp-2">
+                            ${item.insight}
+                        </p>
+                    </div>` : ''}
                 </article>
             `;
         };
 
-// 🔥 에러 수정 포인트: 변수 범위를 함수 전체로 확장하고 초기화 루틴을 강화했습니다.
+        // 🔥 메인 대시보드 렌더링 (에러 해결 완료)
         window.renderMainDashboard = function() {
             const content = document.getElementById('magazine-content');
             if (!content) return;
 
             document.getElementById('subscribe-banner-section').style.display = 'block';
-            updateTabUI('전체보기');
+            window.updateTabUI('전체보기');
 
-            // 1. 데이터가 아예 없을 경우 (발행 안 된 날) 가이드 노출
-            if (!window.currentArticles || (window.currentArticles.length === 0 && !window.currentMain)) {
+            if (!window.currentArticles || (window.currentArticles.length === 0 && !window.currentMain && !window.currentVideo)) {
                 content.innerHTML = `
                     <div class="flex flex-col items-center justify-center py-40 text-center bg-white rounded-3xl shadow-sm border border-gray-100 mb-16">
                         <div class="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6">
-                            <i class="fas fa-newspaper text-4xl text-gray-300"></i>
+                            <i class="fas fa-calendar-times text-4xl text-brand opacity-60"></i>
                         </div>
                         <h2 class="text-[28px] font-black text-gray-900 mb-4 tracking-tight">해당 날짜에는 배포된 리포트가 없습니다</h2>
                         <p class="text-gray-500 font-bold text-[16px]">R&D 센터에서 더욱 유익한 인사이트로 찾아올게요! 🐻</p>
@@ -308,12 +317,8 @@ ${item.insight ? `
                 return; 
             }
 
-            // 2. 변수 초기화 (ReferenceError 방지 핵심)
-            let videoHtml = '';
-            let mainHtml = '';
-            let sectionsHtml = '';
+            let videoHtml = ''; let mainHtml = ''; let sectionsHtml = '';
 
-            // 3. 유튜브 섹션 빌드
             const embedUrl = window.currentVideo ? window.getYoutubeEmbed(window.currentVideo.url) : '';
             if (embedUrl) {
                 videoHtml = `
@@ -331,14 +336,13 @@ ${item.insight ? `
                 </section>`;
             }
 
-            // 4. 메인 기사(1면) 섹션 빌드
             if (window.currentMain) {
                 mainHtml = `
-                <section class="mb-16 cursor-pointer group" onclick="smartOpen('${window.currentMain.link}')">
+                <section class="mb-16 cursor-pointer group" onclick="window.smartOpen('${window.currentMain.link}')">
                     <div class="flex items-center gap-2 mb-6">
                         <span class="w-2 h-8 bg-brand rounded-full"></span><h2 class="text-2xl font-black tracking-tight text-gray-900">오늘의 1면 딥다이브</h2>
                     </div>
-                    <div class="bg-white rounded-3xl overflow-hidden article-card flex flex-col lg:flex-row">
+                    <div class="bg-white rounded-3xl overflow-hidden article-card flex flex-col lg:flex-row shadow-sm border border-gray-100">
                         <div class="w-full lg:w-1/2 h-[300px] lg:h-[400px] relative overflow-hidden">
                             <img src="${window.currentMain.img || 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                             <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
@@ -363,7 +367,6 @@ ${item.insight ? `
                 </section>`;
             }
 
-            // 5. 카테고리별 그리드 빌드
             const getCat = (cat) => window.currentArticles.filter(a => a.category === cat && !a.isCampaign);
             const renderGrid = (items, title, categoryKey) => {
                 if(!items || items.length === 0) return '';
@@ -371,10 +374,10 @@ ${item.insight ? `
                 <section class="mb-24">
                     <div class="flex justify-between items-end pb-3 mb-6 border-b-2 border-gray-800">
                         <h2 class="text-xl font-black text-gray-900 tracking-tight">${title}</h2>
-                        <button onclick="showCategoryList('${categoryKey}', '${title}')" class="text-[14px] text-gray-500 hover:text-brand font-bold transition flex items-center gap-1">더보기 <i class="fas fa-chevron-right text-[12px]"></i></button>
+                        <button onclick="window.showCategoryList('${categoryKey}', '${title}')" class="text-[14px] text-gray-500 hover:text-brand font-bold transition flex items-center gap-1">더보기 <i class="fas fa-chevron-right text-[12px]"></i></button>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">`;
-                items.slice(0, 4).forEach(item => { gridHtml += generateCardHtml(item); });
+                items.slice(0, 4).forEach(item => { gridHtml += window.generateCardHtml(item); });
                 return gridHtml + `</div></section>`;
             };
 
@@ -389,31 +392,79 @@ ${item.insight ? `
             sectionsHtml += renderGrid(getCat('ai'), '🤖 AI STRATEGY', 'ai');
             sectionsHtml += renderGrid(securityItems, '🛡️ INFO-SECURE', 'security');
 
-            // 6. 최종 렌더링 (에러 없이 합쳐짐)
             content.innerHTML = videoHtml + mainHtml + sectionsHtml;
         };
-        // 🔥 고도화 기능: 브라우저 기본 달력을 대체하고, Flatpickr로 주말 차단 및 하단 버튼 삭제
-        window.lastValidDate = "";
 
-// 1. 데이터 로드 로직: '최근 기사 가져오기' 기능을 완전히 삭제했습니다.
-// 🔥 고도화: 과거 ID(날짜_호수)와 신규 ID(날짜)를 모두 찾아내는 스마트 로드 로직
+        // 특정 카테고리 모아보기
+        window.showCategoryList = async function(categoryKey, title) {
+            document.getElementById('subscribe-banner-section').style.display = 'none';
+            const tabName = title.split(' (')[0].split(' ').slice(1).join(' '); 
+            window.updateTabUI(tabName);
+            
+            const content = document.getElementById('magazine-content');
+            content.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-32">
+                    <i class="fas fa-circle-notch fa-spin text-5xl text-brand mb-4"></i>
+                    <p class="text-gray-500 font-bold text-lg">전체 발행 히스토리에서 기사를 수집하고 있습니다...</p>
+                </div>
+            `;
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "magazines"));
+                let allItems = [];
+                
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const articles = data.articles || [];
+                    const filtered = articles.filter(a => a.category === categoryKey);
+                    filtered.forEach(item => { item.issueDate = doc.id; allItems.push(item); });
+                });
+
+                allItems.sort((a, b) => b.issueDate.localeCompare(a.issueDate));
+
+                if(categoryKey === 'security' && window.currentCampaign && window.currentCampaign.securityImg) {
+                    allItems.unshift({ isCampaign: true, img: window.currentCampaign.securityImg, link: '#' });
+                }
+
+                let html = `
+                    <div class="mb-12 flex justify-between items-end pb-4 border-b-2 border-gray-800">
+                        <div class="flex items-center gap-4">
+                            <button onclick="window.renderMainDashboard()" class="w-10 h-10 bg-white shadow-sm border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-900 hover:text-white transition cursor-pointer text-lg"><i class="fas fa-arrow-left"></i></button>
+                            <div>
+                                <h2 class="text-[28px] font-black text-gray-900 leading-tight">${title}</h2>
+                                <p class="text-gray-500 font-bold text-sm mt-1">지금까지 발행된 전체 아카이브</p>
+                            </div>
+                        </div>
+                        <span class="text-brand bg-blue-50 px-3 py-1 rounded-md font-bold text-[14px]">총 ${allItems.length}건</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">`;
+                
+                allItems.forEach(item => { html += window.generateCardHtml(item); });
+                if(allItems.length === 0) html += `<div class="col-span-full py-20 text-center text-gray-400 font-bold">등록된 기사가 없습니다.</div>`;
+                
+                content.innerHTML = html + `</div>`; 
+                window.scrollTo({ top: 0, behavior: 'smooth' }); 
+            } catch (error) {
+                console.error("전체 기사 로드 실패:", error);
+                content.innerHTML = `<div class="py-20 text-center text-gray-500 font-bold">기사를 불러오는 중 오류가 발생했습니다.</div>`;
+            }
+        };
+
+        // 🔥 스마트 로드 (과거 포맷 2026-04-20_NO.34 와 신규 포맷 모두 검색)
         window.loadReport = async function(date) {
             const content = document.getElementById('magazine-content');
             try {
-                // 1. 먼저 전체 리포트 목록을 가져와서 해당 날짜로 시작하는 문서가 있는지 찾습니다.
                 const q = query(collection(db, "magazines"));
                 const querySnapshot = await getDocs(q);
                 
                 let targetDoc = null;
                 querySnapshot.forEach((doc) => {
-                    // 문서 ID가 '2026-04-20'이거나 '2026-04-20_NO.34'인 경우를 모두 포함합니다.
                     if (doc.id === date || doc.id.startsWith(date + "_")) {
                         targetDoc = doc;
                     }
                 });
                 
                 if (targetDoc) {
-                    // ✅ 매칭되는 리포트를 찾은 경우: 화면에 정상 노출
                     const data = targetDoc.data();
                     window.currentArticles = data.articles || [];
                     window.currentMain = window.currentArticles.find(a => a.category === 'main');
@@ -421,10 +472,8 @@ ${item.insight ? `
                     window.currentCampaign = data.campaign || null;
                     
                     if(document.getElementById('dummy-badge')) document.getElementById('dummy-badge').classList.add('hidden'); 
-                    if(document.getElementById('display-issue')) document.getElementById('display-issue').textContent = data.issueName || targetDoc.id;
+                    if(document.getElementById('display-issue')) document.getElementById('display-issue').textContent = data.issueName || targetDoc.id.split('_')[1] || "NO.--";
                 } else { 
-                    // ❌ 해당 날짜에 발행된 것이 아예 없는 경우: 안내 가이드 노출
-                    console.log(`${date} 날짜에 발행된 리포트가 없습니다.`);
                     window.currentArticles = [];
                     window.currentMain = null;
                     window.currentVideo = null;
@@ -433,16 +482,16 @@ ${item.insight ? `
                     if(document.getElementById('display-issue')) document.getElementById('display-issue').textContent = "NO. --";
                 }
 
-                // 결과에 따라 화면 렌더링 (데이터가 비었으면 가이드 페이지가 뜸)
                 window.renderMainDashboard();
             } catch (error) { 
                 console.error("데이터 로드 실패:", error);
                 if(content) content.innerHTML = `<div class="py-20 text-center text-gray-500 font-bold">데이터를 불러올 수 없습니다.</div>`; 
             }
         };
+
+        // 시스템 초기화
         window.initDashboard = function() {
             const now = new Date();
-            
             if (now.getDay() === 0) now.setDate(now.getDate() - 2); 
             else if (now.getDay() === 6) now.setDate(now.getDate() - 1); 
 
@@ -450,18 +499,13 @@ ${item.insight ? `
             window.lastValidDate = todayStr;
 
             const pickerEl = document.getElementById('date-picker');
-            
             if(pickerEl) {
-                // 🔥 Flatpickr 적용: 네이티브 달력을 버리고 커스텀 달력으로 완벽 제어
                 flatpickr(pickerEl, {
-                    locale: "ko",              // 한글 UI
-                    defaultDate: todayStr,     // 기본값
-                    maxDate: "today",          // 미래 날짜 딤(Dim) 처리
+                    locale: "ko",              
+                    defaultDate: todayStr,     
+                    maxDate: "today",          
                     disable: [
-                        function(date) {
-                            // 토/일요일 딤(Dim) 처리 및 선택 불가
-                            return (date.getDay() === 0 || date.getDay() === 6);
-                        }
+                        function(date) { return (date.getDay() === 0 || date.getDay() === 6); }
                     ],
                     onChange: function(selectedDates, dateStr, instance) {
                         window.lastValidDate = dateStr;
