@@ -275,41 +275,35 @@
                     <h4 class="text-lg font-bold text-gray-900 leading-snug mb-3 group-hover:text-brand transition line-clamp-2">${item.title}</h4>
                     <p class="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-5 flex-grow">${item.desc}</p>
                     
-                    ${item.insight ? `
-                    <div class="mt-auto bg-blue-50/50 p-4 rounded-xl border-t-2 border-brand/20">
-                        <p class="text-[11px] font-bold text-brand mb-1 flex items-center gap-1"><i class="fas fa-check-circle"></i> Insight</p>
-                        <p class="text-xs text-gray-700 font-medium line-clamp-2">${item.insight}</p>
-                    </div>` : ''}
+${item.insight ? `
+            <div class="mt-auto bg-blue-50/70 p-3 rounded-xl border-t-2 border-brand/10">
+                <p class="text-[10px] font-black text-brand mb-1 uppercase tracking-tighter">💡 R&D Insight</p>
+                <p class="text-[11px] text-gray-700 font-bold leading-snug line-clamp-2">
+                    ${item.insight}
+                </p>
+            </div>` : ''}
                 </article>
             `;
         };
 
-        window.renderMainDashboard = function() {
+window.renderMainDashboard = function() {
             const content = document.getElementById('magazine-content');
             document.getElementById('subscribe-banner-section').style.display = 'block';
             updateTabUI('전체보기');
 
-            const getCat = (cat) => window.currentArticles.filter(a => a.category === cat && !a.isCampaign);
-            
-            let securityItems = getCat('security');
-            if(window.currentCampaign && window.currentCampaign.securityImg) {
-                securityItems.unshift({ isCampaign: true, img: window.currentCampaign.securityImg, link: '#' });
-            }
-
-            const embedUrl = window.currentVideo ? window.getYoutubeEmbed(window.currentVideo.url) : '';
-            const videoHtml = embedUrl ? `
-                <section class="mb-16">
-                    <div class="bg-gray-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
-                        <div class="w-full md:w-2/3 aspect-video bg-black relative">
-                            <iframe class="absolute top-0 left-0 w-full h-full" src="${embedUrl}" frameborder="0" allowfullscreen></iframe>
+            // 🔥 가이드 페이지 노출 조건 (데이터가 없을 때)
+            if (window.currentArticles.length === 0 && !window.currentMain) {
+                content.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-40 text-center bg-white rounded-3xl shadow-sm border border-gray-100 mb-16">
+                        <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
+                            <i class="fas fa-calendar-times text-3xl text-gray-300"></i>
                         </div>
-                        <div class="w-full md:w-1/3 p-8 flex flex-col justify-center">
-                            <span class="text-red-500 font-black text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><i class="fab fa-youtube text-lg"></i> ${window.currentVideo.source || 'YouTube'}</span>
-                            <h2 class="text-2xl font-bold text-white leading-snug mb-4">${window.currentVideo.title}</h2>
-                            <p class="text-gray-400 text-sm line-clamp-3 leading-relaxed">${window.currentVideo.desc}</p>
-                        </div>
+                        <h2 class="text-2xl font-black text-gray-900 mb-3 tracking-tight">해당 날짜에는 발행된 리포트가 없습니다</h2>
+                        <p class="text-gray-500 font-bold">R&D 센터에서 더 좋은 인사이트로 찾아올게요! 🐻</p>
                     </div>
-                </section>` : '';
+                `;
+                return;
+            }
 
             const mainHtml = window.currentMain ? `
                 <section class="mb-16 cursor-pointer group" onclick="smartOpen('${window.currentMain.link}')">
@@ -441,24 +435,15 @@
         // 🔥 고도화 기능: 브라우저 기본 달력을 대체하고, Flatpickr로 주말 차단 및 하단 버튼 삭제
         window.lastValidDate = "";
 
+// 1. 데이터 로드 로직: '최근 기사 가져오기' 기능을 완전히 삭제했습니다.
         window.loadReport = async function(date) {
             const content = document.getElementById('magazine-content');
             try {
-                let docRef = doc(db, "magazines", date);
-                let snap = await getDoc(docRef);
+                const docRef = doc(db, "magazines", date);
+                const snap = await getDoc(docRef);
                 
-                if (!snap.exists()) {
-                    console.log("선택한 날짜의 데이터가 없어 가장 최근 데이터를 탐색합니다.");
-                    const q = query(collection(db, "magazines"));
-                    const recentSnap = await getDocs(q);
-                    
-                    if (!recentSnap.empty) {
-                        const sortedDocs = recentSnap.docs.sort((a, b) => b.id.localeCompare(a.id));
-                        snap = sortedDocs[0]; 
-                    }
-                }
-
                 if (snap.exists()) {
+                    // 데이터가 있을 때만 정상 바인딩
                     const data = snap.data();
                     window.currentArticles = data.articles || [];
                     window.currentMain = window.currentArticles.find(a => a.category === 'main');
@@ -468,23 +453,22 @@
                     if(document.getElementById('dummy-badge')) document.getElementById('dummy-badge').classList.add('hidden'); 
                     if(document.getElementById('display-issue')) document.getElementById('display-issue').textContent = data.issueName || snap.id;
                 } else { 
-                    console.log("DB에 리포트가 없어 기본 더미 데이터를 노출합니다.");
-                    const dummy = getDummyData(); 
-                    window.currentArticles = dummy.articles;
-                    window.currentMain = dummy.articles.find(a => a.category === 'main');
-                    window.currentVideo = dummy.video;
-                    window.currentCampaign = dummy.campaign;
+                    // 🔥 핵심 수정: 데이터가 없으면 예전 데이터를 찾지 않고 즉시 모든 변수를 비웁니다.
+                    window.currentArticles = [];
+                    window.currentMain = null;
+                    window.currentVideo = null;
+                    window.currentCampaign = null;
                     
-                    if(document.getElementById('dummy-badge')) document.getElementById('dummy-badge').classList.remove('hidden'); 
+                    if(document.getElementById('display-issue')) document.getElementById('display-issue').textContent = "NO. --";
                 }
 
+                // 무조건 렌더링 함수 호출 (데이터가 비어있으면 가이드가 뜹니다)
                 window.renderMainDashboard();
             } catch (error) { 
                 console.error("데이터 로드 실패:", error);
-                if(content) content.innerHTML = `<div class="py-20 text-center text-gray-500 font-bold">데이터 로딩 중 오류가 발생했습니다.</div>`; 
+                if(content) content.innerHTML = `<div class="py-20 text-center text-gray-500 font-bold">데이터를 불러올 수 없습니다.</div>`; 
             }
         };
-
         window.initDashboard = function() {
             const now = new Date();
             
