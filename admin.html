@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OASIS Admin | Autohands R&D Center (v3.6 Master)</title>
+    <title>OASIS Admin | Autohands R&D Center (v3.7 Master)</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -56,68 +56,6 @@
             <div id="preview-modal-content" style="padding:30px; overflow-y:auto; flex:1; background:#f1f5f9;"></div>
         </div>
     </div>
-<div id="edit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.85); z-index:9000; justify-content:center; align-items:center;">
-        <div style="background:white; width:850px; max-height:90vh; border-radius:16px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
-            <div style="padding:20px 30px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; color:#1e293b;"><i class="fas fa-edit"></i> 배포 리포트 사후 관리</h3>
-                <button onclick="closeEditModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#64748b;">&times;</button>
-            </div>
-            <div style="padding:30px; overflow-y:auto; flex:1;">
-                <label style="font-size:12px; font-weight:bold; color:#64748b;">리포트 호수명</label>
-                <input type="text" id="edit-issue-name" style="margin-bottom:25px; font-weight:bold; font-size:16px; color:#3b82f6;">
-<div style="background:#f8fafc; padding:20px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:25px;">
-                    <div style="font-size:13px; font-weight:bold; color:#334155; margin-bottom:10px;">🛡️ 보안 캠페인 배너 교체</div>
-                    <select id="edit-campaign-select" style="width:100%; padding:10px; font-weight:bold; border-radius:8px; border:1px solid #cbd5e1; background:white;">
-                        </select>
-                </div>
-                <div style="background:#fefce8; border:1px solid #fef08a; padding:20px; border-radius:12px; margin-bottom:25px;">
-                    <div style="font-size:13px; font-weight:bold; color:#a16207; margin-bottom:15px;"><i class="fab fa-youtube"></i> 메인 유튜브 정보 교체</div>
-                    <input type="text" id="edit-v-url" placeholder="유튜브 링크 URL" style="margin-bottom:10px;">
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-                        <input type="text" id="edit-v-title" placeholder="영상 제목">
-                        <input type="text" id="edit-v-source" placeholder="채널명">
-                    </div>
-                    <input type="text" id="edit-v-desc" placeholder="영상 코멘트">
-                </div>
-
-                <div style="display:flex; justify-content:space-between; align-items:end; margin-bottom:10px;">
-                    <label style="font-size:12px; font-weight:bold; color:#64748b;">현재 수록된 기사 관리 (중요 뱃지 ON/OFF)</label>
-                    <span style="font-size:11px; color:#ef4444; font-weight:bold;">*중요 기사는 최대 3개까지만 체크 가능</span>
-                </div>
-                <div id="edit-articles-list" style="margin-bottom:25px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;"></div>
-
-                <div style="background:#eff6ff; padding:20px; border-radius:12px; border:1px solid #bfdbfe;">
-                    <div style="font-size:13px; font-weight:bold; color:#1d4ed8; margin-bottom:15px;"><i class="fas fa-plus-circle"></i> 누락된 기사 수동 추가</div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-                        <select id="edit-new-cat" style="font-weight:bold; padding:10px;"><option value="auto">Auto (일반)</option><option value="ai">AI Tech (기술)</option><option value="security">Security (보안)</option><option value="main">Main (메인)</option></select>
-                        <input type="text" id="edit-new-brand" placeholder="관련 기업명 (예: 엔카)">
-                    </div>
-                    <input type="text" id="edit-new-title" placeholder="기사 제목" style="margin-bottom:10px;">
-                    <input type="text" id="edit-new-link" placeholder="원본 뉴스 링크" style="margin-bottom:15px;">
-                    <label style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:bold; margin-bottom:15px; cursor:pointer;"><input type="checkbox" id="edit-new-important" style="width:14px; height:14px;"> ⭐ 이 기사에 '중요(HOT)' 뱃지 달기</label>
-                    <button class="btn btn-primary" style="width:100%;" onclick="addNewArticleToEdit()">이 리포트에 기사 추가하기</button>
-                </div>
-            </div>
-            <div style="padding:20px 30px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
-                <button class="btn btn-danger" onclick="deleteEntireReport()"><i class="fas fa-trash"></i> 리포트 전체 삭제</button>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn btn-dark" style="background:#64748b;" onclick="closeEditModal()">취소</button>
-                    <button class="btn btn-primary" onclick="saveEditingReport()"><i class="fas fa-save"></i> 변경사항 최종 서버 반영</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div id="login-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); z-index:9999; display:flex; justify-content:center; align-items:center;">
-        <div style="background:white; padding:50px 40px; border-radius:24px; width:400px; text-align:center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
-            <div style="font-size:12px; font-weight:900; color:var(--primary); letter-spacing:2px; margin-bottom:10px;">AUTOHANDS R&D</div>
-            <h2 style="margin:0 0 30px 0; font-weight:900;">OASIS MASTER ADMIN</h2>
-            <input type="email" id="admin-email" placeholder="관리자 ID (이메일)" style="margin-bottom:15px;">
-            <input type="password" id="admin-pw" placeholder="비밀번호" style="margin-bottom:30px;" onkeypress="if(event.key==='Enter') window.loginAdmin()">
-            <button class="btn btn-dark" onclick="window.loginAdmin()" style="width:100%; padding:16px; font-size:16px;">시스템 접속</button>
-            <p id="login-error" style="color:#ef4444; font-size:12px; margin-top:15px; font-weight:bold; display:none;">로그인 정보가 올바르지 않습니다.</p>
-        </div>
-    </div>
-
     <div id="edit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.85); z-index:9000; justify-content:center; align-items:center;">
         <div style="background:white; width:850px; max-height:90vh; border-radius:16px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
             <div style="padding:20px 30px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
@@ -126,8 +64,12 @@
             </div>
             <div style="padding:30px; overflow-y:auto; flex:1;">
                 <label style="font-size:12px; font-weight:bold; color:#64748b;">리포트 호수명</label>
-                <input type="text" id="edit-issue-name" style="margin-bottom:25px; font-weight:bold; font-size:16px; color:var(--theme-primary);">
-
+                <input type="text" id="edit-issue-name" style="margin-bottom:25px; font-weight:bold; font-size:16px; color:#3b82f6;">
+                <div style="background:#f8fafc; padding:20px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:25px;">
+                    <div style="font-size:13px; font-weight:bold; color:#334155; margin-bottom:10px;">🛡️ 보안 캠페인 배너 교체</div>
+                    <select id="edit-campaign-select" style="width:100%; padding:10px; font-weight:bold; border-radius:8px; border:1px solid #cbd5e1; background:white;">
+                    </select>
+                </div>
                 <div style="background:#fefce8; border:1px solid #fef08a; padding:20px; border-radius:12px; margin-bottom:25px;">
                     <div style="font-size:13px; font-weight:bold; color:#a16207; margin-bottom:15px;"><i class="fab fa-youtube"></i> 메인 유튜브 정보 교체</div>
                     <input type="text" id="edit-v-url" placeholder="유튜브 링크 URL" style="margin-bottom:10px;">
@@ -147,7 +89,14 @@
                 <div style="background:#eff6ff; padding:20px; border-radius:12px; border:1px solid #bfdbfe;">
                     <div style="font-size:13px; font-weight:bold; color:#1d4ed8; margin-bottom:15px;"><i class="fas fa-plus-circle"></i> 누락된 기사 수동 추가</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-                        <select id="edit-new-cat" style="font-weight:bold;"><option value="auto">Auto (일반)</option><option value="ai">AI Tech (기술)</option><option value="security">Security (보안)</option><option value="main">Main (메인)</option></select>
+                        <select id="edit-new-cat" style="font-weight:bold; padding:10px;">
+                            <option value="main">🔥 FIRST DIVE (1면)</option>
+                            <option value="macro">🌐 MACRO VIEW (경제)</option>
+                            <option value="platform">🛒 BIZ & PLATFORM (비즈)</option>
+                            <option value="auto">🚗 AUTO TRACK (산업)</option>
+                            <option value="ai">🤖 AI STRATEGY (인공지능)</option>
+                            <option value="security">🛡️ INFO-SECURE (보안)</option>
+                        </select>
                         <input type="text" id="edit-new-brand" placeholder="관련 기업명 (예: 엔카)">
                     </div>
                     <input type="text" id="edit-new-title" placeholder="기사 제목" style="margin-bottom:10px;">
@@ -157,12 +106,23 @@
                 </div>
             </div>
             <div style="padding:20px 30px; background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
-                <button class="btn" style="background:#ef4444; color:white;" onclick="deleteEntireReport()"><i class="fas fa-trash"></i> 리포트 전체 삭제 (Rollback)</button>
+                <button class="btn btn-danger" style="background:#ef4444; color:white;" onclick="deleteEntireReport()"><i class="fas fa-trash"></i> 리포트 전체 삭제</button>
                 <div style="display:flex; gap:10px;">
                     <button class="btn btn-dark" style="background:#64748b;" onclick="closeEditModal()">취소</button>
                     <button class="btn btn-primary" onclick="saveEditingReport()"><i class="fas fa-save"></i> 변경사항 최종 서버 반영</button>
                 </div>
             </div>
+        </div>
+    </div>
+    
+    <div id="login-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); z-index:9999; display:flex; justify-content:center; align-items:center;">
+        <div style="background:white; padding:50px 40px; border-radius:24px; width:400px; text-align:center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+            <div style="font-size:12px; font-weight:900; color:var(--primary); letter-spacing:2px; margin-bottom:10px;">AUTOHANDS R&D</div>
+            <h2 style="margin:0 0 30px 0; font-weight:900;">OASIS MASTER ADMIN</h2>
+            <input type="email" id="admin-email" placeholder="관리자 ID (이메일)" style="margin-bottom:15px;">
+            <input type="password" id="admin-pw" placeholder="비밀번호" style="margin-bottom:30px;" onkeypress="if(event.key==='Enter') window.loginAdmin()">
+            <button class="btn btn-dark" onclick="window.loginAdmin()" style="width:100%; padding:16px; font-size:16px;">시스템 접속</button>
+            <p id="login-error" style="color:#ef4444; font-size:12px; margin-top:15px; font-weight:bold; display:none;">로그인 정보가 올바르지 않습니다.</p>
         </div>
     </div>
 
@@ -175,6 +135,7 @@
         <div class="menu-item" id="nav-campaign" onclick="switchMenu('campaign')"><i class="fas fa-shield-alt"></i> 보안 캠페인 배너 관리</div>
         <div class="menu-item" id="nav-subscribe" onclick="switchMenu('subscribe')"><i class="fas fa-users"></i> 뉴스레터 구독자 관리</div>
         <div class="menu-item" id="nav-settings" onclick="switchMenu('settings')"><i class="fas fa-cog"></i> 시스템 환경 설정</div>
+        <div class="menu-item" id="nav-api" onclick="switchMenu('api')"><i class="fas fa-key"></i> API 및 보안 설정</div>
         <div style="margin-top:auto; padding:30px; border-top: 1px solid #334155;">
             <div style="font-size:12px; color:#94a3b8; margin-bottom:5px;">Connected as</div>
             <div id="current-user-name" style="font-size:14px; color:white; font-weight:bold; margin-bottom:15px;">관리자</div>
@@ -202,7 +163,8 @@
                 </div>
             </div>
         </div>
-<div id="section-news" class="page-section">
+
+        <div id="section-news" class="page-section">
             <div class="header"><h2 style="margin:0;">🤖 뉴스 수집 및 AI 분석기</h2></div>
 
             <div class="card" style="border: 2px solid #f59e0b; background:#fffbeb;">
@@ -255,11 +217,12 @@
 
                         <div style="display:flex; gap:10px; align-items:center;">
                             <select id="a-category" style="flex:1; font-weight:bold;">
-                                <option value="auto">Auto Platform (일반)</option>
-                                <option value="ai">AI Technology (기술)</option>
-                                <option value="security">Security (보안 이슈)</option>
-                                <option value="security">AH(오토핸즈 NOW)</option>
-                                <option value="main">🔥 메인 헤드라인</option>
+                                <option value="main">🔥 FIRST DIVE (오늘의 1면)</option>
+                                <option value="macro">🌐 MACRO VIEW (거시경제 흐름)</option>
+                                <option value="platform">🛒 BIZ & PLATFORM (플랫폼/커머스)</option>
+                                <option value="auto">🚗 AUTO TRACK (완성차/모빌리티)</option>
+                                <option value="ai">🤖 AI STRATEGY (인공지능 전략)</option>
+                                <option value="security">🛡️ INFO-SECURE (정보 보안 이슈)</option>
                             </select>
                             <label style="display:flex; align-items:center; justify-content:center; gap:8px; background:#fefce8; border:1px solid #fef08a; padding:10px; border-radius:8px; font-weight:900; font-size:13px; color:#a16207; cursor:pointer;">
                                 <input type="checkbox" id="a-important" style="width:16px; height:16px;"> ⭐ 중요 (최대 3개)
@@ -307,7 +270,7 @@
                 <button class="btn" style="background:#3b82f6; color:white; font-weight:bold;" onclick="previewPremiumNewsletter()">
                         <i class="fas fa-search"></i> 메일 발송 미리보기
                     </button>
-                    <button class="btn" style="background:#14b8a6; color:white; font-weight:bold;" onclick="sendPremiumNewsletter()">
+                    <button class="btn" style="background:#75b5ee; color:white; font-weight:bold;" onclick="sendPremiumNewsletter()">
                         <i class="fas fa-paper-plane"></i> 뉴스레터 자동 복사 및 발송
                     </button>
                     <button class="btn" style="background:#107c41; color:white;" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
@@ -315,7 +278,7 @@
                 </div>
             </div>
             <div class="card" style="border: 2px solid #10b981; background:#f0fdf4;">
-                <div class="card-title" style="color:#047857;"><i class="fas fa-cloud-upload-alt"></i> 클라우드 DB 최종 발행</div>
+                <div class="card-title" style="color:#75b5ee;"><i class="fas fa-cloud-upload-alt"></i> 클라우드 DB 최종 발행</div>
                 <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
                     <input type="text" id="issue-name" placeholder="발행 호수 입력 (예: NO.38)" style="flex:1; padding:15px; font-weight:bold;">
                     <select id="campaign-select-deploy" style="flex:1; padding:15px; font-weight:bold; border-color:#34d399;"><option value="">보안 캠페인 배너 선택 (없음)</option></select>
@@ -335,17 +298,16 @@
             <div class="card" style="border: 2px solid #3b82f6; background:#eff6ff; margin-bottom: 30px;">
                 <div class="card-title" style="color:#1d4ed8;"><i class="fas fa-building"></i> 🏢 모니터링 대상 업체 및 키워드 관리</div>
             </div>
-                <div style="display:flex; gap:10px; margin-bottom: 20px;">
-                    <input type="text" id="new-company-name" placeholder="기업명 (예: 엔카닷컴)" style="flex:1; padding:12px; border-radius:8px; border:1px solid #bfdbfe; font-weight:bold;">
-                    <input type="text" id="new-company-keywords" placeholder="추적 키워드 쉼표 구분 (예: 엔카, 중고차, 매입)" style="flex:2; padding:12px; border-radius:8px; border:1px solid #bfdbfe;">
-                    <button onclick="addCompany()" class="btn btn-primary" style="background:#2563eb; padding:0 25px; border-radius:8px; font-weight:bold;">➕ 추가</button>
-                </div>
-
-                <div id="company-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
-                    </div>
+            <div style="display:flex; gap:10px; margin-bottom: 20px;">
+                <input type="text" id="new-company-name" placeholder="기업명 (예: 엔카닷컴)" style="flex:1; padding:12px; border-radius:8px; border:1px solid #bfdbfe; font-weight:bold;">
+                <input type="text" id="new-company-keywords" placeholder="추적 키워드 쉼표 구분 (예: 엔카, 중고차, 매입)" style="flex:2; padding:12px; border-radius:8px; border:1px solid #bfdbfe;">
+                <button onclick="addCompany()" class="btn btn-primary" style="background:#2563eb; padding:0 25px; border-radius:8px; font-weight:bold;">➕ 추가</button>
             </div>
+            <div id="company-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+            </div>
+        </div>
 
-<div id="section-campaign" class="page-section">
+        <div id="section-campaign" class="page-section">
             <div class="header">
                 <div><h2 style="margin:0;">🛡️ 보안 캠페인 배너 관리</h2><p style="margin:5px 0 0; font-size:13px; color:#64748b;">로컬 PC 이미지를 업로드하여 배너 풀을 관리합니다.</p></div>
             </div>
@@ -377,29 +339,46 @@
             </div>
         </div>
 
+        <div id="section-api" class="page-section">
+            <div class="header">
+                <div>
+                    <h2 style="margin:0;"><i class="fas fa-shield-alt"></i> 시스템 API 관리</h2>
+                    <p style="margin:5px 0 0; font-size:13px; color:#64748b;">시스템 연동을 위한 중요 보안 키 관리</p>
+                </div>
+            </div>
+            <div class="card" style="max-width: 700px; border: 2px solid #1e293b;">
+                <div class="card-title" style="color: #1e293b;">Gemini AI API Key</div>
+                <p style="font-size: 14px; color: #64748b; margin-bottom: 20px;">AI 인사이트 추출을 위해 구글 제미니 키를 저장해야 합니다.</p>
+                
+                <div style="display: flex; gap: 10px;">
+                    <input type="password" id="gemini-api-key" placeholder="AIza..." style="flex: 1; font-weight: bold;">
+                    <button class="btn btn-dark" onclick="window.saveGeminiKey()">저장</button>
+                </div>
+            </div>
+        </div>
+
         <div id="section-settings" class="page-section">
             <div class="header"><div><h2 style="margin:0;">⚙️ 시스템 환경 및 테마 설정</h2></div></div>
             <div class="card" style="padding:0; overflow:hidden;">
                 <div style="display:flex; background:#f1f5f9; border-bottom:1px solid #e2e8f0;">
                     <div id="tab-set-tokens" class="menu-item active" style="color:#1e293b; border-bottom:3px solid var(--theme-primary);" onclick="switchSetTab('set-tokens')">🎨 테마 토큰 관리</div>
-                </div>
+                </div>            
                 <div style="padding:30px; min-height:300px; background:white;">
                     <div id="set-tokens" class="set-pane active">
                         <h3 style="margin-top:0;">디자인 테마 커스텀</h3>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-                            <div><label style="font-size:12px; font-weight:bold; color:var(--text-sub);">브랜드 컬러 (Primary)</label><input type="color" id="tk-color" style="height:40px; border:none; padding:0; margin-top:5px;" oninput="applyTokens()"></div>
-                            <div><label style="font-size:12px; font-weight:bold; color:var(--text-sub);">카드 모서리 둥글기 (Radius)</label><input type="range" id="tk-radius" min="0" max="24" step="4" style="margin-top:15px;" oninput="applyTokens()"></div>
+                            <div><label style="font-size:12px; font-weight:bold; color:#64748b;">브랜드 컬러 (Primary)</label><input type="color" id="tk-color" style="height:40px; border:none; padding:0; margin-top:5px;" oninput="applyTokens()"></div>
+                            <div><label style="font-size:12px; font-weight:bold; color:#64748b;">카드 모서리 둥글기 (Radius)</label><input type="range" id="tk-radius" min="0" max="24" step="4" style="margin-top:15px;" oninput="applyTokens()"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-<script type="module">
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        // 🔥 스토리지 모듈 추가 (이미지 업로드용)
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
         const firebaseConfig = {
@@ -414,12 +393,12 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        const storage = getStorage(app); // 스토리지 초기화
+        const storage = getStorage(app);
 
-        window.draftArticles = { main: null, ai: [], auto: [], security: [] };
+        // 🔥 고도화 기능: 카테고리 스키마 현행화
+        window.draftArticles = { main: null, macro: [], platform: [], auto: [], ai: [], security: [] };
         window.trackingPolicies = []; window.campaignImages = []; window.historyCache = {}; window.subscriberExcelData = [];
 
-        // 🔥 수정: 로그인 및 실명 호출 로직
         onAuthStateChanged(auth, async (user) => {
             if (user) { 
                 document.getElementById('login-overlay').style.display = 'none'; 
@@ -435,15 +414,22 @@
             } else { document.getElementById('login-overlay').style.display = 'flex'; }
         });
 
-        window.loginAdmin = () => signInWithEmailAndPassword(auth, document.getElementById('admin-email').value, document.getElementById('admin-pw').value).catch(err => document.getElementById('login-error').style.display='block');
+        window.loginAdmin = () => signInWithEmailAndPassword(auth, document.getElementById('admin-email').value, document.getElementById('admin-pw').value).catch(err => {
+            document.getElementById('login-error').style.display='block';
+        });
         window.logoutAdmin = () => signOut(auth);
 
         window.switchMenu = function(menu) {
             document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.sidebar .menu-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`section-${menu}`).classList.add('active'); document.getElementById(`nav-${menu}`).classList.add('active');
-            if(menu === 'dashboard') window.updateDashboardStats(); if(menu === 'deploy') window.loadHistory();
-            if(menu === 'subscribe') window.loadSubscribers(); if(menu === 'campaign') window.loadCampaignImages();
+            document.getElementById(`section-${menu}`).classList.add('active'); 
+            const navItem = document.getElementById(`nav-${menu}`);
+            if(navItem) navItem.classList.add('active');
+            
+            if(menu === 'dashboard') window.updateDashboardStats(); 
+            if(menu === 'deploy') window.loadHistory();
+            if(menu === 'subscribe') window.loadSubscribers(); 
+            if(menu === 'campaign') window.loadCampaignImages();
         };
 
         window.switchSetTab = function(tabId) {
@@ -451,7 +437,6 @@
             document.getElementById(tabId).classList.add('active');
         };
 
-        // 🔥 수정: AI 분석 (API Key 백엔드 은닉화)
         window.runNewsAIExtraction = async function() {
             const url = document.getElementById('a-link').value; 
             const btn = document.getElementById('ai-news-btn');
@@ -463,7 +448,7 @@
             try {
                 const response = await fetch(backendUrl, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: url }) // apiKey 전송 안함
+                    body: JSON.stringify({ url: url })
                 });
 
                 if (!response.ok) throw new Error(await response.text());
@@ -486,7 +471,6 @@
             document.getElementById('prev-img-fallback').style.display = 'none'; document.getElementById('prev-img').src = document.getElementById('a-img').value || '';
         };
 
-        // 🔥 수정: 스토리지 연동 캠페인 이미지 업로드
         window.uploadCampaignImage = async function() {
             const fileInput = document.getElementById('campaign-file-upload');
             const btn = document.getElementById('btn-upload-campaign');
@@ -508,7 +492,6 @@
             finally { btn.innerText = "배너 업로드"; btn.disabled = false; }
         };
 
-       // 🔥 수정: 엄한데 생기던 리스트를 카드 안쪽 규격에 맞춰 예쁘게 렌더링
         window.loadCampaignImages = async function() {
             const snap = await getDoc(doc(db, "settings", "campaigns")); 
             if(snap.exists()) window.campaignImages = snap.data().list || [];
@@ -522,25 +505,35 @@
                         <img src="${img.url}" style="width:100%; height:140px; object-fit:cover; border-radius:8px; border:1px solid #cbd5e1; margin-bottom:12px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:auto;">
                             <span style="font-size:11px; color:#64748b; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; margin-right:10px;" title="${img.name || '배너'}">${img.name || '배너 이미지'}</span>
-                            <button onclick="deleteCampaignImage(${img.id})" class="btn btn-danger" style="padding:6px 12px; font-size:11px; border-radius:6px;">삭제</button>
+                            <button onclick="deleteCampaignImage(${img.id})" class="btn btn-danger" style="padding:6px 12px; font-size:11px; border-radius:6px; background:#ef4444;">삭제</button>
                         </div>
                     </div>
                 `).join('');
             }
             
-            // 배포 화면의 드롭다운 업데이트
             document.getElementById('campaign-select-deploy').innerHTML = '<option value="">보안 캠페인 배너 선택 (없음)</option>' + window.campaignImages.map(img => `<option value="${img.url}">${img.name || img.url.substring(0,20)}</option>`).join('');
         };
-        window.deleteCampaignImage = async function(id) { window.campaignImages = window.campaignImages.filter(img => img.id !== id); await setDoc(doc(db, "settings", "campaigns"), { list: window.campaignImages }); window.loadCampaignImages(); };
+        
+        window.deleteCampaignImage = async function(id) { 
+            window.campaignImages = window.campaignImages.filter(img => img.id !== id); 
+            await setDoc(doc(db, "settings", "campaigns"), { list: window.campaignImages }); 
+            window.loadCampaignImages(); 
+        };
 
-        // [중복 필터링 및 대기열 로직 (원본 유지 + 중요 뱃지 제한)]
+        // 🔥 고도화 기능: 필터 및 기사 수집 카테고리 연동
         window.filterAndAddArticles = function(newItems) {
             const deployedHistory = JSON.parse(localStorage.getItem('oasis_deployed_history') || '[]');
-            const currentLinks = [ ...(window.draftArticles.main ? [window.draftArticles.main.link] : []), ...window.draftArticles.ai.map(a => a.link), ...window.draftArticles.auto.map(a => a.link), ...window.draftArticles.security.map(a => a.link) ];
+            const currentLinks = [ ...(window.draftArticles.main ? [window.draftArticles.main.link] : []), ...window.draftArticles.macro.map(a=>a.link), ...window.draftArticles.platform.map(a=>a.link), ...window.draftArticles.auto.map(a=>a.link), ...window.draftArticles.ai.map(a=>a.link), ...window.draftArticles.security.map(a=>a.link) ];
             let count = 0;
             newItems.forEach(item => {
                 if (deployedHistory.includes(item.link) || currentLinks.includes(item.link)) return;
-                if (item.category === 'ai') window.draftArticles.ai.push(item); else window.draftArticles.auto.push(item);
+                
+                if (item.category === 'macro') window.draftArticles.macro.push(item); 
+                else if (item.category === 'platform') window.draftArticles.platform.push(item); 
+                else if (item.category === 'ai') window.draftArticles.ai.push(item); 
+                else if (item.category === 'security') window.draftArticles.security.push(item); 
+                else window.draftArticles.auto.push(item);
+                
                 count++;
             });
             if (count > 0) window.renderArticleList();
@@ -552,12 +545,13 @@
             alert("수집 완료!");
         };
 
+        // 🔥 고도화 기능: 신규 5개 카테고리 배열 참조 추가
         window.addArticleToDraft = function() {
             const cat = document.getElementById('a-category').value, title = document.getElementById('a-title').value; if(!title) return alert("기사가 없습니다.");
             const isImportant = document.getElementById('a-important').checked;
             
             if(isImportant) {
-                const count = [ ...(window.draftArticles.main ? [window.draftArticles.main] : []), ...window.draftArticles.ai, ...window.draftArticles.auto, ...window.draftArticles.security ].filter(a => a.isImportant).length;
+                const count = [ ...(window.draftArticles.main ? [window.draftArticles.main] : []), ...window.draftArticles.macro, ...window.draftArticles.platform, ...window.draftArticles.auto, ...window.draftArticles.ai, ...window.draftArticles.security ].filter(a => a.isImportant).length;
                 if(count >= 3) { alert("⚠️ 중요 기사는 최대 3개까지만 설정 가능합니다."); document.getElementById('a-important').checked=false; return; }
             }
 
@@ -570,7 +564,7 @@
 
         window.renderArticleList = function() {
             const list = document.getElementById('article-list'); if (!list) return;
-            const all = [ ...(window.draftArticles.main ? [window.draftArticles.main] : []), ...window.draftArticles.ai, ...window.draftArticles.auto, ...window.draftArticles.security ];
+            const all = [ ...(window.draftArticles.main ? [window.draftArticles.main] : []), ...window.draftArticles.macro, ...window.draftArticles.platform, ...window.draftArticles.auto, ...window.draftArticles.ai, ...window.draftArticles.security ];
             if (all.length === 0) { list.innerHTML = `<div style="text-align:center; padding:50px; color:#cbd5e1; border:2px dashed #e2e8f0; border-radius:20px;">수집된 기사가 없습니다.</div>`; return; }
             list.innerHTML = all.map((a, index) => {
                 const thumbImg = a.img && a.img.includes('http') ? a.img : 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300';
@@ -583,43 +577,62 @@
                 </div>`;
             }).join('');
         };
-window.setMainArticle = function(index) {
-            const all = [ ...(window.draftArticles.main ? [window.draftArticles.main] : []), ...window.draftArticles.ai, ...window.draftArticles.auto, ...window.draftArticles.security ];
+
+        window.setMainArticle = function(index) {
+            const all = [ ...(window.draftArticles.main ? [window.draftArticles.main] : []), ...window.draftArticles.macro, ...window.draftArticles.platform, ...window.draftArticles.auto, ...window.draftArticles.ai, ...window.draftArticles.security ];
             const target = all[index];
-            if(window.draftArticles.ai.includes(target)) window.draftArticles.ai.splice(window.draftArticles.ai.indexOf(target), 1);
-            if(window.draftArticles.auto.includes(target)) window.draftArticles.auto.splice(window.draftArticles.auto.indexOf(target), 1);
-            if(window.draftArticles.security.includes(target)) window.draftArticles.security.splice(window.draftArticles.security.indexOf(target), 1);
+            ['macro','platform','auto','ai','security'].forEach(c => {
+                if(window.draftArticles[c].includes(target)) window.draftArticles[c].splice(window.draftArticles[c].indexOf(target), 1);
+            });
             target.category = 'main'; window.draftArticles.main = target; window.renderArticleList();
         };
 
         window.deleteArticle = function(index) {
-            const all = [ ...(window.draftArticles.main ? [window.draftArticles.main] : []), ...window.draftArticles.ai, ...window.draftArticles.auto, ...window.draftArticles.security ];
+            const all = [ ...(window.draftArticles.main ? [window.draftArticles.main] : []), ...window.draftArticles.macro, ...window.draftArticles.platform, ...window.draftArticles.auto, ...window.draftArticles.ai, ...window.draftArticles.security ];
             const target = all[index];
             if(window.draftArticles.main === target) window.draftArticles.main = null;
-            else { ['ai','auto','security'].forEach(c => { if(window.draftArticles[c].includes(target)) window.draftArticles[c].splice(window.draftArticles[c].indexOf(target), 1); }); }
+            else { ['macro','platform','auto','ai','security'].forEach(c => { if(window.draftArticles[c].includes(target)) window.draftArticles[c].splice(window.draftArticles[c].indexOf(target), 1); }); }
             window.renderArticleList(); window.updateDashboardStats();
         };
-
+        
         window.deployData = async function() {
-            const issueName = document.getElementById('issue-name').value; if(!issueName) return alert("호수를 입력하세요.");
-            const articles = [ ...(window.draftArticles.main ? [window.draftArticles.main] : []), ...window.draftArticles.ai, ...window.draftArticles.auto, ...window.draftArticles.security ];
+            const issueName = document.getElementById('issue-name').value; 
+            if(!issueName) return alert("호수를 입력하세요.");
+            
+            // 현재 확정된 5개 카테고리 + 메인 헤드라인 배열 수집
+            const articles = [ ...(window.draftArticles.main ? [window.draftArticles.main] : []), ...window.draftArticles.macro, ...window.draftArticles.platform, ...window.draftArticles.auto, ...window.draftArticles.ai, ...window.draftArticles.security ];
             if(articles.length === 0) return alert("배포할 기사가 없습니다.");
 
             const videoData = { url: document.getElementById('v-url').value, title: document.getElementById('v-title').value, desc: document.getElementById('v-desc').value };
             const campaignData = { securityImg: document.getElementById('campaign-select-deploy').value };
 
             document.getElementById('deploy-btn').innerText = "배포 중...";
-            const docId = `${new Date().toISOString().split('T')[0]}_${issueName.replace(/\s/g, '')}`;
-            await setDoc(doc(db, "magazines", docId), { issueName, publishDate: new Date().toISOString(), articles, video: videoData, campaign: campaignData });
+            
+            // 🔥 핵심 수정 부분: 문서 ID(docId)를 날짜 뒤에 호수를 붙이지 않고 깔끔하게 'YYYY-MM-DD'로만 저장!
+            const docId = new Date().toISOString().split('T')[0];
+            
+            await setDoc(doc(db, "magazines", docId), { 
+                issueName, 
+                publishDate: new Date().toISOString(), 
+                articles, 
+                video: videoData, 
+                campaign: campaignData 
+            });
 
             const currentLinks = articles.map(a => a.link).filter(l => l);
             const history = JSON.parse(localStorage.getItem('oasis_deployed_history') || '[]');
             localStorage.setItem('oasis_deployed_history', JSON.stringify([...new Set([...history, ...currentLinks])]));
 
             alert("서버에 배포되었습니다.");
-            window.draftArticles = { main: null, ai: [], auto: [], security: [] }; window.renderArticleList();
+            
+            // 전송 후 대기열 초기화
+            window.draftArticles = { main: null, macro: [], platform: [], auto: [], ai: [], security: [] }; 
+            window.renderArticleList();
+            
             ['issue-name', 'v-url', 'v-title', 'v-desc'].forEach(id => document.getElementById(id).value = '');
-            document.getElementById('deploy-btn').innerText = "🚀 라이브 서버 배포"; window.loadHistory(); window.updateDashboardStats();
+            document.getElementById('deploy-btn').innerText = "🚀 라이브 서버 배포"; 
+            window.loadHistory(); 
+            window.updateDashboardStats();
         };
 
         window.loadHistory = async function() {
@@ -632,189 +645,9 @@ window.setMainArticle = function(index) {
 
         window.deleteReportDirectly = async function(docId) { if(!confirm("⚠️ 개별 삭제하시겠습니까?")) return; try { await deleteDoc(doc(db, "magazines", docId)); alert("삭제되었습니다."); window.loadHistory(); window.updateDashboardStats(); } catch(error) { alert("삭제 실패"); } };
 
-        window.editingDocId = null; window.editingArticles = [];
-        window.openEditModal = function(docId) {
-            const data = window.historyCache[docId]; if(!data) return;
-            window.editingDocId = docId; window.editingArticles = [...(data.articles || [])];
-            document.getElementById('edit-issue-name').value = data.issueName;
-            ['url','title','source','desc'].forEach(k => { if(document.getElementById(`edit-v-${k}`)) document.getElementById(`edit-v-${k}`).value = data.video?.[k] || ''; });
-            document.getElementById('edit-campaign-sec-img').value = data.campaign?.securityImg || '';
-            window.renderEditArticles(); document.getElementById('edit-modal').style.display = 'flex';
-        };
-        window.closeEditModal = function() { document.getElementById('edit-modal').style.display = 'none'; };
-
-        window.renderEditArticles = function() {
-            const listDiv = document.getElementById('edit-articles-list');
-            if(window.editingArticles.length === 0) { listDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#94a3b8;">수록된 기사가 없습니다.</div>'; return; }
-            listDiv.innerHTML = window.editingArticles.map((art, idx) => `
-                <div style="padding:12px 15px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:13px; flex:1;"><span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:bold; margin-right:5px;">${art.category}</span><b>[${art.brand}]</b> ${art.title}</div>
-                    <div style="display:flex; align-items:center; gap:15px;">
-                        <label style="font-size:12px; font-weight:bold; cursor:pointer; color:${art.isImportant?'#ef4444':'#64748b'};"><input type="checkbox" ${art.isImportant ? 'checked' : ''} onchange="toggleEditImportant(${idx}, this)" style="margin-right:4px;">⭐중요</label>
-                        <button onclick="window.editingArticles.splice(${idx}, 1); window.renderEditArticles();" style="background:none; border:none; color:#ef4444; font-size:12px; font-weight:bold; cursor:pointer;">삭제</button>
-                    </div>
-                </div>`).join('');
-        };
-
-        window.toggleEditImportant = function(idx, checkbox) {
-            if(checkbox.checked && window.editingArticles.filter(a => a.isImportant).length >= 3) { alert("⚠️ 중요 기사는 최대 3개까지만 설정할 수 있습니다."); checkbox.checked = false; return; }
-            window.editingArticles[idx].isImportant = checkbox.checked; window.renderEditArticles();
-        };
-
-        window.addNewArticleToEdit = function() {
-            const title = document.getElementById('edit-new-title').value, link = document.getElementById('edit-new-link').value;
-            const desc = document.getElementById('edit-new-desc').value, insight = document.getElementById('edit-new-insight').value;
-            const isImportant = document.getElementById('edit-new-important').checked;
-            if(isImportant && window.editingArticles.filter(a => a.isImportant).length >= 3) return alert("⚠️ 중요 기사는 최대 3개까지만 가능합니다.");
-            if(!title || !link) return alert("제목과 링크는 필수 입력입니다.");
-            window.editingArticles.push({ category: document.getElementById('edit-new-cat').value, brand: document.getElementById('edit-new-brand').value || '수동추가', title, link, desc, insight, source: '수동입력', img: '', isImportant });
-            window.renderEditArticles(); ['edit-new-title','edit-new-link','edit-new-desc','edit-new-insight'].forEach(id => document.getElementById(id).value=''); document.getElementById('edit-new-important').checked = false;
-        };
-
-        window.saveEditingReport = async function() {
-            const newIssueName = document.getElementById('edit-issue-name').value; if(!newIssueName) return alert("호수명 필수");
-            const updatedVideo = { url: document.getElementById('edit-v-url').value, title: document.getElementById('edit-v-title').value, source: document.getElementById('edit-v-source').value, desc: document.getElementById('edit-v-desc').value };
-            const updatedCampaign = { securityImg: document.getElementById('edit-campaign-sec-img').value };
-            try { await setDoc(doc(db, "magazines", window.editingDocId), { ...window.historyCache[window.editingDocId], issueName: newIssueName, articles: window.editingArticles, video: updatedVideo, campaign: updatedCampaign }); alert("저장 완료!"); window.closeEditModal(); window.loadHistory(); } catch (error) { alert("저장 실패"); }
-        };
-        window.deleteEntireReport = async function() { if(!confirm("⚠️ 리포트를 전체 삭제하시겠습니까?")) return; try { await deleteDoc(doc(db, "magazines", window.editingDocId)); alert("삭제되었습니다."); window.closeEditModal(); window.loadHistory(); } catch(e) { alert("삭제 실패"); } };
-
-// 🔥 고도화: 배포 전 '진짜 프론트엔드' 미리보기 렌더링 로직
-        window.openReportPreview = function() {
-            const issueName = document.getElementById('issue-name').value || "미지정 호수 (임시)";
-            const campaignImg = document.getElementById('campaign-select-deploy').value;
-
-            // 카테고리별 기사 분류
-            const mainArt = window.draftArticles.main;
-            const aiArts = window.draftArticles.ai || [];
-            const autoArts = window.draftArticles.auto || [];
-            
-            // 프론트엔드 일반 기사 카드 완벽 모사 렌더링 함수
-            const makeCard = (a) => {
-                const thumb = a.img && a.img.includes('http') ? a.img : 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400';
-                const badge = a.isImportant ? `<span style="background:#ef4444; color:white; padding:3px 8px; border-radius:6px; font-size:10px; font-weight:900; margin-right:5px; box-shadow: 0 2px 4px rgba(239,68,68,0.3);">HOT</span>` : '';
-                return `
-                <div style="background:white; border:1px solid #e2e8f0; border-radius:16px; padding:20px; display:flex; flex-direction:column; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                    <div style="width:100%; aspect-ratio:4/3; border-radius:12px; overflow:hidden; margin-bottom:16px; background:#f1f5f9;">
-                        <img src="${thumb}" style="width:100%; height:100%; object-fit:cover;">
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-                        <div style="display:flex; align-items:center;">
-                            ${badge}
-                            <span style="background:#f1f5f9; color:#64748b; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:900;">[${a.brand}]</span>
-                        </div>
-                        <span style="font-size:10px; color:#94a3b8; font-weight:bold;">${a.source}</span>
-                    </div>
-                    <div style="font-size:16px; font-weight:900; color:#1e293b; margin-bottom:12px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${a.title}</div>
-                    <div style="font-size:13px; color:#64748b; line-height:1.6; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${a.desc}</div>
-                </div>`;
-            };
-
-            // 프론트엔드 캠페인 배너 카드 완벽 모사 렌더링 함수
-            const makeCampaignCard = (imgUrl) => {
-                if(!imgUrl) return '';
-                return `
-                <div style="background:white; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; position:relative; min-height:280px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                    <div style="position:absolute; top:16px; left:16px; background:rgba(0,0,0,0.65); color:white; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:900; z-index:10; border:1px solid rgba(255,255,255,0.2); backdrop-filter: blur(4px); letter-spacing:1px;">캠페인</div>
-                    <img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover; position:absolute; inset:0;">
-                </div>`;
-            };
-
-            // 섹션 단위 렌더링 (그리드 레이아웃)
-            const renderSection = (title, items, isSecurity = false) => {
-                // 기사도 없고 배너도 없으면 렌더링 생략
-                if(!isSecurity && (!items || items.length === 0)) return '';
-                if(isSecurity && !campaignImg && (!items || items.length === 0)) return ''; 
-
-                let gridHtml = `
-                <div style="margin-bottom:50px;">
-                    <div style="font-size:18px; font-weight:900; color:#1e293b; border-bottom:2px solid #1e293b; padding-bottom:12px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:end;">
-                        <span>${title}</span>
-                    </div>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:24px;">`;
-                
-                // 보안 섹션인 경우 가장 첫 번째 칸에 캠페인 배너 강제 삽입
-                if(isSecurity && campaignImg) {
-                    gridHtml += makeCampaignCard(campaignImg);
-                }
-                
-                items.forEach(a => { gridHtml += makeCard(a); });
-
-                gridHtml += `</div></div>`;
-                return gridHtml;
-            };
-
-            // 전체 모달 HTML 조립
-            let html = `
-            <div style="padding:20px; background:#f8fafc;">
-                <div style="text-align:center; margin-bottom:40px;">
-                    <span style="background:#ef4444; color:white; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:900; margin-bottom:10px; display:inline-block; letter-spacing:1px;">미리보기 모드</span>
-                    <h1 style="font-size:26px; font-weight:900; color:#1e293b; margin:0;">[배포 예정] ${issueName}</h1>
-                </div>`;
-
-            html += renderSection('🔥 오늘의 딥다이브', mainArt ? [mainArt] : []);
-            html += renderSection('🚗 AUTO PLATFORM 동향', autoArts);
-            html += renderSection('🤖 AI/테크 트렌드', aiArts);
-            html += renderSection('🛡️ 정보 보안 및 IT 이슈', [], true); // 캠페인 배너 전용 보안 섹션
-
-            html += `</div>`;
-            
-            document.getElementById('preview-modal-content').innerHTML = html;
-            document.getElementById('preview-modal-content').style.padding = '0'; // 모달 기본 여백 제거
-            document.getElementById('preview-modal').style.display = 'flex';
-        };
-
-        // 기타 관리
-        window.targetCompanies = JSON.parse(localStorage.getItem('oasis_companies')) || [{ name: '엔카닷컴', keywords: '엔카' }];
-        window.renderCompanies = function() {
-            const list = document.getElementById('company-list'), selectBox = document.getElementById('company-select');
-            if(selectBox) selectBox.innerHTML = window.targetCompanies.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-            if(list) list.innerHTML = window.targetCompanies.map((c, index) => `<div style="background:white; border:1px solid #bfdbfe; border-radius:12px; padding:15px; display:flex; flex-direction:column; justify-content:space-between;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><span style="font-weight:900; font-size:16px; color:#1e3a8a;">${c.name}</span><button onclick="deleteCompany(${index})" style="color:#ef4444; border:none; background:none; cursor:pointer;"><i class="fas fa-times-circle"></i></button></div><div style="font-size:12px; color:#475569; background:#f8fafc; padding:8px 10px; border-radius:8px;"># ${c.keywords}</div></div>`).join('');
-        };
-        window.addCompany = function() { const name = document.getElementById('new-company-name').value.trim(), keywords = document.getElementById('new-company-keywords').value.trim(); if(name) { window.targetCompanies.push({name, keywords}); localStorage.setItem('oasis_companies', JSON.stringify(window.targetCompanies)); renderCompanies(); } };
-        window.deleteCompany = function(index) { window.targetCompanies.splice(index, 1); localStorage.setItem('oasis_companies', JSON.stringify(window.targetCompanies)); renderCompanies(); };
-
-        window.savePolicy = async function() {
-            const company = document.getElementById('company-select').value, url = document.getElementById('p-url').value, keyword = document.getElementById('p-keyword').value;
-            if(!url || !keyword) return alert("필수 입력 누락"); window.trackingPolicies.push({ id: Date.now(), company, url, keyword });
-            await setDoc(doc(db, "settings", "policies"), { list: window.trackingPolicies }); window.renderPolicies(); window.updateDashboardStats();
-        };
-        window.loadPolicies = async function() { const docSnap = await getDoc(doc(db, "settings", "policies")); if (docSnap.exists()) window.trackingPolicies = docSnap.data().list || []; window.renderPolicies(); };
-        window.renderPolicies = function() { document.getElementById('policy-list').innerHTML = window.trackingPolicies.map(p => `<div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px 20px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; font-size:14px;"><span><b>[${p.company}]</b> ${p.url} / <b>${p.keyword}</b></span><button onclick="deletePolicy(${p.id})" style="border:1px solid #ef4444; color:#ef4444; background:white; padding:5px 15px; border-radius:4px; cursor:pointer; font-weight:bold;">삭제</button></div>`).join(''); };
-        window.deletePolicy = async (id) => { window.trackingPolicies = window.trackingPolicies.filter(p => p.id !== id); await setDoc(doc(db, "settings", "policies"), { list: window.trackingPolicies }); window.renderPolicies(); window.updateDashboardStats(); };
-
-        window.loadSubscribers = async function() {
-            try {
-                const q = await getDocs(collection(db, "subscribers")); const list = document.getElementById('subscriber-list');
-                if(q.empty) { list.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; font-weight:bold;">등록된 구독자가 없습니다.</td></tr>'; window.subscriberExcelData = []; return; }
-                let excelData = [];
-                list.innerHTML = q.docs.map(docSnap => {
-                    const d = docSnap.data(); const dateObj = new Date(d.subscribeDate);
-                    const formattedDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
-                    excelData.push({ "가입일시": formattedDate, "이메일 주소": d.email, "구독상태": "활성" });
-                    return `<tr><td>${formattedDate}</td><td style="font-weight:900; color:#1d4ed8;">${d.email}</td><td><span style="background:#dcfce7; color:#166534; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:900;">구독중</span></td><td><button onclick="deleteSubscriber('${d.email}')" style="background:#fef2f2; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer; color:#ef4444;">삭제</button></td></tr>`;
-                }).join(''); window.subscriberExcelData = excelData;
-            } catch(e) {}
-        };
-        window.deleteSubscriber = async function(email) { if(!confirm(`삭제하시겠습니까?`)) return; try { await deleteDoc(doc(db, "subscribers", email)); alert("삭제완료"); window.loadSubscribers(); } catch(error) {} };
-        window.exportSubscribersExcel = function() { if(window.subscriberExcelData.length === 0) return; const ws = XLSX.utils.json_to_sheet(window.subscriberExcelData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Subscribers"); XLSX.writeFile(wb, `OASIS_구독자_${new Date().toISOString().split('T')[0]}.xlsx`); };
-        window.exportToExcel = async function() {
-            try {
-                const q = await getDocs(collection(db, "magazines")); if(q.empty) return alert("데이터가 없습니다.");
-                let excelData = []; q.docs.forEach(doc => { const mag = doc.data(); if(mag.articles) mag.articles.forEach(art => excelData.push({ "발행 호수": mag.issueName, "카테고리": art.category, "관련 기업": art.brand, "기사 제목": art.title, "인사이트": art.insight, "원문 링크": art.link })); });
-                const ws = XLSX.utils.json_to_sheet(excelData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, `OASIS_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
-            } catch (err) { alert("엑셀 오류"); }
-        };
-        window.exportToPDF = function() { html2pdf().set({ margin: 1, filename: `OASIS_History.pdf`, jsPDF: { format: 'letter', orientation: 'portrait' } }).from(document.getElementById('history-container')).save(); };
-        window.applyTokens = function() { document.documentElement.style.setProperty('--theme-primary', document.getElementById('tk-color').value); document.documentElement.style.setProperty('--theme-radius', document.getElementById('tk-radius').value + 'px'); };
-        
-        window.updateDashboardStats = async function() { document.getElementById('dash-policies').innerText = window.trackingPolicies.length; document.getElementById('dash-drafts').innerText = window.draftArticles.ai.length + window.draftArticles.auto.length + window.draftArticles.security.length + (window.draftArticles.main ? 1 : 0); try { const q = await getDocs(collection(db, "magazines")); document.getElementById('dash-reports').innerText = q.size; } catch(e) {} };
-        document.addEventListener('DOMContentLoaded', () => { window.renderCompanies(); });
-    // 🔥 복구: 리포트 사후 관리(수정/삭제) 로직
         window.editingDocId = null; 
         window.editingArticles = [];
 
-/* 🔥 원본 코드 유지: 기존 사후 관리 예외 처리 로직 유지 */
         window.openEditModal = function(docId) {
             const data = window.historyCache[docId]; 
             if(!data) return;
@@ -823,7 +656,6 @@ window.setMainArticle = function(index) {
             
             document.getElementById('edit-issue-name').value = data.issueName;
             
-            /* 🔥 고도화: 모달 열 때 캠페인 배너 목록 불러오기 및 기존 세팅값 매칭 */
             const editCampaignSelect = document.getElementById('edit-campaign-select');
             editCampaignSelect.innerHTML = '<option value="">보안 캠페인 배너 선택 안 함 (없음)</option>' + 
                 (window.campaignImages || []).map(img => `<option value="${img.url}">${img.name || img.url.substring(0,20)}</option>`).join('');
@@ -891,7 +723,7 @@ window.setMainArticle = function(index) {
             document.getElementById('edit-new-important').checked = false;
         };
 
-window.saveEditingReport = async function() {
+        window.saveEditingReport = async function() {
             const newIssueName = document.getElementById('edit-issue-name').value; 
             if(!newIssueName) return alert("호수명은 필수입니다.");
             
@@ -902,7 +734,6 @@ window.saveEditingReport = async function() {
                 desc: document.getElementById('edit-v-desc').value 
             };
 
-            /* 🔥 고도화: 수정 완료 시 캠페인 배너 데이터도 함께 서버에 저장 */
             const campaignVal = document.getElementById('edit-campaign-select').value;
             const updatedCampaign = campaignVal ? { securityImg: campaignVal } : null;
             
@@ -920,7 +751,7 @@ window.saveEditingReport = async function() {
             } catch (error) { 
                 alert("저장 실패: " + error.message); 
             }
-        };;
+        };
 
         window.deleteEntireReport = async function() { 
             if(!confirm("⚠️ 리포트를 전체 삭제하시겠습니까?")) return; 
@@ -934,21 +765,99 @@ window.saveEditingReport = async function() {
                 alert("삭제 실패"); 
             } 
         };
-             // 🔥 1. 초기 데이터 세팅 (저장된 데이터가 없으면 기본값 세팅)
-        window.targetCompanies = JSON.parse(localStorage.getItem('oasis_companies')) || [
-            { name: '엔카닷컴', keywords: '엔카, 중고차, 직영' },
-            { name: '케이카', keywords: '케이카, Kcar, 내차사기' },
-            { name: '헤이딜러', keywords: '헤이딜러, 피알앤디, 내차팔기' },
-            { name: '쏘카', keywords: '쏘카, 카셰어링, 모빌리티' }
-        ];
-// 🔥 고도화: 뉴닉 스타일의 고급(Premium) 뉴스레터 HTML 생성기
+
+        // 🔥 고도화 기능: 프리뷰 섹션 카테고리 업데이트
+        window.openReportPreview = function() {
+            const issueName = document.getElementById('issue-name').value || "미지정 호수 (임시)";
+            const campaignImg = document.getElementById('campaign-select-deploy').value;
+
+            const mainArt = window.draftArticles.main;
+            const macroArts = window.draftArticles.macro || [];
+            const platformArts = window.draftArticles.platform || [];
+            const autoArts = window.draftArticles.auto || [];
+            const aiArts = window.draftArticles.ai || [];
+            const securityArts = window.draftArticles.security || [];
+            
+            const makeCard = (a) => {
+                const thumb = a.img && a.img.includes('http') ? a.img : 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400';
+                const badge = a.isImportant ? `<span style="background:#ef4444; color:white; padding:3px 8px; border-radius:6px; font-size:10px; font-weight:900; margin-right:5px; box-shadow: 0 2px 4px rgba(239,68,68,0.3);">HOT</span>` : '';
+                return `
+                <div style="background:white; border:1px solid #e2e8f0; border-radius:16px; padding:20px; display:flex; flex-direction:column; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                    <div style="width:100%; aspect-ratio:4/3; border-radius:12px; overflow:hidden; margin-bottom:16px; background:#f1f5f9;">
+                        <img src="${thumb}" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                        <div style="display:flex; align-items:center;">
+                            ${badge}
+                            <span style="background:#f1f5f9; color:#64748b; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:900;">[${a.brand}]</span>
+                        </div>
+                        <span style="font-size:10px; color:#94a3b8; font-weight:bold;">${a.source}</span>
+                    </div>
+                    <div style="font-size:16px; font-weight:900; color:#1e293b; margin-bottom:12px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${a.title}</div>
+                    <div style="font-size:13px; color:#64748b; line-height:1.6; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${a.desc}</div>
+                </div>`;
+            };
+
+            const makeCampaignCard = (imgUrl) => {
+                if(!imgUrl) return '';
+                return `
+                <div style="background:white; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; position:relative; min-height:280px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                    <div style="position:absolute; top:16px; left:16px; background:rgba(0,0,0,0.65); color:white; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:900; z-index:10; border:1px solid rgba(255,255,255,0.2); backdrop-filter: blur(4px); letter-spacing:1px;">캠페인</div>
+                    <img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover; position:absolute; inset:0;">
+                </div>`;
+            };
+
+            const renderSection = (title, items, isSecurity = false) => {
+                if(!isSecurity && (!items || items.length === 0)) return '';
+                if(isSecurity && !campaignImg && (!items || items.length === 0)) return ''; 
+
+                let gridHtml = `
+                <div style="margin-bottom:50px;">
+                    <div style="font-size:18px; font-weight:900; color:#1e293b; border-bottom:2px solid #1e293b; padding-bottom:12px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:end;">
+                        <span>${title}</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:24px;">`;
+                
+                if(isSecurity && campaignImg) {
+                    gridHtml += makeCampaignCard(campaignImg);
+                }
+                
+                items.forEach(a => { gridHtml += makeCard(a); });
+
+                gridHtml += `</div></div>`;
+                return gridHtml;
+            };
+
+            let html = `
+            <div style="padding:20px; background:#f8fafc;">
+                <div style="text-align:center; margin-bottom:40px;">
+                    <span style="background:#ef4444; color:white; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:900; margin-bottom:10px; display:inline-block; letter-spacing:1px;">미리보기 모드</span>
+                    <h1 style="font-size:26px; font-weight:900; color:#1e293b; margin:0;">[배포 예정] ${issueName}</h1>
+                </div>`;
+
+            html += renderSection('🔥 FIRST DIVE (1면)', mainArt ? [mainArt] : []);
+            html += renderSection('🌐 MACRO VIEW', macroArts);
+            html += renderSection('🛒 BIZ & PLATFORM', platformArts);
+            html += renderSection('🚗 AUTO TRACK', autoArts);
+            html += renderSection('🤖 AI STRATEGY', aiArts);
+            html += renderSection('🛡️ INFO-SECURE', securityArts, true);
+
+            html += `</div>`;
+            
+            document.getElementById('preview-modal-content').innerHTML = html;
+            document.getElementById('preview-modal-content').style.padding = '0'; 
+            document.getElementById('preview-modal').style.display = 'flex';
+        };
+
+        // 🔥 고도화 기능: 뉴스레터 이메일 양식 업데이트
         window.getPremiumNewsletterHTML = function() {
             const issueName = document.getElementById('issue-name').value || "임시 호수";
             const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace(/\.$/, '');
             const campaignImg = document.getElementById('campaign-select-deploy').value;
 
             const main = window.draftArticles.main;
-            const autohands = window.draftArticles.autohands || [];
+            const macro = window.draftArticles.macro || [];
+            const platform = window.draftArticles.platform || [];
             const auto = window.draftArticles.auto || [];
             const ai = window.draftArticles.ai || [];
             const security = window.draftArticles.security || [];
@@ -966,10 +875,10 @@ window.saveEditingReport = async function() {
             let html = `
             <div style="background-color: #f8fafc; padding: 40px 10px; font-family: 'Pretendard', -apple-system, sans-serif;">
                 <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
-                    <div style="background-color: #14b8a6; padding: 35px 30px; text-align: center;">
+                    <div style="background-color: #1e293b; padding: 35px 30px; text-align: center;">
                         <div style="color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 700; margin-bottom: 10px; letter-spacing: 1px;">오토핸즈 R&D 매거진 OASIS</div>
                         <div style="color: #ffffff; font-size: 28px; font-weight: 900; line-height: 1.3; word-break: keep-all;">바쁜 아침,<br>오늘의 모빌리티 핵심만 빠르게 🚙</div>
-                        <div style="display: inline-block; background-color: rgba(0,0,0,0.15); color: #ffffff; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-top: 20px;">${today} • ISSUE ${issueName}</div>
+                        <div style="display: inline-block; background-color: rgba(255,255,255,0.15); color: #ffffff; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-top: 20px;">${today} • ISSUE ${issueName}</div>
                     </div>
                     <div style="padding: 40px 25px; background-color: #f8fafc;">`;
 
@@ -988,10 +897,11 @@ window.saveEditingReport = async function() {
                         </div>`;
             }
 
-            if(autohands.length > 0) html += `<div style="margin-bottom: 40px;"><div style="font-size: 18px; font-weight: 900; color: #1e293b; margin-bottom: 15px;">⚡ 오토핸즈 HOT 브리핑</div>${buildPremiumCard(autohands, '#fef08a')}</div>`;
-            if(auto.length > 0) html += `<div style="margin-bottom: 40px;"><div style="font-size: 18px; font-weight: 900; color: #1e293b; margin-bottom: 15px;">🚗 모빌리티 트렌드</div>${buildPremiumCard(auto, '#bfdbfe')}</div>`;
-            if(ai.length > 0) html += `<div style="margin-bottom: 40px;"><div style="font-size: 18px; font-weight: 900; color: #1e293b; margin-bottom: 15px;">🤖 AI & 테크 동향</div>${buildPremiumCard(ai, '#e9d5ff')}</div>`;
-            if(security.length > 0) html += `<div style="margin-bottom: 40px;"><div style="font-size: 18px; font-weight: 900; color: #1e293b; margin-bottom: 15px;">🛡️ 슬기로운 보안 생활</div>${buildPremiumCard(security, '#fecaca')}</div>`;
+            if(macro.length > 0) html += `<div style="margin-bottom: 40px;"><div style="font-size: 18px; font-weight: 900; color: #1e293b; margin-bottom: 15px;">🌐 MACRO VIEW 브리핑</div>${buildPremiumCard(macro, '#fef08a')}</div>`;
+            if(platform.length > 0) html += `<div style="margin-bottom: 40px;"><div style="font-size: 18px; font-weight: 900; color: #1e293b; margin-bottom: 15px;">🛒 BIZ & PLATFORM 동향</div>${buildPremiumCard(platform, '#fed7aa')}</div>`;
+            if(auto.length > 0) html += `<div style="margin-bottom: 40px;"><div style="font-size: 18px; font-weight: 900; color: #1e293b; margin-bottom: 15px;">🚗 AUTO TRACK 트렌드</div>${buildPremiumCard(auto, '#bfdbfe')}</div>`;
+            if(ai.length > 0) html += `<div style="margin-bottom: 40px;"><div style="font-size: 18px; font-weight: 900; color: #1e293b; margin-bottom: 15px;">🤖 AI STRATEGY 테크</div>${buildPremiumCard(ai, '#e9d5ff')}</div>`;
+            if(security.length > 0) html += `<div style="margin-bottom: 40px;"><div style="font-size: 18px; font-weight: 900; color: #1e293b; margin-bottom: 15px;">🛡️ INFO-SECURE 보안 이슈</div>${buildPremiumCard(security, '#fecaca')}</div>`;
 
             html += `</div>`; 
 
@@ -1010,22 +920,17 @@ window.saveEditingReport = async function() {
             return html;
         };
 
-// 🔥 미리보기 기능 (새 창) - Live Server 충돌 방지 패치 완료
         window.previewPremiumNewsletter = function() {
             const html = window.getPremiumNewsletterHTML();
             const viewer = window.open('', '_blank', 'width=700,height=900,scrollbars=yes');
-            
-            // Live Server 에러 방지용 치트키: '</' + 'body>' 로 단어 분리
             viewer.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>뉴스레터 미리보기</title></head><body style="margin:0;">' + html + '</' + 'body></' + 'html>');
             viewer.document.close();
         };
 
-        // 🔥 발송(복사) 기능 (AWS 없이 사내 메일용)
         window.sendPremiumNewsletter = function() {
             if(!confirm("최고급 퀄리티의 뉴스레터 HTML을 생성하여 복사하시겠습니까?\n복사 후 사내 웹메일(아웃룩 등)에 붙여넣기 하시면 즉시 발송 가능합니다!")) return;
             
             const html = window.getPremiumNewsletterHTML();
-            
             const el = document.createElement('textarea');
             el.value = html;
             document.body.appendChild(el);
@@ -1034,7 +939,142 @@ window.saveEditingReport = async function() {
             document.body.removeChild(el);
             
             alert("🎉 [성공] 뉴스레터 HTML이 클립보드에 완벽하게 복사되었습니다!\n\n사내 메일 '편지쓰기' 창에서 [HTML 편집]을 누르고 붙여넣기만 하시면 끝납니다.");
-        };         
-       </script>
+        };       
+
+        window.targetCompanies = JSON.parse(localStorage.getItem('oasis_companies')) || [
+            { name: '엔카닷컴', keywords: '엔카, 중고차, 직영' },
+            { name: '케이카', keywords: '케이카, Kcar, 내차사기' },
+            { name: '헤이딜러', keywords: '헤이딜러, 피알앤디, 내차팔기' },
+            { name: '쏘카', keywords: '쏘카, 카셰어링, 모빌리티' }
+        ];
+
+        window.renderCompanies = function() {
+            const list = document.getElementById('company-list'), selectBox = document.getElementById('company-select');
+            if(selectBox) selectBox.innerHTML = window.targetCompanies.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            if(list) list.innerHTML = window.targetCompanies.map((c, index) => `<div style="background:white; border:1px solid #bfdbfe; border-radius:12px; padding:15px; display:flex; flex-direction:column; justify-content:space-between;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><span style="font-weight:900; font-size:16px; color:#1e3a8a;">${c.name}</span><button onclick="deleteCompany(${index})" style="color:#ef4444; border:none; background:none; cursor:pointer;"><i class="fas fa-times-circle"></i></button></div><div style="font-size:12px; color:#475569; background:#f8fafc; padding:8px 10px; border-radius:8px;"># ${c.keywords}</div></div>`).join('');
+        };
+        
+        window.addCompany = function() { 
+            const name = document.getElementById('new-company-name').value.trim(), keywords = document.getElementById('new-company-keywords').value.trim(); 
+            if(name) { 
+                window.targetCompanies.push({name, keywords}); 
+                localStorage.setItem('oasis_companies', JSON.stringify(window.targetCompanies)); 
+                window.renderCompanies(); 
+            } 
+        };
+        
+        window.deleteCompany = function(index) { 
+            window.targetCompanies.splice(index, 1); 
+            localStorage.setItem('oasis_companies', JSON.stringify(window.targetCompanies)); 
+            window.renderCompanies(); 
+        };
+
+        window.savePolicy = async function() {
+            const company = document.getElementById('company-select').value, url = document.getElementById('p-url').value, keyword = document.getElementById('p-keyword').value;
+            if(!url || !keyword) return alert("필수 입력 누락"); window.trackingPolicies.push({ id: Date.now(), company, url, keyword });
+            await setDoc(doc(db, "settings", "policies"), { list: window.trackingPolicies }); window.renderPolicies(); window.updateDashboardStats();
+        };
+        window.loadPolicies = async function() { const docSnap = await getDoc(doc(db, "settings", "policies")); if (docSnap.exists()) window.trackingPolicies = docSnap.data().list || []; window.renderPolicies(); };
+        window.renderPolicies = function() { document.getElementById('policy-list').innerHTML = window.trackingPolicies.map(p => `<div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px 20px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; font-size:14px;"><span><b>[${p.company}]</b> ${p.url} / <b>${p.keyword}</b></span><button onclick="deletePolicy(${p.id})" style="border:1px solid #ef4444; color:#ef4444; background:white; padding:5px 15px; border-radius:4px; cursor:pointer; font-weight:bold;">삭제</button></div>`).join(''); };
+        window.deletePolicy = async (id) => { window.trackingPolicies = window.trackingPolicies.filter(p => p.id !== id); await setDoc(doc(db, "settings", "policies"), { list: window.trackingPolicies }); window.renderPolicies(); window.updateDashboardStats(); };
+
+        window.loadSubscribers = async function() {
+            try {
+                const q = await getDocs(collection(db, "subscribers")); const list = document.getElementById('subscriber-list');
+                if(q.empty) { list.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; font-weight:bold;">등록된 구독자가 없습니다.</td></tr>'; window.subscriberExcelData = []; return; }
+                let excelData = [];
+                list.innerHTML = q.docs.map(docSnap => {
+                    const d = docSnap.data(); const dateObj = new Date(d.subscribeDate);
+                    const formattedDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
+                    excelData.push({ "가입일시": formattedDate, "이메일 주소": d.email, "구독상태": "활성" });
+                    return `<tr><td>${formattedDate}</td><td style="font-weight:900; color:#1d4ed8;">${d.email}</td><td><span style="background:#dcfce7; color:#166534; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:900;">구독중</span></td><td><button onclick="deleteSubscriber('${d.email}')" style="background:#fef2f2; border:none; padding:6px 12px; border-radius:4px; font-weight:bold; cursor:pointer; color:#ef4444;">삭제</button></td></tr>`;
+                }).join(''); window.subscriberExcelData = excelData;
+            } catch(e) {}
+        };
+        window.deleteSubscriber = async function(email) { if(!confirm(`삭제하시겠습니까?`)) return; try { await deleteDoc(doc(db, "subscribers", email)); alert("삭제완료"); window.loadSubscribers(); } catch(error) {} };
+        window.exportSubscribersExcel = function() { if(window.subscriberExcelData.length === 0) return; const ws = XLSX.utils.json_to_sheet(window.subscriberExcelData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Subscribers"); XLSX.writeFile(wb, `OASIS_구독자_${new Date().toISOString().split('T')[0]}.xlsx`); };
+        window.exportToExcel = async function() {
+            try {
+                const q = await getDocs(collection(db, "magazines")); if(q.empty) return alert("데이터가 없습니다.");
+                let excelData = []; q.docs.forEach(doc => { const mag = doc.data(); if(mag.articles) mag.articles.forEach(art => excelData.push({ "발행 호수": mag.issueName, "카테고리": art.category, "관련 기업": art.brand, "기사 제목": art.title, "인사이트": art.insight, "원문 링크": art.link })); });
+                const ws = XLSX.utils.json_to_sheet(excelData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, `OASIS_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+            } catch (err) { alert("엑셀 오류"); }
+        };
+        window.exportToPDF = function() { html2pdf().set({ margin: 1, filename: `OASIS_History.pdf`, jsPDF: { format: 'letter', orientation: 'portrait' } }).from(document.getElementById('history-container')).save(); };
+        window.applyTokens = function() { document.documentElement.style.setProperty('--theme-primary', document.getElementById('tk-color').value); document.documentElement.style.setProperty('--theme-radius', document.getElementById('tk-radius').value + 'px'); };
+        
+        // 🔥 고도화 기능: 대시보드 대기열 개수 정확히 합산하기
+        window.updateDashboardStats = async function() { 
+            if(document.getElementById('dash-policies') && window.trackingPolicies) {
+                document.getElementById('dash-policies').innerText = window.trackingPolicies.length; 
+            }
+            
+            if(document.getElementById('dash-drafts') && window.draftArticles) {
+                const macroCount = window.draftArticles.macro ? window.draftArticles.macro.length : 0;
+                const platformCount = window.draftArticles.platform ? window.draftArticles.platform.length : 0;
+                const autoCount = window.draftArticles.auto ? window.draftArticles.auto.length : 0;
+                const aiCount = window.draftArticles.ai ? window.draftArticles.ai.length : 0;
+                const secCount = window.draftArticles.security ? window.draftArticles.security.length : 0;
+                const mainCount = window.draftArticles.main ? 1 : 0;
+                
+                document.getElementById('dash-drafts').innerText = macroCount + platformCount + autoCount + aiCount + secCount + mainCount;
+            }
+            
+            try { 
+                const q = await getDocs(collection(db, "magazines")); 
+                if(document.getElementById('dash-reports')) {
+                    document.getElementById('dash-reports').innerText = q.size; 
+                }
+            } catch(e) { console.error("대시보드 통계 로드 실패", e); } 
+        };
+
+        window.saveGeminiKey = function() {
+            const key = document.getElementById('gemini-api-key').value.trim();
+            if(!key) return alert("API 키를 입력해주세요!");
+            localStorage.setItem('GEMINI_API_KEY', key);
+            alert("✅ API 키가 브라우저에 안전하게 저장되었습니다.");
+        };
+
+        document.addEventListener('DOMContentLoaded', () => { 
+            window.renderCompanies(); 
+            
+            const savedKey = localStorage.getItem('GEMINI_API_KEY');
+            if(savedKey && document.getElementById('gemini-api-key')) {
+                document.getElementById('gemini-api-key').value = savedKey;
+            }
+        });
+
+        window.fetchYoutubeMeta = async function() {
+            const urlEl = document.getElementById('v-url');
+            
+            if(!urlEl || !urlEl.value.trim()) {
+                return alert("유튜브 링크 URL을 먼저 입력해주세요!");
+            }
+            
+            const url = urlEl.value.trim();
+            const btn = event.currentTarget; 
+            const originalText = btn.innerHTML;
+            
+            try {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 불러오는 중...';
+                
+                const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
+                const data = await res.json();
+
+                if(data.error) {
+                    alert("정보를 불러오지 못했습니다. 유튜브 링크가 맞는지 확인해주세요.");
+                } else {
+                    if(document.getElementById('v-title')) document.getElementById('v-title').value = data.title || '';
+                    if(document.getElementById('v-source')) document.getElementById('v-source').value = data.author_name || '';
+                    alert("✅ 유튜브 영상 제목과 채널명을 성공적으로 불러왔습니다!");
+                }
+            } catch(e) {
+                console.error(e);
+                alert("네트워크 오류가 발생했습니다. 잠시 후 다시 시도하거나 수동으로 입력해주세요.");
+            } finally {
+                btn.innerHTML = originalText;
+            }
+        };
+    </script>
 </body>
-</html>                    
+</html>
