@@ -9,7 +9,6 @@ const menuItems = [
   { id: 'security', icon: 'fas fa-shield-alt', label: '보안 캠페인 배너 관리' },
   { id: 'subscribe', icon: 'fas fa-users', label: '뉴스레터 구독자 관리' },
   { id: 'settings', icon: 'fas fa-cog', label: '시스템 환경 설정' },
-  { id: 'design', icon: 'fas fa-palette', label: '디자인 시스템 가이드' },
   { id: 'api', icon: 'fas fa-key', label: 'API 및 보안 설정' },
 ];
 
