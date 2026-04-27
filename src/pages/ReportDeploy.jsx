@@ -327,25 +327,24 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
                 {editArticles.length === 0 ? (
                   <div style={{ padding:20, textAlign:'center', color:'#94a3b8' }}>수록된 기사가 없습니다.</div>
                 ) : editArticles.map((art, idx) => (
-                  <div key={idx} style={{ padding:'12px 15px', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8, flex:1, minWidth:0 }}>
-                      <select value={art.category || 'auto'} onChange={e => changeEditCategory(idx, e.target.value)} style={{ padding:'4px 6px', fontSize:11, fontWeight:'bold', borderRadius:4, border:'1px solid #cbd5e1', background:'#f8fafc', cursor:'pointer', flexShrink:0 }}>
-                        <option value="main">🔥 1면</option>
-                        <option value="macro">🌐 경제</option>
-                        <option value="platform">🛒 비즈</option>
-                        <option value="auto">🚗 산업</option>
-                        <option value="ai">🤖 AI</option>
-                        <option value="security">🛡️ 보안</option>
-                      </select>
-                      <span style={{ fontSize:13, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                        <b>[{art.brand || 'N/A'}]</b> {art.title || '(제목 없음)'}
-                      </span>
+                  <div key={idx} style={{ padding:'15px', borderBottom:'1px solid #e2e8f0', display:'flex', gap:15, alignItems:'center', background: idx % 2 === 0 ? '#f8fafc' : 'white' }}>
+                    <select value={art.category || 'auto'} onChange={e => changeEditCategory(idx, e.target.value)} style={{ width:100, padding:'6px', fontSize:11, fontWeight:'bold', borderRadius:6, border:'1px solid #cbd5e1', background:'white', cursor:'pointer', flexShrink:0 }}>
+                      <option value="main">🔥 1면</option>
+                      <option value="macro">🌐 경제</option>
+                      <option value="platform">🛒 비즈</option>
+                      <option value="auto">🚗 산업</option>
+                      <option value="ai">🤖 AI</option>
+                      <option value="security">🛡️ 보안</option>
+                    </select>
+                    <div style={{ flex:1, display:'flex', gap:8, minWidth:0 }}>
+                      <input value={art.brand || ''} onChange={e => { const updated = [...editArticles]; updated[idx].brand = e.target.value; setEditArticles(updated); }} placeholder="기업" style={{ width:80, padding:'6px 10px', fontSize:12, borderRadius:6, border:'1px solid #e2e8f0', flexShrink:0 }} />
+                      <input value={art.title || ''} onChange={e => { const updated = [...editArticles]; updated[idx].title = e.target.value; setEditArticles(updated); }} placeholder="기사 제목을 입력하세요" style={{ flex:1, padding:'6px 10px', fontSize:13, borderRadius:6, border:'1px solid #e2e8f0', fontWeight:'bold' }} />
                     </div>
-                    <div style={{ display:'flex', alignItems:'center', gap:15, flexShrink:0, marginLeft:10 }}>
-                      <label style={{ fontSize:12, fontWeight:'bold', cursor:'pointer', color: art.isImportant ? '#ef4444' : '#64748b' }}>
-                        <input type="checkbox" checked={art.isImportant} onChange={() => toggleEditImportant(idx)} style={{ marginRight:4 }} />⭐중요
+                    <div style={{ display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
+                      <label style={{ fontSize:12, fontWeight:'bold', cursor:'pointer', color: art.isImportant ? '#ef4444' : '#64748b', display:'flex', alignItems:'center', gap:4 }}>
+                        <input type="checkbox" checked={art.isImportant} onChange={() => toggleEditImportant(idx)} style={{ width:15, height:15 }} />⭐중요
                       </label>
-                      <button onClick={() => removeEditArticle(idx)} style={{ background:'none', border:'none', color:'#ef4444', fontSize:12, fontWeight:'bold', cursor:'pointer' }}>삭제</button>
+                      <button onClick={() => removeEditArticle(idx)} style={{ background:'none', border:'none', color:'#ef4444', fontSize:12, fontWeight:'bold', cursor:'pointer', padding:'5px 10px' }}>삭제</button>
                     </div>
                   </div>
                 ))}
