@@ -4,14 +4,20 @@ import { useAuth } from './hooks/useAuth';
 import Sidebar from './components/Sidebar';
 import LoginOverlay from './components/LoginOverlay';
 import Dashboard from './pages/Dashboard';
+import NewsCrawler from './pages/NewsCrawler';
+import ReportDeploy from './pages/ReportDeploy';
+import CompanyList from './pages/CompanyList';
+import CampaignManager from './pages/CampaignManager';
+import SecurityBanner from './pages/SecurityBanner';
 import Subscribers from './pages/Subscribers';
+import Settings from './pages/Settings';
 import ApiSettings from './pages/ApiSettings';
-import { NewsCrawler, ReportDeploy, CompanyList, CampaignManager, SecurityBanner, Settings } from './pages/PlaceholderPages';
 
 function App() {
   const { user, userName, loading, login, logout } = useAuth();
   const [activeMenu, setActiveMenu] = useState('dashboard');
-  const [draftArticles] = useState({ main: null, macro: [], platform: [], auto: [], ai: [], security: [] });
+  const [draftArticles, setDraftArticles] = useState({ main: null, macro: [], platform: [], auto: [], ai: [], security: [] });
+  const companies = JSON.parse(localStorage.getItem('oasis_companies') || '[]');
 
   if (loading) {
     return (
@@ -24,15 +30,13 @@ function App() {
     );
   }
 
-  if (!user) {
-    return <LoginOverlay onLogin={login} />;
-  }
+  if (!user) return <LoginOverlay onLogin={login} />;
 
   const renderPage = () => {
     switch (activeMenu) {
       case 'dashboard': return <Dashboard draftArticles={draftArticles} />;
-      case 'news': return <NewsCrawler />;
-      case 'deploy': return <ReportDeploy />;
+      case 'news': return <NewsCrawler draftArticles={draftArticles} setDraftArticles={setDraftArticles} companies={companies} />;
+      case 'deploy': return <ReportDeploy draftArticles={draftArticles} setDraftArticles={setDraftArticles} />;
       case 'company': return <CompanyList />;
       case 'campaign': return <CampaignManager />;
       case 'security': return <SecurityBanner />;
@@ -46,9 +50,7 @@ function App() {
   return (
     <>
       <Sidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} userName={userName} onLogout={logout} />
-      <main className="main-content">
-        {renderPage()}
-      </main>
+      <main className="main-content">{renderPage()}</main>
     </>
   );
 }

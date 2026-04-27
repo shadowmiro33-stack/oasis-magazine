@@ -1,0 +1,171 @@
+import React, { useState } from 'react';
+import { getPolicies, savePolicies } from '../services/dataService';
+
+export default function NewsCrawler({ draftArticles, setDraftArticles, companies }) {
+  const [policies, setPoliciesState] = useState([]);
+  const [policyForm, setPolicyForm] = useState({ company:'', url:'', keyword:'' });
+  const [aiInput, setAiInput] = useState({ url:'', title:'', brand:'', source:'', desc:'', insight:'', img:'', category:'auto', isImportant:false });
+  const [aiLoading, setAiLoading] = useState(false);
+
+  React.useEffect(() => { loadPolicies(); }, []);
+
+  const loadPolicies = async () => { setPoliciesState(await getPolicies()); };
+
+  const savePolicy = async () => {
+    if (!policyForm.url || !policyForm.keyword) return alert('필수 입력 누락');
+    const updated = [...policies, { id: Date.now(), company: policyForm.company || companies?.[0]?.name || '', url: policyForm.url, keyword: policyForm.keyword }];
+    await savePolicies(updated);
+    setPolicyForm({ company:'', url:'', keyword:'' });
+    loadPolicies();
+  };
+
+  const deletePolicy = async (id) => {
+    await savePolicies(policies.filter(p => p.id !== id));
+    loadPolicies();
+  };
+
+  const runAI = async () => {
+    if (!aiInput.url) return alert('분석할 기사 URL을 입력하세요.');
+    setAiLoading(true);
+    try {
+      const response = await fetch('/.netlify/functions/analyze', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: aiInput.url })
+      });
+      if (!response.ok) throw new Error(await response.text());
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
+    } catch (e) { alert('통신 실패: ' + e.message); }
+    finally { setAiLoading(false); }
+  };
+
+  const addToDraft = () => {
+    if (!aiInput.title) return alert('기사가 없습니다.');
+    if (aiInput.isImportant) {
+      const all = [...(draftArticles.main ? [draftArticles.main] : []), ...draftArticles.macro, ...draftArticles.platform, ...draftArticles.auto, ...draftArticles.ai, ...draftArticles.security];
+      if (all.filter(a => a.isImportant).length >= 3) { alert('⚠️ 중요 기사는 최대 3개까지만 가능'); return; }
+    }
+    const article = { ...aiInput, link: aiInput.url };
+    const cat = aiInput.category;
+    if (cat === 'main') setDraftArticles(prev => ({ ...prev, main: article }));
+    else setDraftArticles(prev => ({ ...prev, [cat]: [...(prev[cat]||[]), article] }));
+    setAiInput({ url:'', title:'', brand:'', source:'', desc:'', insight:'', img:'', category:'auto', isImportant:false });
+  };
+
+  const allDrafts = [...(draftArticles.main ? [draftArticles.main] : []), ...draftArticles.macro, ...draftArticles.platform, ...draftArticles.auto, ...draftArticles.ai, ...draftArticles.security];
+
+  const deleteArticle = (index) => {
+    const target = allDrafts[index];
+    if (draftArticles.main === target) setDraftArticles(prev => ({ ...prev, main: null }));
+    else {
+      ['macro','platform','auto','ai','security'].forEach(c => {
+        if (draftArticles[c]?.includes(target)) setDraftArticles(prev => ({ ...prev, [c]: prev[c].filter(a => a !== target) }));
+      });
+    }
+  };
+
+  const showPreview = aiInput.title || aiInput.brand || aiInput.desc;
+
+  return (
+    <div className="animate-fade">
+      <div className="page-header"><div><h2>🤖 뉴스 수집 및 AI 분석기</h2></div></div>
+
+      {/* YouTube */}
+      <div className="card" style={{ border:'2px solid #f59e0b', background:'#fffbeb', marginBottom:25 }}>
+        <div className="card-title" style={{ color:'#b45309' }}><div><i className="fab fa-youtube"></i> 매거진 메인 유튜브 자동 세팅</div></div>
+        <input placeholder="유튜브 링크를 붙여넣으세요" style={{ marginBottom:10 }} />
+        <div className="grid-2"><input placeholder="영상 제목" /><input placeholder="채널명" /></div>
+      </div>
+
+      {/* Policies */}
+      <div className="card" style={{ marginBottom:25 }}>
+        <div className="card-title">
+          <div><i className="fas fa-crosshairs"></i> 추적 정책 및 기사 수집 제어</div>
+        </div>
+        <div style={{ display:'flex', gap:10, marginBottom:15 }}>
+          <input value={policyForm.url} onChange={e => setPolicyForm({...policyForm, url:e.target.value})} placeholder="대상 언론사 URL" style={{ flex:1 }} />
+          <input value={policyForm.keyword} onChange={e => setPolicyForm({...policyForm, keyword:e.target.value})} placeholder="추적 키워드" style={{ flex:1 }} />
+          <button className="btn btn-dark" onClick={savePolicy}>정책 추가</button>
+        </div>
+        {policies.map(p => (
+          <div key={p.id} style={{ background:'#f8fafc', border:'1px solid #e2e8f0', padding:'12px 20px', borderRadius:8, marginBottom:8, display:'flex', justifyContent:'space-between', fontSize:14 }}>
+            <span><b>[{p.company}]</b> {p.url} / <b>{p.keyword}</b></span>
+            <button className="btn btn-outline" style={{ padding:'4px 12px', fontSize:11, color:'#ef4444', borderColor:'#ef4444' }} onClick={() => deletePolicy(p.id)}>삭제</button>
+          </div>
+        ))}
+      </div>
+
+      {/* AI Analysis */}
+      <div className="card" style={{ border:'2px solid #3b82f6', background:'#f8fafc', marginBottom:25 }}>
+        <div className="card-title" style={{ color:'#3b82f6' }}><div><i className="fas fa-brain"></i> Gemini 2.5 Flash 기반 심층 기사 분석</div></div>
+        <div style={{ display:'flex', gap:10, marginBottom:20, background:'#eff6ff', padding:20, borderRadius:12 }}>
+          <input value={aiInput.url} onChange={e => setAiInput({...aiInput, url:e.target.value})} placeholder="분석할 기사 원문 URL" style={{ flex:1, border:'2px solid #93c5fd', fontWeight:'bold' }} />
+          <button className="btn btn-primary" onClick={runAI} disabled={aiLoading} style={{ width:180 }}>
+            {aiLoading ? <><i className="fas fa-spinner fa-spin"></i> 분석 중...</> : <><i className="fas fa-magic"></i> AI 분석 실행</>}
+          </button>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns: showPreview ? '1fr 380px' : '1fr', gap:30 }}>
+          <div>
+            <div className="grid-2" style={{ marginBottom:15 }}>
+              <input value={aiInput.brand} onChange={e => setAiInput({...aiInput, brand:e.target.value})} placeholder="관련 기업" />
+              <input value={aiInput.source} onChange={e => setAiInput({...aiInput, source:e.target.value})} placeholder="언론사" />
+            </div>
+            <input value={aiInput.title} onChange={e => setAiInput({...aiInput, title:e.target.value})} placeholder="기사 제목" style={{ marginBottom:15, fontWeight:'bold' }} />
+            <input value={aiInput.img} onChange={e => setAiInput({...aiInput, img:e.target.value})} placeholder="썸네일 URL (선택)" style={{ marginBottom:15 }} />
+            <textarea value={aiInput.desc} onChange={e => setAiInput({...aiInput, desc:e.target.value})} rows="3" placeholder="기사 핵심 요약" style={{ marginBottom:15, background:'#f1f5f9' }} />
+            <textarea value={aiInput.insight} onChange={e => setAiInput({...aiInput, insight:e.target.value})} rows="3" placeholder="R&D 전략 인사이트" style={{ marginBottom:15, borderColor:'#bfdbfe', background:'#eff6ff' }} />
+            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+              <select value={aiInput.category} onChange={e => setAiInput({...aiInput, category:e.target.value})} style={{ flex:1, fontWeight:'bold' }}>
+                <option value="main">🔥 FIRST DIVE</option><option value="macro">🌐 MACRO VIEW</option>
+                <option value="platform">🛒 BIZ & PLATFORM</option><option value="auto">🚗 AUTO TRACK</option>
+                <option value="ai">🤖 AI STRATEGY</option><option value="security">🛡️ INFO-SECURE</option>
+              </select>
+              <label style={{ display:'flex', alignItems:'center', gap:8, background:'#fefce8', border:'1px solid #fef08a', padding:10, borderRadius:8, fontWeight:900, fontSize:13, color:'#a16207', cursor:'pointer', whiteSpace:'nowrap' }}>
+                <input type="checkbox" checked={aiInput.isImportant} onChange={e => setAiInput({...aiInput, isImportant:e.target.checked})} style={{ width:16, height:16 }} /> ⭐ 중요
+              </label>
+              <button className="btn btn-dark" style={{ width:150, height:45 }} onClick={addToDraft}>대기열 전송 ⬇️</button>
+            </div>
+          </div>
+          {showPreview && (
+            <div>
+              <div style={{ fontSize:13, fontWeight:900, color:'#64748b', marginBottom:10 }}><i className="fas fa-mobile-alt"></i> 미리보기</div>
+              <div style={{ border:'1px solid #e2e8f0', borderRadius:12, overflow:'hidden', background:'white', boxShadow:'0 10px 15px -3px rgba(0,0,0,0.1)' }}>
+                {aiInput.img && <img src={aiInput.img} alt="" style={{ width:'100%', height:200, objectFit:'cover' }} />}
+                <div style={{ padding:20 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:11, fontWeight:'bold' }}>
+                    <span className="badge badge-blue">{aiInput.brand || '기업명'}</span>
+                    <span style={{ color:'#64748b' }}>{aiInput.source || '언론사'}</span>
+                  </div>
+                  <div style={{ fontWeight:900, fontSize:17, marginBottom:12, lineHeight:1.4 }}>{aiInput.title || '제목'}</div>
+                  <div style={{ fontSize:13, color:'#475569', lineHeight:1.5 }}>{aiInput.desc || '요약'}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Draft List */}
+      <div className="card-title">📋 발행 대기 목록 (Drafts)</div>
+      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:10, padding:20, background:'#f8fafc' }}>
+          {allDrafts.length === 0 ? (
+            <div style={{ textAlign:'center', padding:50, color:'#cbd5e1', border:'2px dashed #e2e8f0', borderRadius:20 }}>수집된 기사가 없습니다.</div>
+          ) : allDrafts.map((a, i) => (
+            <div key={i} className="card" style={{ display:'flex', gap:15, padding:15, alignItems:'center', border:'1px solid #e2e8f0', borderRadius:15 }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                  <span style={{ fontSize:11, fontWeight:900, color:'#3b82f6' }}>{a.isImportant && <span className="badge badge-red" style={{ marginRight:4 }}>⭐중요</span>}[{a.brand}]</span>
+                  <span style={{ fontSize:10, color:'#94a3b8', fontWeight:'bold' }}>{a.source}</span>
+                </div>
+                <div style={{ fontWeight:900, fontSize:15, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.title}</div>
+              </div>
+              <button className="btn btn-danger" style={{ padding:'6px 12px', fontSize:11 }} onClick={() => deleteArticle(i)}>삭제</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
