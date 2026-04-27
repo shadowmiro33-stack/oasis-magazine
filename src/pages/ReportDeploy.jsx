@@ -72,7 +72,10 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
       <div className="page-header">
         <div><h2>🚀 리포트 배포 및 데이터 추출</h2></div>
         <div style={{ display:'flex', gap:10 }}>
+          <button className="btn" style={{ background:'#3b82f6', color:'white', fontWeight:'bold' }} onClick={() => alert('준비 중')}><i className="fas fa-search"></i> 메일 발송 미리보기</button>
+          <button className="btn" style={{ background:'#75b5ee', color:'white', fontWeight:'bold' }} onClick={() => alert('준비 중')}><i className="fas fa-paper-plane"></i> 뉴스레터 자동 복사 및 발송</button>
           <button className="btn" style={{ background:'#107c41', color:'white' }} onClick={exportExcel}><i className="fas fa-file-excel"></i> Excel</button>
+          <button className="btn btn-danger" onClick={() => alert('준비 중')}><i className="fas fa-file-pdf"></i> PDF</button>
         </div>
       </div>
 
@@ -91,8 +94,9 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
           </select>
         </div>
         <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+          <button className="btn btn-primary" onClick={() => alert('준비 중')} style={{ padding:'15px 30px', fontSize:16, background:'#3b82f6' }}><i className="fas fa-eye"></i> 1. 배포 전 미리보기</button>
           <button className="btn btn-dark" onClick={deploy} disabled={deploying} style={{ padding:'15px 30px', fontSize:16 }}>
-            {deploying ? '배포 중...' : '🚀 라이브 서버 배포'}
+            {deploying ? '배포 중...' : '🚀 2. 라이브 서버 배포'}
           </button>
         </div>
       </div>
@@ -112,9 +116,13 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
                 <td>{m.articles?.length || 0}건</td>
                 <td><span style={{ color:'#10b981', fontWeight:'bold' }}>배포완료</span></td>
                 <td>
-                  <div style={{ display:'flex', gap:5 }}>
-                    <button className="btn btn-success" style={{ padding:'6px 12px', fontSize:11 }} onClick={() => sendEmail(m)}>발송</button>
-                    <button className="btn btn-danger" style={{ padding:'6px 12px', fontSize:11 }} onClick={() => deleteReport(m.id)}>삭제</button>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                    <button className="btn btn-primary" style={{ background:'#3b82f6', padding:'6px 12px', fontSize:11, width:'100%' }} onClick={() => alert('준비 중')}><i className="fas fa-eye"></i> 미리보기</button>
+                    <div style={{ display:'flex', gap:5 }}>
+                      <button className="btn btn-success" style={{ padding:'6px 12px', fontSize:11, flex:1 }} onClick={() => sendEmail(m)}>발송</button>
+                      <button className="btn" style={{ background:'#f1f5f9', color:'#475569', padding:'6px 12px', fontSize:11, flex:1 }} onClick={() => alert('준비 중')}>관리</button>
+                    </div>
+                    <button className="btn btn-danger" style={{ padding:'6px 12px', fontSize:11, width:'100%', background:'#fef2f2', color:'#ef4444', borderColor:'#fecaca' }} onClick={() => deleteReport(m.id)}>삭제</button>
                   </div>
                 </td>
               </tr>

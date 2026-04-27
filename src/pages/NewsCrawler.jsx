@@ -73,9 +73,16 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
 
       {/* YouTube */}
       <div className="card" style={{ border:'2px solid #f59e0b', background:'#fffbeb', marginBottom:25 }}>
-        <div className="card-title" style={{ color:'#b45309' }}><div><i className="fab fa-youtube"></i> 매거진 메인 유튜브 자동 세팅</div></div>
-        <input placeholder="유튜브 링크를 붙여넣으세요" style={{ marginBottom:10 }} />
-        <div className="grid-2"><input placeholder="영상 제목" /><input placeholder="채널명" /></div>
+        <div className="card-title" style={{ color:'#b45309', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div><i className="fab fa-youtube"></i> 매거진 메인 유튜브 자동 세팅</div>
+          <button className="btn btn-primary" style={{ background:'#f59e0b', color:'white', borderRadius:8, padding:'6px 12px', fontSize:12 }}>정보 불러오기</button>
+        </div>
+        <input placeholder="유튜브 링크를 붙여넣으세요 (예: https://youtu.be/...)" style={{ marginBottom:10, borderColor:'#fcd34d' }} />
+        <div className="grid-2" style={{ marginBottom:10 }}>
+          <input placeholder="영상 제목 (자동 입력)" style={{ borderColor:'#fcd34d' }} />
+          <input placeholder="채널명 (자동 입력)" style={{ borderColor:'#fcd34d' }} />
+        </div>
+        <input placeholder="영상에 대한 짧은 코멘트를 입력하세요 (선택)" style={{ borderColor:'#fcd34d', width:'100%' }} />
       </div>
 
       {/* Policies */}
@@ -107,6 +114,10 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
         </div>
         <div style={{ display:'grid', gridTemplateColumns: showPreview ? '1fr 380px' : '1fr', gap:30 }}>
           <div>
+            <div style={{ fontWeight: 800, color: '#3b82f6', marginBottom: 10, fontSize:14 }}><i className="fas fa-edit"></i> 기사 수동 직접 입력 / AI 결과 수정</div>
+            <div style={{ fontSize: 11, color: '#64748b', background: '#f8fafc', padding: '8px 12px', borderRadius: 8, marginBottom: 15, border:'1px solid #e2e8f0' }}>
+              💡 AI 분석을 돌리지 않고 아래 폼에 내용을 직접 작성하여 수동으로 등록할 수도 있습니다.
+            </div>
             <div className="grid-2" style={{ marginBottom:15 }}>
               <input value={aiInput.brand} onChange={e => setAiInput({...aiInput, brand:e.target.value})} placeholder="관련 기업" />
               <input value={aiInput.source} onChange={e => setAiInput({...aiInput, source:e.target.value})} placeholder="언론사" />
