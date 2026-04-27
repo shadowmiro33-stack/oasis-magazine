@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './styles/global.css';
 import { useAuth } from './hooks/useAuth';
+import { getCampaigns, getSecBanners } from './services/dataService';
 import Sidebar from './components/Sidebar';
 import LoginOverlay from './components/LoginOverlay';
 import Dashboard from './pages/Dashboard';
@@ -17,6 +18,23 @@ function App() {
   const { user, userName, loading, login, logout } = useAuth();
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [draftArticles, setDraftArticles] = useState({ main: null, macro: [], platform: [], auto: [], ai: [], security: [] });
+  const [issueName, setIssueName] = useState('');
+  const [selCampaign, setSelCampaign] = useState('');
+  const [selSecurity, setSelSecurity] = useState('');
+  const [video, setVideo] = useState({ url: '', title: '', source: '', desc: '' });
+  const [campaigns, setCampaigns] = useState([]);
+  const [secBanners, setSecBanners] = useState([]);
+
+  React.useEffect(() => {
+    const loadShared = async () => {
+      const c = await getCampaigns();
+      setCampaigns(c);
+      const s = await getSecBanners();
+      setSecBanners(s);
+    };
+    loadShared();
+  }, []);
+
   const companies = JSON.parse(localStorage.getItem('oasis_companies') || '[]');
 
   if (loading) {
@@ -35,8 +53,8 @@ function App() {
   const renderPage = () => {
     switch (activeMenu) {
       case 'dashboard': return <Dashboard draftArticles={draftArticles} />;
-      case 'news': return <NewsCrawler draftArticles={draftArticles} setDraftArticles={setDraftArticles} companies={companies} />;
-      case 'deploy': return <ReportDeploy draftArticles={draftArticles} setDraftArticles={setDraftArticles} />;
+      case 'news': return <NewsCrawler draftArticles={draftArticles} setDraftArticles={setDraftArticles} companies={companies} issueName={issueName} selCampaign={selCampaign} selSecurity={selSecurity} video={video} setVideo={setVideo} campaigns={campaigns} secBanners={secBanners} />;
+      case 'deploy': return <ReportDeploy draftArticles={draftArticles} setDraftArticles={setDraftArticles} issueName={issueName} setIssueName={setIssueName} selCampaign={selCampaign} setSelCampaign={setSelCampaign} selSecurity={selSecurity} setSelSecurity={setSelSecurity} video={video} setVideo={setVideo} campaigns={campaigns} setCampaigns={setCampaigns} secBanners={secBanners} setSecBanners={setSecBanners} />;
       case 'company': return <CompanyList />;
       case 'campaign': return <CampaignManager />;
       case 'security': return <SecurityBanner />;

@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
 import { getPolicies, savePolicies } from '../services/dataService';
 
-export default function NewsCrawler({ draftArticles, setDraftArticles, companies }) {
+export default function NewsCrawler({ draftArticles, setDraftArticles, companies, issueName, selCampaign, selSecurity, video, setVideo, campaigns, secBanners }) {
+  const [showWebPreview, setShowWebPreview] = useState(false);
   const [policies, setPoliciesState] = useState([]);
   const [policyForm, setPolicyForm] = useState({ company:'', url:'', keyword:'' });
   const [aiInput, setAiInput] = useState({ url:'', title:'', brand:'', source:'', desc:'', insight:'', img:'', category:'auto', isImportant:false });
   const [aiLoading, setAiLoading] = useState(false);
   const [manualText, setManualText] = useState('');
 
-  // YouTube Info State
-  const [ytUrl, setYtUrl] = useState('');
-  const [ytTitle, setYtTitle] = useState('');
-  const [ytChannel, setYtChannel] = useState('');
-  const [ytDesc, setYtDesc] = useState('');
   const [fetchingYt, setFetchingYt] = useState(false);
 
   React.useEffect(() => { loadPolicies(); }, []);
@@ -66,16 +62,15 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   };
 
   const fetchYoutubeMeta = async () => {
-    if(!ytUrl.trim()) return alert("유튜브 링크 URL을 먼저 입력해주세요!");
+    if(!video.url) return alert("유튜브 링크 URL을 먼저 입력해주세요!");
     try {
       setFetchingYt(true);
-      const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(ytUrl)}`);
+      const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(video.url)}`);
       const data = await res.json();
       if(data.error) {
         alert("정보를 불러오지 못했습니다. 유튜브 링크가 맞는지 확인해주세요.");
       } else {
-        setYtTitle(data.title || '');
-        setYtChannel(data.author_name || '');
+        setVideo({ ...video, title: data.title || '', source: data.author_name || '', desc: data.title || '' });
         alert("✅ 유튜브 영상 제목과 채널명을 성공적으로 불러왔습니다!");
       }
     } catch(e) { alert("네트워크 오류가 발생했습니다."); } 
@@ -128,16 +123,16 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       <div className="card" style={{ border:'2px solid #f59e0b', background:'#fffbeb', marginBottom:25 }}>
         <div className="card-title" style={{ color:'#b45309', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div><i className="fab fa-youtube"></i> 매거진 메인 유튜브 자동 세팅</div>
-          <button className="btn btn-primary" onClick={fetchYoutubeMeta} disabled={fetchingYt} style={{ background:'#f59e0b', color:'white', borderRadius:8, padding:'6px 12px', fontSize:12 }}>
-            {fetchingYt ? '불러오는 중...' : '정보 불러오기'}
-          </button>
         </div>
-        <input value={ytUrl} onChange={e => setYtUrl(e.target.value)} placeholder="유튜브 링크를 붙여넣으세요 (예: https://youtu.be/...)" style={{ marginBottom:10, borderColor:'#fcd34d', width:'100%', padding:10, borderRadius:8 }} />
-        <div className="grid-2" style={{ marginBottom:10 }}>
-          <input value={ytTitle} onChange={e => setYtTitle(e.target.value)} placeholder="영상 제목 (자동 입력)" style={{ borderColor:'#fcd34d', width:'100%', padding:10, borderRadius:8 }} />
-          <input value={ytChannel} onChange={e => setYtChannel(e.target.value)} placeholder="채널명 (자동 입력)" style={{ borderColor:'#fcd34d', width:'100%', padding:10, borderRadius:8 }} />
+        <div style={{ display:'flex', gap:10, marginBottom:10 }}>
+          <input value={video.url} onChange={e => setVideo({...video, url:e.target.value})} placeholder="유튜브 영상 URL (YouTube Link)" style={{ flex:1, padding:10, borderRadius:8, border:'1px solid #e2e8f0' }} />
+          <button className="btn" onClick={fetchYoutubeMeta} disabled={fetchingYt} style={{ background:'#f59e0b', color:'white', fontWeight:'bold', width:120 }}>{fetchingYt ? '...' : '정보 불러오기'}</button>
         </div>
-        <input value={ytDesc} onChange={e => setYtDesc(e.target.value)} placeholder="영상에 대한 짧은 코멘트를 입력하세요 (선택)" style={{ borderColor:'#fcd34d', width:'100%', padding:10, borderRadius:8 }} />
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+          <input value={video.title} onChange={e => setVideo({...video, title:e.target.value})} placeholder="영상 제목 (자동 입력)" style={{ padding:10, borderRadius:8, border:'1px solid #e2e8f0' }} />
+          <input value={video.source} onChange={e => setVideo({...video, source:e.target.value})} placeholder="채널명 (자동 입력)" style={{ padding:10, borderRadius:8, border:'1px solid #e2e8f0' }} />
+          <input value={video.desc} onChange={e => setVideo({...video, desc:e.target.value})} placeholder="간략 코멘트" style={{ padding:10, borderRadius:8, border:'1px solid #e2e8f0' }} />
+        </div>
       </div>
 
       {/* Policies */}
@@ -238,11 +233,13 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       </div>
 
       {/* Draft List - 썸네일 이미지 + 메인 기사 설정 버튼 포함 */}
-      <div className="card-title" style={{ marginTop:30, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-        <div>📋 발행 대기 목록 (수집된 기사 대기열)</div>
-        <div style={{ fontSize:12, fontWeight:500, color:'#64748b' }}>총 {allDrafts.length}건 대기 중</div>
-      </div>
-      <div className="card" style={{ padding:0, overflow:'hidden', border:'1px solid #e2e8f0' }}>
+      <div className="card">
+        <div className="card-title" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div><i className="fas fa-list"></i> 발행 대기 목록 ({allDrafts.length}건)</div>
+          <button className="btn" onClick={() => setShowWebPreview(true)} style={{ background:'#3b82f6', color:'white', fontSize:12, padding:'5px 15px' }}>
+            <i className="fas fa-eye"></i> 최종 웹 미리보기
+          </button>
+        </div>
         <div style={{ display:'flex', flexDirection:'column', gap:10, padding:20, background:'#f8fafc' }}>
           {allDrafts.length === 0 ? (
             <div style={{ textAlign:'center', padding:50, color:'#cbd5e1', border:'2px dashed #e2e8f0', borderRadius:20 }}>수집된 기사가 없습니다.</div>
@@ -273,6 +270,133 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
           })}
         </div>
       </div>
+
+      {/* Web Preview Modal (Replicated from ReportDeploy for zero-deployment verification) */}
+      {showWebPreview && (
+        <div style={{ position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(15,23,42,0.9)', zIndex:9999, display:'flex', justifyContent:'center', alignItems:'center' }}>
+          <div style={{ background:'#f1f5f9', width:'90%', height:'90%', borderRadius:20, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
+            <div style={{ padding:'15px 30px', background:'white', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ background:'#ef4444', color:'white', padding:'4px 12px', borderRadius:20, fontSize:12, fontWeight:900 }}>최종 미리보기 모드</span>
+                <h3 style={{ margin:0, color:'#1e293b' }}>[배포 예정] {issueName || '미지정 호수'}</h3>
+              </div>
+              <button onClick={() => setShowWebPreview(false)} style={{ background:'#0f172a', color:'white', border:'none', padding:'8px 20px', borderRadius:8, fontWeight:'bold', cursor:'pointer' }}>닫기</button>
+            </div>
+            
+            <div style={{ padding:40, overflowY:'auto', flex:1 }}>
+              {(() => {
+                const sourceData = allDrafts;
+                const sourceVideo = video;
+                const sourceMain = draftArticles.main;
+                const currentSecurityBanner = selSecurity;
+
+                const getCat = (cat) => Array.isArray(sourceData) ? sourceData.filter(a => a.category === cat) : [];
+
+                return (
+                  <div style={{ maxWidth:1200, margin:'0 auto' }}>
+                    {/* YouTube Section */}
+                    {sourceVideo?.url && (
+                      <div style={{ display:'flex', background:'#0f172a', borderRadius:24, overflow:'hidden', marginBottom:60, boxShadow:'0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                        <div style={{ width:'65%', aspectRatio:'16/9', background:'black' }}>
+                          <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:14 }}>
+                             [YouTube Player: {sourceVideo.url}]
+                          </div>
+                        </div>
+                        <div style={{ width:'35%', padding:30, display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                          <div style={{ color:'#ef4444', fontSize:12, fontWeight:900, marginBottom:10 }}><i className="fab fa-youtube"></i> {sourceVideo.source || 'YouTube'}</div>
+                          <h2 style={{ color:'white', fontSize:20, fontWeight:800, marginBottom:15, lineHeight:1.4 }}>{sourceVideo.title}</h2>
+                          <p style={{ color:'#94a3b8', fontSize:13, lineHeight:1.6 }}>{sourceVideo.desc}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Main Article Section */}
+                    {sourceMain && (
+                      <div style={{ marginBottom:60 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
+                          <span style={{ width:6, height:24, background:'#2563eb', borderRadius:10 }}></span>
+                          <h2 style={{ fontSize:22, fontWeight:900, color:'#1e293b' }}>오늘의 1면 딥다이브</h2>
+                        </div>
+                        <div style={{ display:'flex', background:'white', borderRadius:24, overflow:'hidden', border:'1px solid #e2e8f0', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                          <div style={{ width:'50%', height:400, position:'relative' }}>
+                            <img src={sourceMain.img || 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800'} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                            <div style={{ position:'absolute', bottom:0, left:0, padding:30, background:'linear-gradient(transparent, rgba(0,0,0,0.8))', width:'100%' }}>
+                              <span style={{ background:'#2563eb', color:'white', padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:900, marginBottom:10, display:'inline-block' }}>FOCUS</span>
+                              <h3 style={{ color:'white', fontSize:26, fontWeight:900 }}>{sourceMain.title}</h3>
+                            </div>
+                          </div>
+                          <div style={{ width:'50%', padding:40, display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', borderBottom:'1px solid #f1f5f9', paddingBottom:15, marginBottom:15 }}>
+                              <span style={{ color:'#2563eb', fontSize:14, fontWeight:900 }}>{sourceMain.brand}</span>
+                              <span style={{ color:'#94a3b8', fontSize:12, fontWeight:700 }}>{sourceMain.source}</span>
+                            </div>
+                            <p style={{ fontSize:15, color:'#475569', lineHeight:1.7, marginBottom:20 }}>{sourceMain.desc}</p>
+                            {sourceMain.insight && (
+                              <div style={{ background:'#eff6ff', padding:20, borderRadius:16, border:'1px solid #dbeafe' }}>
+                                <div style={{ fontSize:11, fontWeight:900, color:'#2563eb', marginBottom:5 }}><i className="fas fa-lightbulb"></i> R&D INSIGHT</div>
+                                <p style={{ fontSize:13, color:'#1e40af', fontWeight:700, lineHeight:1.5 }}>{sourceMain.insight}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Category Grids */}
+                    {[
+                      { key: 'macro', label: '🌐 MACRO VIEW' },
+                      { key: 'platform', label: '🛒 BIZ & PLATFORM' },
+                      { key: 'auto', label: '🚗 AUTO TRACK' },
+                      { key: 'ai', label: '🤖 AI STRATEGY' },
+                      { key: 'security', label: '🛡️ INFO-SECURE' }
+                    ].map(sec => {
+                      const articles = getCat(sec.key);
+                      if (articles.length === 0 && (sec.key !== 'security' || !currentSecurityBanner)) return null;
+
+                      return (
+                        <div key={sec.key} style={{ marginBottom:60 }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'end', borderBottom:'2px solid #1e293b', paddingBottom:10, marginBottom:25 }}>
+                            <h2 style={{ fontSize:18, fontWeight:900, color:'#1e293b' }}>{sec.label}</h2>
+                          </div>
+                          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:25 }}>
+                            {sec.key === 'security' && currentSecurityBanner && (
+                              <div style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', position:'relative', minHeight:300 }}>
+                                <img src={currentSecurityBanner} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                                <div style={{ position:'absolute', bottom:20, left:20, background:'rgba(0,0,0,0.8)', color:'white', padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:900 }}>🚨 보안 캠페인</div>
+                              </div>
+                            )}
+                            {articles.map((a, i) => (
+                              <div key={i} style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
+                                <div style={{ width:'100%', aspectRatio:'16/10' }}>
+                                  <img src={a.img || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400'} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                                </div>
+                                <div style={{ padding:20, flex:1, display:'flex', flexDirection:'column' }}>
+                                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
+                                    <span style={{ color:'#2563eb', fontSize:11, fontWeight:800 }}>[{a.brand}]</span>
+                                    <span style={{ color:'#94a3b8', fontSize:10, fontWeight:700 }}>{a.source}</span>
+                                  </div>
+                                  <h4 style={{ fontSize:16, fontWeight:900, color:'#1e293b', marginBottom:10, lineHeight:1.4 }}>{a.title}</h4>
+                                  <p style={{ fontSize:13, color:'#64748b', lineHeight:1.5, marginBottom:15 }}>{a.desc}</p>
+                                  {a.insight && (
+                                    <div style={{ marginTop:'auto', paddingTop:15, borderTop:'1px solid #f1f5f9' }}>
+                                      <div style={{ fontSize:10, fontWeight:900, color:'#1e293b', marginBottom:5 }}>R&D INSIGHT</div>
+                                      <p style={{ fontSize:12, color:'#475569', fontWeight:700 }}>{a.insight}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

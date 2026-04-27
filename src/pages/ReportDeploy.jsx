@@ -4,14 +4,8 @@ import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
 import { getPremiumNewsletterHTML } from '../utils/newsletterTemplate';
 
-export default function ReportDeploy({ draftArticles, setDraftArticles }) {
+export default function ReportDeploy({ draftArticles, setDraftArticles, issueName, setIssueName, selCampaign, setSelCampaign, selSecurity, setSelSecurity, video, setVideo, campaigns, secBanners }) {
   const [history, setHistory] = useState([]);
-  const [issueName, setIssueName] = useState('');
-  const [campaigns, setCampaigns] = useState([]);
-  const [secBanners, setSecBanners] = useState([]);
-  const [selCampaign, setSelCampaign] = useState('');
-  const [selSecurity, setSelSecurity] = useState('');
-  const [video, setVideo] = useState({ url: '', title: '', source: '', desc: '' });
   const [deploying, setDeploying] = useState(false);
   const [expandedRows, setExpandedRows] = useState({}); // historyRow 확장 상태
   const [pastPreviewReport, setPastPreviewReport] = useState(null); // 과거 리포트 웹 미리보기용
@@ -39,14 +33,11 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
   const [showWebPreview, setShowWebPreview] = useState(false);
 
   const fetchData = async () => {
-    const [mags, camps, secs] = await Promise.all([getAllMagazines(), getCampaigns(), getSecurityBanners()]);
-    setHistory(mags); setCampaigns(camps); setSecBanners(secs);
+    const mags = await getAllMagazines();
+    setHistory(mags);
   };
-  const load = async () => {
-    const [mags, camps, secs] = await Promise.all([getAllMagazines(), getCampaigns(), getSecurityBanners()]);
-    setHistory(mags); setCampaigns(camps); setSecBanners(secs);
-  };
-  useEffect(() => { load(); }, []);
+  
+  useEffect(() => { fetchData(); }, []);
 
   const allDrafts = [...(draftArticles.main ? [draftArticles.main] : []), ...draftArticles.macro, ...draftArticles.platform, ...draftArticles.auto, ...draftArticles.ai, ...draftArticles.security];
 
