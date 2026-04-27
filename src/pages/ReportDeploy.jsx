@@ -242,25 +242,6 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
             {secBanners.map(img => <option key={img.id} value={img.url}>{img.name || '배너'}</option>)}
           </select>
         </div>
-        <div style={{ background:'#fefce8', border:'1px solid #fef08a', padding:20, borderRadius:12, marginBottom:20 }}>
-          <div style={{ fontSize:13, fontWeight:'bold', color:'#a16207', marginBottom:12 }}><i className="fab fa-youtube"></i> 메거진 메인 유튜브 자동 세팅</div>
-          <div style={{ display:'flex', gap:10, marginBottom:10 }}>
-            <input value={video.url} onChange={e => setVideo({...video, url:e.target.value})} placeholder="유튜브 링크 URL" style={{ flex:1, padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
-            <button className="btn" onClick={async () => {
-              if(!video.url) return alert("URL을 입력하세요.");
-              try {
-                const res = await fetch(`https://noembed.com/embed?url=${video.url}`);
-                const data = await res.json();
-                setVideo({...video, title:data.title||'', source:data.author_name||'', desc:data.title||''});
-              } catch(e) { alert("불러오기 실패"); }
-            }} style={{ background:'#f59e0b', color:'white', fontWeight:'bold', width:120 }}>정보 불러오기</button>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
-            <input value={video.title} onChange={e => setVideo({...video, title:e.target.value})} placeholder="영상 제목" style={{ padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
-            <input value={video.source} onChange={e => setVideo({...video, source:e.target.value})} placeholder="채널명" style={{ padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
-            <input value={video.desc} onChange={e => setVideo({...video, desc:e.target.value})} placeholder="영상 코멘트" style={{ padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
-          </div>
-        </div>
         <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
           <button className="btn" onClick={previewCurrentDrafts} style={{ padding:'12px 25px', fontSize:14, background:'#6366f1', color:'white', fontWeight:'bold' }}>
             <i className="fas fa-envelope-open-text"></i> ① 메일 발송용 미리보기
@@ -460,51 +441,116 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
             </div>
             
             <div style={{ padding:40, overflowY:'auto', flex:1 }}>
-              {[
-                { key: 'main', label: '🔥 FIRST DIVE (1면)' },
-                { key: 'macro', label: '🌐 MACRO VIEW' },
-                { key: 'platform', label: '🛒 BIZ & PLATFORM' },
-                { key: 'auto', label: '🚗 AUTO TRACK' },
-                { key: 'ai', label: '🤖 AI STRATEGY' },
-                { key: 'security', label: '🛡️ INFO-SECURE' }
-              ].map(sec => {
-                const sourceData = pastPreviewReport ? pastPreviewReport.articles : draftArticles;
-                const articles = sec.key === 'main' ? (sourceData.main ? [sourceData.main] : (Array.isArray(sourceData) ? [sourceData.find(a => a.category === 'main')] : [])) : (Array.isArray(sourceData) ? sourceData.filter(a => a.category === sec.key) : sourceData[sec.key]);
-                
-                const filteredArticles = articles.filter(Boolean);
-                if (filteredArticles.length === 0) return null;
-                
+              {/* Actual Magazine Layout Simulation */}
+              {(() => {
+                const sourceData = pastPreviewReport ? pastPreviewReport.articles : allDrafts;
+                const sourceVideo = pastPreviewReport ? pastPreviewReport.video : video;
+                const sourceMain = Array.isArray(sourceData) ? sourceData.find(a => a.category === 'main') : sourceData.main;
                 const currentSecurityBanner = pastPreviewReport ? (pastPreviewReport.webCampaign || pastPreviewReport.campaign?.securityImg) : selSecurity;
 
+                const getCat = (cat) => Array.isArray(sourceData) ? sourceData.filter(a => a.category === cat) : (sourceData[cat] || []);
+
                 return (
-                  <div key={sec.key} style={{ marginBottom:50 }}>
-                    <div style={{ fontSize:20, fontWeight:900, color:'#1e293b', borderBottom:'3px solid #1e293b', paddingBottom:12, marginBottom:25 }}>{sec.label}</div>
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:30 }}>
-                      {sec.key === 'security' && currentSecurityBanner && (
-                        <div style={{ background:'white', borderRadius:16, border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)', position:'relative', minHeight:280 }}>
-                          <div style={{ position:'absolute', top:16, left:16, background:'rgba(0,0,0,0.65)', color:'white', padding:'4px 10px', borderRadius:6, fontSize:11, fontWeight:900, zIndex:10, backdropFilter:'blur(4px)' }}>캠페인</div>
-                          <img src={currentSecurityBanner} alt="Campaign" style={{ width:'100%', height:'100%', objectFit:'cover', position:'absolute', inset:0 }} />
-                        </div>
-                      )}
-                      {filteredArticles.map((a, i) => (
-                        <div key={i} style={{ background:'white', borderRadius:16, border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                          <div style={{ width:'100%', aspectRatio:'16/9', background:'#f1f5f9' }}>
-                            {a.img && <img src={a.img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />}
+                  <div style={{ maxWidth:1200, margin:'0 auto' }}>
+                    {/* YouTube Section */}
+                    {sourceVideo?.url && (
+                      <div style={{ display:'flex', background:'#0f172a', borderRadius:24, overflow:'hidden', marginBottom:60, boxShadow:'0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                        <div style={{ width:'65%', aspectRatio:'16/9', background:'black' }}>
+                          <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:14 }}>
+                             [YouTube Player: {sourceVideo.url}]
                           </div>
-                          <div style={{ padding:20 }}>
-                            <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-                              {a.isImportant && <span style={{ background:'#ef4444', color:'white', padding:'2px 8px', borderRadius:4, fontSize:10, fontWeight:900 }}>HOT</span>}
-                              <span style={{ fontSize:11, fontWeight:800, color:'#3b82f6' }}>[{a.brand}]</span>
+                        </div>
+                        <div style={{ width:'35%', padding:30, display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                          <div style={{ color:'#ef4444', fontSize:12, fontWeight:900, marginBottom:10 }}><i className="fab fa-youtube"></i> {sourceVideo.source || 'YouTube'}</div>
+                          <h2 style={{ color:'white', fontSize:20, fontWeight:800, marginBottom:15, lineHeight:1.4 }}>{sourceVideo.title}</h2>
+                          <p style={{ color:'#94a3b8', fontSize:13, lineHeight:1.6 }}>{sourceVideo.desc}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Main Article Section */}
+                    {sourceMain && (
+                      <div style={{ marginBottom:60 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
+                          <span style={{ width:6, height:24, background:'#2563eb', borderRadius:10 }}></span>
+                          <h2 style={{ fontSize:22, fontWeight:900, color:'#1e293b' }}>오늘의 1면 딥다이브</h2>
+                        </div>
+                        <div style={{ display:'flex', background:'white', borderRadius:24, overflow:'hidden', border:'1px solid #e2e8f0', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                          <div style={{ width:'50%', height:400, position:'relative' }}>
+                            <img src={sourceMain.img || 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800'} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                            <div style={{ position:'absolute', bottom:0, left:0, padding:30, background:'linear-gradient(transparent, rgba(0,0,0,0.8))', width:'100%' }}>
+                              <span style={{ background:'#2563eb', color:'white', padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:900, marginBottom:10, display:'inline-block' }}>FOCUS</span>
+                              <h3 style={{ color:'white', fontSize:26, fontWeight:900 }}>{sourceMain.title}</h3>
                             </div>
-                            <div style={{ fontSize:16, fontWeight:900, color:'#1e293b', marginBottom:10, lineHeight:1.4 }}>{a.title}</div>
-                            <div style={{ fontSize:13, color:'#64748b', lineHeight:1.6 }}>{a.desc}</div>
+                          </div>
+                          <div style={{ width:'50%', padding:40, display:'flex', flexDirection:'column', justifyContent:'center' }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', borderBottom:'1px solid #f1f5f9', paddingBottom:15, marginBottom:15 }}>
+                              <span style={{ color:'#2563eb', fontSize:14, fontWeight:900 }}>{sourceMain.brand}</span>
+                              <span style={{ color:'#94a3b8', fontSize:12, fontWeight:700 }}>{sourceMain.source}</span>
+                            </div>
+                            <p style={{ fontSize:15, color:'#475569', lineHeight:1.7, marginBottom:20 }}>{sourceMain.desc}</p>
+                            {sourceMain.insight && (
+                              <div style={{ background:'#eff6ff', padding:20, borderRadius:16, border:'1px solid #dbeafe' }}>
+                                <div style={{ fontSize:11, fontWeight:900, color:'#2563eb', marginBottom:5 }}><i className="fas fa-lightbulb"></i> R&D INSIGHT</div>
+                                <p style={{ fontSize:13, color:'#1e40af', fontWeight:700, lineHeight:1.5 }}>{sourceMain.insight}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* Category Grids */}
+                    {[
+                      { key: 'macro', label: '🌐 MACRO VIEW' },
+                      { key: 'platform', label: '🛒 BIZ & PLATFORM' },
+                      { key: 'auto', label: '🚗 AUTO TRACK' },
+                      { key: 'ai', label: '🤖 AI STRATEGY' },
+                      { key: 'security', label: '🛡️ INFO-SECURE' }
+                    ].map(sec => {
+                      const articles = getCat(sec.key);
+                      if (articles.length === 0 && (sec.key !== 'security' || !currentSecurityBanner)) return null;
+
+                      return (
+                        <div key={sec.key} style={{ marginBottom:60 }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'end', borderBottom:'2px solid #1e293b', paddingBottom:10, marginBottom:25 }}>
+                            <h2 style={{ fontSize:18, fontWeight:900, color:'#1e293b' }}>{sec.label}</h2>
+                          </div>
+                          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:25 }}>
+                            {sec.key === 'security' && currentSecurityBanner && (
+                              <div style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', position:'relative', minHeight:300 }}>
+                                <img src={currentSecurityBanner} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                                <div style={{ position:'absolute', bottom:20, left:20, background:'rgba(0,0,0,0.8)', color:'white', padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:900 }}>🚨 보안 캠페인</div>
+                              </div>
+                            )}
+                            {articles.map((a, i) => (
+                              <div key={i} style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
+                                <div style={{ width:'100%', aspectRatio:'16/10' }}>
+                                  <img src={a.img || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400'} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                                </div>
+                                <div style={{ padding:20, flex:1, display:'flex', flexDirection:'column' }}>
+                                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
+                                    <span style={{ color:'#2563eb', fontSize:11, fontWeight:800 }}>[{a.brand}]</span>
+                                    <span style={{ color:'#94a3b8', fontSize:10, fontWeight:700 }}>{a.source}</span>
+                                  </div>
+                                  <h4 style={{ fontSize:16, fontWeight:900, color:'#1e293b', marginBottom:10, lineHeight:1.4 }}>{a.title}</h4>
+                                  <p style={{ fontSize:13, color:'#64748b', lineHeight:1.5, marginBottom:15 }}>{a.desc}</p>
+                                  {a.insight && (
+                                    <div style={{ marginTop:'auto', paddingTop:15, borderTop:'1px solid #f1f5f9' }}>
+                                      <div style={{ fontSize:10, fontWeight:900, color:'#1e293b', marginBottom:5 }}>R&D INSIGHT</div>
+                                      <p style={{ fontSize:12, color:'#475569', fontWeight:700 }}>{a.insight}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
-              })}
+              })()}
             </div>
           </div>
         </div>
