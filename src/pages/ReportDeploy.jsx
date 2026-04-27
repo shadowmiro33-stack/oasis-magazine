@@ -134,6 +134,12 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
     setEditArticles(updated);
   };
 
+  const changeEditCategory = (idx, newCat) => {
+    const updated = [...editArticles];
+    updated[idx].category = newCat;
+    setEditArticles(updated);
+  };
+
   const addNewArticleToEdit = () => {
     if(newArtImportant && editArticles.filter(a => a.isImportant).length >= 3) return alert("⚠️ 중요 기사는 최대 3개까지만 가능합니다.");
     if(!newArtTitle || !newArtLink) return alert("제목과 링크는 필수 입력입니다.");
@@ -283,9 +289,18 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
                   <div style={{ padding:20, textAlign:'center', color:'#94a3b8' }}>수록된 기사가 없습니다.</div>
                 ) : editArticles.map((art, idx) => (
                   <div key={idx} style={{ padding:'12px 15px', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <div style={{ fontSize:13, flex:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                      <span style={{ background:'#f1f5f9', padding:'2px 6px', borderRadius:4, fontWeight:'bold', marginRight:5 }}>{art.category}</span>
-                      <b>[{art.brand}]</b> {art.title}
+                    <div style={{ display:'flex', alignItems:'center', gap:8, flex:1, minWidth:0 }}>
+                      <select value={art.category || 'auto'} onChange={e => changeEditCategory(idx, e.target.value)} style={{ padding:'4px 6px', fontSize:11, fontWeight:'bold', borderRadius:4, border:'1px solid #cbd5e1', background:'#f8fafc', cursor:'pointer', flexShrink:0 }}>
+                        <option value="main">🔥 1면</option>
+                        <option value="macro">🌐 경제</option>
+                        <option value="platform">🛒 비즈</option>
+                        <option value="auto">🚗 산업</option>
+                        <option value="ai">🤖 AI</option>
+                        <option value="security">🛡️ 보안</option>
+                      </select>
+                      <span style={{ fontSize:13, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                        <b>[{art.brand}]</b> {art.title}
+                      </span>
                     </div>
                     <div style={{ display:'flex', alignItems:'center', gap:15, flexShrink:0, marginLeft:10 }}>
                       <label style={{ fontSize:12, fontWeight:'bold', cursor:'pointer', color: art.isImportant ? '#ef4444' : '#64748b' }}>

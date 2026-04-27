@@ -14,28 +14,34 @@ exports.handler = async function(event, context) {
         // 2. 파라미터 및 키 수신
         const body = JSON.parse(event.body);
         const targetUrl = body.url;
+        const rawText = body.text; // 수동 텍스트 입력 지원
         const apiKey = body.apiKey || process.env.GEMINI_API_KEY;
 
-        if (!targetUrl) throw new Error("분석할 기사 URL이 전달되지 않았습니다.");
+        if (!targetUrl && !rawText) throw new Error("분석할 기사 URL 또는 텍스트가 전달되지 않았습니다.");
         if (!apiKey) throw new Error("Gemini API Key가 없습니다. 시스템 관리 탭에서 키를 저장하거나 넷리파이 환경변수에 등록해주세요.");
 
-        // 3. 기사 스크래핑 (우회)
-        const htmlResponse = await fetch(targetUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-        });
-        
-        if (!htmlResponse.ok) throw new Error(`기사 페이지 접근 실패 (상태코드: ${htmlResponse.status})`);
-        
-        const htmlText = await htmlResponse.text();
-        
-        // 4. 본문 추출 및 정제
-        const bodyText = htmlText.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '')
-                                 .replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, '')
-                                 .replace(/<[^>]+>/g, ' ')
-                                 .replace(/\s+/g, ' ')
-                                 .substring(0, 5000);
+        let bodyText;
+
+        if (rawText) {
+            // 수동 텍스트 입력: 그대로 사용
+            bodyText = rawText.substring(0, 5000);
+        } else {
+            // URL 스크래핑
+            const htmlResponse = await fetch(targetUrl, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+            });
+            
+            if (!htmlResponse.ok) throw new Error(`기사 페이지 접근 실패 (상태코드: ${htmlResponse.status})`);
+            
+            const htmlText = await htmlResponse.text();
+            bodyText = htmlText.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '')
+                               .replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, '')
+                               .replace(/<[^>]+>/g, ' ')
+                               .replace(/\s+/g, ' ')
+                               .substring(0, 5000);
+        }
 
         // 5. AI 기사 분석 프롬프트
         const prompt = `

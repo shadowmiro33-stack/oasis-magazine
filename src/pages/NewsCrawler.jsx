@@ -6,6 +6,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   const [policyForm, setPolicyForm] = useState({ company:'', url:'', keyword:'' });
   const [aiInput, setAiInput] = useState({ url:'', title:'', brand:'', source:'', desc:'', insight:'', img:'', category:'auto', isImportant:false });
   const [aiLoading, setAiLoading] = useState(false);
+  const [manualText, setManualText] = useState('');
 
   // YouTube Info State
   const [ytUrl, setYtUrl] = useState('');
@@ -44,6 +45,23 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       if (data.error) throw new Error(data.error);
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
     } catch (e) { alert('통신 실패: ' + e.message); }
+    finally { setAiLoading(false); }
+  };
+
+  const runManualAI = async () => {
+    if (!manualText.trim()) return alert('분석할 기사 내용을 붙여넣어 주세요.');
+    setAiLoading(true);
+    try {
+      const response = await fetch('/.netlify/functions/analyze', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: manualText, apiKey: localStorage.getItem('GEMINI_API_KEY') })
+      });
+      if (!response.ok) throw new Error(await response.text());
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
+      setManualText('');
+    } catch (e) { alert('분석 실패: ' + e.message); }
     finally { setAiLoading(false); }
   };
 
@@ -99,6 +117,9 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
 
   const showPreview = aiInput.title || aiInput.brand || aiInput.desc;
 
+  const catLabel = { main:'🔥 1면', macro:'🌐 경제', platform:'🛒 비즈', auto:'🚗 산업', ai:'🤖 AI', security:'🛡️ 보안' };
+  const catColor = { main:'#ef4444', macro:'#6366f1', platform:'#f59e0b', auto:'#3b82f6', ai:'#8b5cf6', security:'#10b981' };
+
   return (
     <div className="animate-fade">
       <div className="page-header"><div><h2>🤖 뉴스 수집 및 AI 분석기</h2></div></div>
@@ -140,10 +161,17 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       {/* AI Analysis */}
       <div className="card" style={{ border:'2px solid #3b82f6', background:'#f8fafc', marginBottom:25 }}>
         <div className="card-title" style={{ color:'#3b82f6' }}><div><i className="fas fa-brain"></i> Gemini 2.5 Flash 기반 심층 기사 분석</div></div>
-        <div style={{ display:'flex', gap:10, marginBottom:20, background:'#eff6ff', padding:20, borderRadius:12 }}>
+        <div style={{ display:'flex', gap:10, marginBottom:10, background:'#eff6ff', padding:20, borderRadius:12 }}>
           <input value={aiInput.url} onChange={e => setAiInput({...aiInput, url:e.target.value})} placeholder="분석할 기사 원문 URL" style={{ flex:1, border:'2px solid #93c5fd', fontWeight:'bold' }} />
           <button className="btn btn-primary" onClick={runAI} disabled={aiLoading} style={{ width:180 }}>
             {aiLoading ? <><i className="fas fa-spinner fa-spin"></i> 분석 중...</> : <><i className="fas fa-magic"></i> AI 분석 실행</>}
+          </button>
+        </div>
+        <div style={{ background:'#fefce8', border:'1px solid #fef08a', padding:15, borderRadius:12, marginBottom:20 }}>
+          <div style={{ fontSize:12, fontWeight:900, color:'#a16207', marginBottom:8 }}><i className="fas fa-paste"></i> URL 접근 불가 시 — 기사 본문 복사하여 수동 분석</div>
+          <textarea value={manualText} onChange={e => setManualText(e.target.value)} rows="3" placeholder="기사 내용을 여기에 붙여넣으세요. AI가 요약과 인사이트를 자동 생성합니다." style={{ width:'100%', borderRadius:8, border:'1px solid #fcd34d', padding:10, fontFamily:'inherit', fontSize:13, marginBottom:10 }}></textarea>
+          <button className="btn" onClick={runManualAI} disabled={aiLoading} style={{ background:'#f59e0b', color:'white', fontWeight:'bold', width:'100%' }}>
+            {aiLoading ? <><i className="fas fa-spinner fa-spin"></i> 분석 중...</> : <><i className="fas fa-pen-nib"></i> 붙여넣은 텍스트로 AI 요약 실행</>}
           </button>
         </div>
         <div style={{ display:'grid', gridTemplateColumns: showPreview ? '1fr 380px' : '1fr', gap:30 }}>
@@ -225,7 +253,8 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
                     <span style={{ fontSize:11, fontWeight:900, color:'#3b82f6' }}>
-                      {a.isImportant && <span style={{ background:'#ef4444', color:'white', fontSize:10, padding:'2px 6px', borderRadius:4, marginRight:4 }}>⭐중요</span>}
+                      <span style={{ background: catColor[a.category] || '#64748b', color:'white', fontSize:9, padding:'2px 6px', borderRadius:4, marginRight:4 }}>{catLabel[a.category] || a.category}</span>
+                      {a.isImportant && <span style={{ background:'#ef4444', color:'white', fontSize:9, padding:'2px 6px', borderRadius:4, marginRight:4 }}>⭐HOT</span>}
                       [{a.brand}]
                     </span>
                     <span style={{ fontSize:10, color:'#94a3b8', fontWeight:'bold' }}>{a.source}</span>
