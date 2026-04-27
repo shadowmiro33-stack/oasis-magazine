@@ -34,6 +34,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
 
   // Web Preview Modal State
   const [showWebPreview, setShowWebPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null); // For historical web preview
 
   const fetchData = async () => {
     const [mags, camps, secs] = await Promise.all([getAllMagazines(), getCampaigns(), getSecurityBanners()]);
@@ -101,6 +102,11 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
     const viewer = window.open('', '_blank', 'width=800,height=1000,scrollbars=yes');
     viewer.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>과거 리포트 미리보기 - ' + mag.issueName + '</title></head><body style="margin:0; background-color: #f4f6f8;">' + htmlContent + '</body></html>');
     viewer.document.close();
+  };
+
+  const openPastWebPreview = (mag) => {
+    setPreviewData(mag);
+    setShowWebPreview(true);
   };
 
   const sendCurrentDrafts = async () => {
@@ -259,7 +265,10 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
                 <td><span style={{ color:'#10b981', fontWeight:'bold' }}>배포완료</span></td>
                 <td>
                   <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                    <button className="btn btn-primary" style={{ background:'#3b82f6', padding:'6px 12px', fontSize:11, width:'100%' }} onClick={() => previewPastReport(m)}><i className="fas fa-eye"></i> 미리보기</button>
+                    <div style={{ display:'flex', gap:5 }}>
+                      <button className="btn btn-primary" style={{ background:'#3b82f6', padding:'6px 8px', fontSize:10, flex:1 }} onClick={() => previewPastReport(m)} title="메일 뉴스레터 양식 미리보기"><i className="fas fa-envelope"></i> 메일뷰</button>
+                      <button className="btn" style={{ background:'#6366f1', color:'white', padding:'6px 8px', fontSize:10, flex:1 }} onClick={() => openPastWebPreview(m)} title="웹 매거진 레이아웃 미리보기"><i className="fas fa-globe"></i> 웹뷰</button>
+                    </div>
                     <div style={{ display:'flex', gap:5 }}>
                       <button className="btn btn-success" style={{ padding:'6px 12px', fontSize:11, flex:1 }} onClick={() => sendEmail(m)}>발송</button>
                       <button className="btn" style={{ background:'#f1f5f9', color:'#3b82f6', padding:'6px 12px', fontSize:11, flex:1 }} onClick={() => openEditModal(m)}>관리</button>
@@ -396,9 +405,9 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
             <div style={{ padding:'15px 30px', background:'white', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                 <span style={{ background:'#ef4444', color:'white', padding:'4px 12px', borderRadius:20, fontSize:12, fontWeight:900 }}>미리보기 모드</span>
-                <h3 style={{ margin:0, color:'#1e293b' }}>[배포 예정] {issueName || '미지정 호수'}</h3>
+                <h3 style={{ margin:0, color:'#1e293b' }}>[{previewData ? '과거 리포트' : '배포 예정'}] {previewData?.issueName || issueName || '미지정 호수'}</h3>
               </div>
-              <button onClick={() => setShowWebPreview(false)} style={{ background:'#0f172a', color:'white', border:'none', padding:'8px 20px', borderRadius:8, fontWeight:'bold', cursor:'pointer' }}>닫기</button>
+              <button onClick={() => { setShowWebPreview(false); setPreviewData(null); }} style={{ background:'#0f172a', color:'white', border:'none', padding:'8px 20px', borderRadius:8, fontWeight:'bold', cursor:'pointer' }}>닫기</button>
             </div>
             
             <div style={{ padding:40, overflowY:'auto', flex:1 }}>
@@ -410,8 +419,12 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
                 { key: 'ai', label: '🤖 AI STRATEGY' },
                 { key: 'security', label: '🛡️ INFO-SECURE' }
               ].map(sec => {
-                const articles = sec.key === 'main' ? (draftArticles.main ? [draftArticles.main] : []) : draftArticles[sec.key];
-                if (articles.length === 0) return null;
+                const articlesSource = previewData ? previewData.articles : draftArticles;
+                const articles = sec.key === 'main' ? 
+                  (Array.isArray(articlesSource) ? articlesSource.filter(a => a.category === 'main') : (articlesSource.main ? [articlesSource.main] : [])) : 
+                  (Array.isArray(articlesSource) ? articlesSource.filter(a => a.category === sec.key) : articlesSource[sec.key]);
+                
+                if (!articles || articles.length === 0) return null;
                 return (
                   <div key={sec.key} style={{ marginBottom:50 }}>
                     <div style={{ fontSize:20, fontWeight:900, color:'#1e293b', borderBottom:'3px solid #1e293b', paddingBottom:12, marginBottom:25 }}>{sec.label}</div>
