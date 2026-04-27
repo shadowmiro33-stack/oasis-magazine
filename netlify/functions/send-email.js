@@ -33,28 +33,31 @@ exports.handler = async function(event, context) {
             }
         });
 
-        // 이메일 옵션 설정 (to는 숨은참조 bcc로 처리하여 구독자 정보 보호)
-        // 구글 SMTP는 한 번에 보낼 수 있는 수신자 수(약 100명) 제한이 있으므로 50명씩 끊어서 발송
+        // 이메일 옵션 설정 (개별 발송 처리하여 받는 사람에 본인 이메일이 뜨도록 함)
         const emailArray = to.split(',').map(e => e.trim()).filter(e => e);
-        const chunkSize = 50;
+        const chunkSize = 10; // Netlify 함수 제한 시간(10초)을 고려하여 10개씩 병렬 처리
         let lastMessageId = '';
 
         for (let i = 0; i < emailArray.length; i += chunkSize) {
             const chunk = emailArray.slice(i, i + chunkSize);
             
-            const mailOptions = {
-                from: `"OASIS R&D" <${gmailUser}>`,
-                bcc: chunk.join(','), 
-                subject: subject,
-                html: html
-            };
+            const promises = chunk.map(targetEmail => {
+                const mailOptions = {
+                    from: `"OASIS R&D" <${gmailUser}>`,
+                    to: targetEmail, // 숨은 참조(BCC) 대신 개별 수신자로 지정
+                    subject: subject,
+                    html: html
+                };
+                return transporter.sendMail(mailOptions).then(info => {
+                    lastMessageId = info.messageId;
+                });
+            });
 
-            const info = await transporter.sendMail(mailOptions);
-            lastMessageId = info.messageId;
+            await Promise.all(promises);
             
-            // 대량 발송 시 스팸 차단 방지를 위해 약간의 딜레이(1초) 추가
+            // 구글 SMTP 속도 제한 및 스팸 차단 방지를 위한 딜레이
             if (i + chunkSize < emailArray.length) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
 
