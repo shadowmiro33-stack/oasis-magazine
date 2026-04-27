@@ -89,6 +89,14 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     }
   };
 
+  const setMainArticle = (index) => {
+    const target = allDrafts[index];
+    ['macro','platform','auto','ai','security'].forEach(c => {
+      if (draftArticles[c]?.includes(target)) setDraftArticles(prev => ({ ...prev, [c]: prev[c].filter(a => a !== target) }));
+    });
+    setDraftArticles(prev => ({ ...prev, main: { ...target, category: 'main' } }));
+  };
+
   const showPreview = aiInput.title || aiInput.brand || aiInput.desc;
 
   return (
@@ -159,48 +167,78 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
                 <option value="ai">🤖 AI STRATEGY</option><option value="security">🛡️ INFO-SECURE</option>
               </select>
               <label style={{ display:'flex', alignItems:'center', gap:8, background:'#fefce8', border:'1px solid #fef08a', padding:10, borderRadius:8, fontWeight:900, fontSize:13, color:'#a16207', cursor:'pointer', whiteSpace:'nowrap' }}>
-                <input type="checkbox" checked={aiInput.isImportant} onChange={e => setAiInput({...aiInput, isImportant:e.target.checked})} style={{ width:16, height:16 }} /> ⭐ 중요
+                <input type="checkbox" checked={aiInput.isImportant} onChange={e => setAiInput({...aiInput, isImportant:e.target.checked})} style={{ width:16, height:16 }} /> ⭐ 중요 (최대 3개)
               </label>
               <button className="btn btn-dark" style={{ width:150, height:45 }} onClick={addToDraft}>대기열 전송 ⬇️</button>
             </div>
           </div>
-          {showPreview && (
-            <div>
-              <div style={{ fontSize:13, fontWeight:900, color:'#64748b', marginBottom:10 }}><i className="fas fa-mobile-alt"></i> 미리보기</div>
-              <div style={{ border:'1px solid #e2e8f0', borderRadius:12, overflow:'hidden', background:'white', boxShadow:'0 10px 15px -3px rgba(0,0,0,0.1)' }}>
-                {aiInput.img && <img src={aiInput.img} alt="" style={{ width:'100%', height:200, objectFit:'cover' }} />}
-                <div style={{ padding:20 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:11, fontWeight:'bold' }}>
-                    <span className="badge badge-blue">{aiInput.brand || '기업명'}</span>
+
+          {/* 미리보기 카드 - 이미지 썸네일 + R&D 인사이트 포함 */}
+          <div>
+            <div style={{ fontSize:13, fontWeight:900, color:'#64748b', marginBottom:10 }}><i className="fas fa-mobile-alt"></i> 모바일 뷰 미리보기</div>
+            {showPreview ? (
+              <div style={{ border:'1px solid #e2e8f0', borderRadius:12, overflow:'hidden', background:'white', boxShadow:'0 10px 15px -3px rgba(0,0,0,0.1)', display:'flex', flexDirection:'column' }}>
+                <div style={{ width:'100%', height:200, background: aiInput.img ? '#f1f5f9' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', position:'relative', display:'flex', justifyContent:'center', alignItems:'center' }}>
+                  {aiInput.img ? (
+                    <img src={aiInput.img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.target.parentElement.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; e.target.style.display='none'; }} />
+                  ) : (
+                    <i className="fas fa-newspaper" style={{ fontSize:40, color:'rgba(255,255,255,0.5)' }}></i>
+                  )}
+                </div>
+                <div style={{ padding:20, flex:1 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10, fontSize:11, fontWeight:'bold' }}>
+                    <span style={{ color:'#3b82f6', background:'#eff6ff', padding:'4px 8px', borderRadius:4 }}>{aiInput.brand || '기업명'}</span>
                     <span style={{ color:'#64748b' }}>{aiInput.source || '언론사'}</span>
                   </div>
-                  <div style={{ fontWeight:900, fontSize:17, marginBottom:12, lineHeight:1.4 }}>{aiInput.title || '제목'}</div>
-                  <div style={{ fontSize:13, color:'#475569', lineHeight:1.5 }}>{aiInput.desc || '요약'}</div>
+                  <div style={{ fontWeight:900, fontSize:17, marginBottom:12, lineHeight:1.4, color:'#1e293b' }}>{aiInput.title || '기사 제목이 표시됩니다'}</div>
+                  <div style={{ fontSize:13, color:'#475569', marginBottom:15, lineHeight:1.5 }}>{aiInput.desc || '요약 내용이 표시됩니다.'}</div>
+                  {aiInput.insight && (
+                    <div style={{ background:'#f0fdf4', padding:12, borderRadius:8, fontSize:12, color:'#065f46', border:'1px solid #bbf7d0' }}>
+                      <b style={{ color:'#047857' }}>💡 R&D 인사이트</b><br/>
+                      <span style={{ display:'block', marginTop:5, lineHeight:1.4 }}>{aiInput.insight}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div style={{ minHeight:300, border:'2px dashed #cbd5e1', borderRadius:12, display:'flex', justifyContent:'center', alignItems:'center', flexDirection:'column', color:'#94a3b8', fontSize:13, fontWeight:'bold' }}>
+                <i className="fas fa-image" style={{ fontSize:30, marginBottom:10 }}></i>AI 분석을 실행하면 미리보기가 생성됩니다
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Draft List */}
+      {/* Draft List - 썸네일 이미지 + 메인 기사 설정 버튼 포함 */}
       <div className="card-title">📋 발행 대기 목록 (Drafts)</div>
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
         <div style={{ display:'flex', flexDirection:'column', gap:10, padding:20, background:'#f8fafc' }}>
           {allDrafts.length === 0 ? (
             <div style={{ textAlign:'center', padding:50, color:'#cbd5e1', border:'2px dashed #e2e8f0', borderRadius:20 }}>수집된 기사가 없습니다.</div>
-          ) : allDrafts.map((a, i) => (
-            <div key={i} className="card" style={{ display:'flex', gap:15, padding:15, alignItems:'center', border:'1px solid #e2e8f0', borderRadius:15 }}>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                  <span style={{ fontSize:11, fontWeight:900, color:'#3b82f6' }}>{a.isImportant && <span className="badge badge-red" style={{ marginRight:4 }}>⭐중요</span>}[{a.brand}]</span>
-                  <span style={{ fontSize:10, color:'#94a3b8', fontWeight:'bold' }}>{a.source}</span>
+          ) : allDrafts.map((a, i) => {
+            const thumbImg = a.img && a.img.includes('http') ? a.img : 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300';
+            return (
+              <div key={i} className="card" style={{ display:'flex', gap:15, padding:15, alignItems:'center', border:'1px solid #e2e8f0', borderRadius:15, background:'white' }}>
+                <div style={{ width:100, height:70, borderRadius:10, overflow:'hidden', background:'#f1f5f9', flexShrink:0 }}>
+                  <img src={thumbImg} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                 </div>
-                <div style={{ fontWeight:900, fontSize:15, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.title}</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                    <span style={{ fontSize:11, fontWeight:900, color:'#3b82f6' }}>
+                      {a.isImportant && <span style={{ background:'#ef4444', color:'white', fontSize:10, padding:'2px 6px', borderRadius:4, marginRight:4 }}>⭐중요</span>}
+                      [{a.brand}]
+                    </span>
+                    <span style={{ fontSize:10, color:'#94a3b8', fontWeight:'bold' }}>{a.source}</span>
+                  </div>
+                  <div style={{ fontWeight:900, fontSize:15, color:'#1e293b', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.title}</div>
+                </div>
+                <div style={{ display:'flex', gap:6 }}>
+                  <button className="btn" style={{ padding:'6px 12px', fontSize:11, background:'#f59e0b', color:'white' }} onClick={() => setMainArticle(i)}>메인</button>
+                  <button className="btn btn-danger" style={{ padding:'6px 12px', fontSize:11 }} onClick={() => deleteArticle(i)}>삭제</button>
+                </div>
               </div>
-              <button className="btn btn-danger" style={{ padding:'6px 12px', fontSize:11 }} onClick={() => deleteArticle(i)}>삭제</button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

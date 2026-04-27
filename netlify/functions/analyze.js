@@ -58,7 +58,7 @@ exports.handler = async function(event, context) {
         4. (작성 예시) "경쟁사의 오프라인 거점 확보를 통한 고객 신뢰도 선점 전략임. 향후 차량 진단 데이터와의 결합으로 O2O 서비스 초격차 확보를 위한 선제적 인프라 투자가 시급함."
 
         기사 본문:
-        \${bodyText}
+        ${bodyText}
         `;
 
         // 6. 🔥 오류 수정: Gemini 2.5 Flash 모델로 엔드포인트 정상화
