@@ -13,6 +13,26 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
   const [selSecurity, setSelSecurity] = useState('');
   const [deploying, setDeploying] = useState(false);
 
+  // Edit Modal State
+  const [editingReport, setEditingReport] = useState(null);
+  const [editArticles, setEditArticles] = useState([]);
+  const [editIssueName, setEditIssueName] = useState('');
+  const [editSelCampaign, setEditSelCampaign] = useState('');
+  const [editSelSecurity, setEditSelSecurity] = useState('');
+  const [newArtCat, setNewArtCat] = useState('main');
+  const [newArtBrand, setNewArtBrand] = useState('');
+  const [newArtTitle, setNewArtTitle] = useState('');
+  const [newArtLink, setNewArtLink] = useState('');
+  const [newArtSource, setNewArtSource] = useState('');
+  const [newArtImg, setNewArtImg] = useState('');
+  const [newArtDesc, setNewArtDesc] = useState('');
+  const [newArtInsight, setNewArtInsight] = useState('');
+  const [newArtImportant, setNewArtImportant] = useState(false);
+
+  const fetchData = async () => {
+    const [mags, camps, secs] = await Promise.all([getAllMagazines(), getCampaigns(), getSecurityBanners()]);
+    setHistory(mags); setCampaigns(camps); setSecBanners(secs);
+  };
   const load = async () => {
     const [mags, camps, secs] = await Promise.all([getAllMagazines(), getCampaigns(), getSecurityBanners()]);
     setHistory(mags); setCampaigns(camps); setSecBanners(secs);
@@ -89,6 +109,64 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
     html2pdf().set({ margin: 1, filename: `OASIS_History.pdf`, jsPDF: { format: 'letter', orientation: 'portrait' } }).from(element).save();
   };
 
+  const openEditModal = (mag) => {
+    setEditingReport(mag);
+    setEditArticles([...(mag.articles || [])]);
+    setEditIssueName(mag.issueName || '');
+    setEditSelCampaign(mag.campaign?.id || '');
+    setEditSelSecurity(mag.webCampaign || '');
+  };
+
+  const closeEditModal = () => setEditingReport(null);
+
+  const toggleEditImportant = (idx) => {
+    const updated = [...editArticles];
+    if(!updated[idx].isImportant && updated.filter(a => a.isImportant).length >= 3) {
+      return alert("⚠️ 중요 기사는 최대 3개까지만 설정할 수 있습니다.");
+    }
+    updated[idx].isImportant = !updated[idx].isImportant;
+    setEditArticles(updated);
+  };
+
+  const removeEditArticle = (idx) => {
+    const updated = [...editArticles];
+    updated.splice(idx, 1);
+    setEditArticles(updated);
+  };
+
+  const addNewArticleToEdit = () => {
+    if(newArtImportant && editArticles.filter(a => a.isImportant).length >= 3) return alert("⚠️ 중요 기사는 최대 3개까지만 가능합니다.");
+    if(!newArtTitle || !newArtLink) return alert("제목과 링크는 필수 입력입니다.");
+    
+    setEditArticles([...editArticles, { 
+      category: newArtCat, brand: newArtBrand || '오아시스', title: newArtTitle, link: newArtLink, desc: newArtDesc, insight: newArtInsight, source: newArtSource || '자체 보도', img: newArtImg, isImportant: newArtImportant 
+    }]);
+    setNewArtTitle(''); setNewArtLink(''); setNewArtSource(''); setNewArtImg(''); setNewArtDesc(''); setNewArtInsight(''); setNewArtImportant(false);
+  };
+
+  const saveEditingReport = async () => {
+    if(!editIssueName) return alert("호수명은 필수입니다.");
+    const campaignData = editSelCampaign ? campaigns.find(v => v.id === editSelCampaign) || { securityImg: editSelCampaign } : null;
+    try {
+      await saveMagazine(editingReport.id, { 
+        ...editingReport, issueName: editIssueName, articles: editArticles, campaign: campaignData, webCampaign: editSelSecurity
+      });
+      alert("성공적으로 수정되었습니다!");
+      closeEditModal();
+      fetchData();
+    } catch (e) { alert("저장 실패: " + e.message); }
+  };
+
+  const deleteEntireReport = async () => {
+    if(!window.confirm("⚠️ 리포트를 전체 삭제하시겠습니까?")) return;
+    try {
+      await deleteMagazine(editingReport.id);
+      alert("삭제되었습니다.");
+      closeEditModal();
+      fetchData();
+    } catch(e) { alert("삭제 실패"); }
+  };
+
   const exportExcel = async () => {
     if (history.length === 0) return alert('데이터가 없습니다.');
     let rows = [];
@@ -152,7 +230,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
                     <button className="btn btn-primary" style={{ background:'#3b82f6', padding:'6px 12px', fontSize:11, width:'100%' }} onClick={() => previewPastReport(m)}><i className="fas fa-eye"></i> 미리보기</button>
                     <div style={{ display:'flex', gap:5 }}>
                       <button className="btn btn-success" style={{ padding:'6px 12px', fontSize:11, flex:1 }} onClick={() => sendEmail(m)}>발송</button>
-                      <button className="btn" style={{ background:'#f1f5f9', color:'#475569', padding:'6px 12px', fontSize:11, flex:1 }} onClick={() => alert('기사 관리 팝업(준비중)')}>관리</button>
+                      <button className="btn" style={{ background:'#f1f5f9', color:'#3b82f6', padding:'6px 12px', fontSize:11, flex:1 }} onClick={() => openEditModal(m)}>관리</button>
                     </div>
                     <button className="btn btn-danger" style={{ padding:'6px 12px', fontSize:11, width:'100%', background:'#fef2f2', color:'#ef4444', borderColor:'#fecaca' }} onClick={() => deleteReport(m.id)}>삭제</button>
                   </div>
@@ -162,6 +240,101 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
           </tbody>
         </table>
       </div>
+
+      {/* Edit Modal */}
+      {editingReport && (
+        <div style={{ position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(15,23,42,0.85)', zIndex:9000, display:'flex', justifyContent:'center', alignItems:'center' }}>
+          <div style={{ background:'white', width:850, maxHeight:'90vh', borderRadius:16, display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+            <div style={{ padding:'20px 30px', background:'#f8fafc', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <h3 style={{ margin:0, color:'#1e293b' }}><i className="fas fa-edit"></i> 배포 리포트 사후 관리</h3>
+              <button onClick={closeEditModal} style={{ background:'none', border:'none', fontSize:24, cursor:'pointer', color:'#64748b' }}>&times;</button>
+            </div>
+            
+            <div style={{ padding:30, overflowY:'auto', flex:1 }}>
+              <label style={{ fontSize:12, fontWeight:'bold', color:'#64748b' }}>리포트 호수명</label>
+              <input type="text" value={editIssueName} onChange={e => setEditIssueName(e.target.value)} style={{ marginBottom:25, fontWeight:'bold', fontSize:16, color:'#3b82f6', width:'100%', padding:10, borderRadius:8, border:'1px solid #cbd5e1' }} />
+              
+              <div style={{ background:'#f8fafc', padding:20, borderRadius:12, border:'1px solid #e2e8f0', marginBottom:25 }}>
+                <div style={{ display:'flex', gap:10 }}>
+                  <div style={{ flex:1 }}>
+                    <label style={{ fontSize:12, fontWeight:'bold', color:'#64748b', display:'block', marginBottom:5 }}>메일 발송용 (숏츠/릴스)</label>
+                    <select value={editSelCampaign} onChange={e => setEditSelCampaign(e.target.value)} style={{ width:'100%', padding:10, fontWeight:'bold', borderRadius:8, border:'1px solid #cbd5e1', background:'white' }}>
+                      <option value="">보안 캠페인 배너 선택 안 함 (없음)</option>
+                      {campaigns.map(c => <option key={c.id} value={c.id}>{c.title || c.name || '영상'}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <label style={{ fontSize:12, fontWeight:'bold', color:'#64748b', display:'block', marginBottom:5 }}>웹 매거진용 (보안 배너)</label>
+                    <select value={editSelSecurity} onChange={e => setEditSelSecurity(e.target.value)} style={{ width:'100%', padding:10, fontWeight:'bold', borderRadius:8, border:'1px solid #cbd5e1', background:'white' }}>
+                      <option value="">보안 캠페인 배너 선택 안 함 (없음)</option>
+                      {secBanners.map(c => <option key={c.id} value={c.url}>{c.name || '배너'}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:10 }}>
+                <label style={{ fontSize:12, fontWeight:'bold', color:'#64748b' }}>현재 수록된 기사 관리 (중요 뱃지 ON/OFF)</label>
+                <span style={{ fontSize:11, color:'#ef4444', fontWeight:'bold' }}>*중요 기사는 최대 3개까지만 체크 가능</span>
+              </div>
+              
+              <div style={{ marginBottom:25, border:'1px solid #e2e8f0', borderRadius:8, overflow:'hidden' }}>
+                {editArticles.length === 0 ? (
+                  <div style={{ padding:20, textAlign:'center', color:'#94a3b8' }}>수록된 기사가 없습니다.</div>
+                ) : editArticles.map((art, idx) => (
+                  <div key={idx} style={{ padding:'12px 15px', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div style={{ fontSize:13, flex:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                      <span style={{ background:'#f1f5f9', padding:'2px 6px', borderRadius:4, fontWeight:'bold', marginRight:5 }}>{art.category}</span>
+                      <b>[{art.brand}]</b> {art.title}
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', gap:15, flexShrink:0, marginLeft:10 }}>
+                      <label style={{ fontSize:12, fontWeight:'bold', cursor:'pointer', color: art.isImportant ? '#ef4444' : '#64748b' }}>
+                        <input type="checkbox" checked={art.isImportant} onChange={() => toggleEditImportant(idx)} style={{ marginRight:4 }} />⭐중요
+                      </label>
+                      <button onClick={() => removeEditArticle(idx)} style={{ background:'none', border:'none', color:'#ef4444', fontSize:12, fontWeight:'bold', cursor:'pointer' }}>삭제</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background:'#eff6ff', padding:20, borderRadius:12, border:'1px solid #bfdbfe' }}>
+                <div style={{ fontSize:13, fontWeight:'bold', color:'#1d4ed8', marginBottom:15 }}><i className="fas fa-plus-circle"></i> 누락된 기사 수동 추가</div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+                  <select value={newArtCat} onChange={e => setNewArtCat(e.target.value)} style={{ fontWeight:'bold', padding:10, borderRadius:8, border:'1px solid #cbd5e1' }}>
+                    <option value="main">🔥 FIRST DIVE (1면)</option>
+                    <option value="macro">🌐 MACRO VIEW (경제)</option>
+                    <option value="platform">🛒 BIZ & PLATFORM (비즈)</option>
+                    <option value="auto">🚗 AUTO TRACK (산업)</option>
+                    <option value="ai">🤖 AI STRATEGY (인공지능)</option>
+                    <option value="security">🛡️ INFO-SECURE (보안)</option>
+                  </select>
+                  <input type="text" value={newArtBrand} onChange={e => setNewArtBrand(e.target.value)} placeholder="관련 기업명 (예: 엔카)" style={{ padding:10, borderRadius:8, border:'1px solid #cbd5e1' }} />
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+                  <input type="text" value={newArtTitle} onChange={e => setNewArtTitle(e.target.value)} placeholder="기사 제목" style={{ padding:10, borderRadius:8, border:'1px solid #cbd5e1' }} />
+                  <input type="text" value={newArtSource} onChange={e => setNewArtSource(e.target.value)} placeholder="언론사 (예: 전자신문)" style={{ padding:10, borderRadius:8, border:'1px solid #cbd5e1' }} />
+                </div>
+                <input type="text" value={newArtLink} onChange={e => setNewArtLink(e.target.value)} placeholder="원본 뉴스 링크" style={{ marginBottom:10, padding:10, borderRadius:8, border:'1px solid #cbd5e1', width:'100%' }} />
+                <input type="text" value={newArtImg} onChange={e => setNewArtImg(e.target.value)} placeholder="썸네일 이미지 URL (선택사항)" style={{ marginBottom:10, padding:10, borderRadius:8, border:'1px solid #cbd5e1', width:'100%' }} />
+                <textarea value={newArtDesc} onChange={e => setNewArtDesc(e.target.value)} rows="2" placeholder="기사 요약 내용" style={{ marginBottom:10, width:'100%', borderRadius:8, border:'1px solid #cbd5e1', padding:10, fontFamily:'inherit' }}></textarea>
+                <textarea value={newArtInsight} onChange={e => setNewArtInsight(e.target.value)} rows="2" placeholder="R&D 인사이트" style={{ marginBottom:15, width:'100%', borderRadius:8, border:'1px solid #cbd5e1', padding:10, fontFamily:'inherit' }}></textarea>
+                <label style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, fontWeight:'bold', marginBottom:15, cursor:'pointer' }}>
+                  <input type="checkbox" checked={newArtImportant} onChange={e => setNewArtImportant(e.target.checked)} style={{ width:14, height:14 }} /> ⭐ 이 기사에 '중요(HOT)' 뱃지 달기
+                </label>
+                <button className="btn btn-primary" style={{ width:'100%' }} onClick={addNewArticleToEdit}>이 리포트에 기사 추가하기</button>
+              </div>
+            </div>
+
+            <div style={{ padding:'20px 30px', background:'#f8fafc', borderTop:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <button className="btn btn-danger" style={{ background:'#ef4444', color:'white' }} onClick={deleteEntireReport}><i className="fas fa-trash"></i> 리포트 전체 삭제</button>
+              <div style={{ display:'flex', gap:10 }}>
+                <button className="btn btn-dark" style={{ background:'#64748b' }} onClick={closeEditModal}>취소</button>
+                <button className="btn btn-primary" onClick={saveEditingReport}><i className="fas fa-save"></i> 변경사항 최종 서버 반영</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
