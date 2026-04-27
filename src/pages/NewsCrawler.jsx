@@ -238,8 +238,11 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       </div>
 
       {/* Draft List - 썸네일 이미지 + 메인 기사 설정 버튼 포함 */}
-      <div className="card-title">📋 발행 대기 목록 (Drafts)</div>
-      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+      <div className="card-title" style={{ marginTop:30, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div>📋 발행 대기 목록 (수집된 기사 대기열)</div>
+        <div style={{ fontSize:12, fontWeight:500, color:'#64748b' }}>총 {allDrafts.length}건 대기 중</div>
+      </div>
+      <div className="card" style={{ padding:0, overflow:'hidden', border:'1px solid #e2e8f0' }}>
         <div style={{ display:'flex', flexDirection:'column', gap:10, padding:20, background:'#f8fafc' }}>
           {allDrafts.length === 0 ? (
             <div style={{ textAlign:'center', padding:50, color:'#cbd5e1', border:'2px dashed #e2e8f0', borderRadius:20 }}>수집된 기사가 없습니다.</div>
@@ -257,9 +260,9 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
                       {a.isImportant && <span style={{ background:'#ef4444', color:'white', fontSize:9, padding:'2px 6px', borderRadius:4, marginRight:4 }}>⭐HOT</span>}
                       [{a.brand}]
                     </span>
-                    <span style={{ fontSize:10, color:'#94a3b8', fontWeight:'bold' }}>{a.source}</span>
+                    <span style={{ fontSize:10, color:'#94a3b8', fontWeight:'bold' }}>{a.source || 'N/A'}</span>
                   </div>
-                  <div style={{ fontWeight:900, fontSize:15, color:'#1e293b', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.title}</div>
+                  <div style={{ fontWeight:900, fontSize:15, color:'#1e293b', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.title || '(제목 없음 - 내용을 확인하세요)'}</div>
                 </div>
                 <div style={{ display:'flex', gap:6 }}>
                   <button className="btn" style={{ padding:'6px 12px', fontSize:11, background:'#f59e0b', color:'white' }} onClick={() => setMainArticle(i)}>메인</button>

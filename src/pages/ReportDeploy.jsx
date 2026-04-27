@@ -29,6 +29,12 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
   const [newArtInsight, setNewArtInsight] = useState('');
   const [newArtImportant, setNewArtImportant] = useState(false);
 
+  // Edit Video State
+  const [editVideo, setEditVideo] = useState({ url: '', title: '', source: '', desc: '' });
+
+  // Web Preview Modal State
+  const [showWebPreview, setShowWebPreview] = useState(false);
+
   const fetchData = async () => {
     const [mags, camps, secs] = await Promise.all([getAllMagazines(), getCampaigns(), getSecurityBanners()]);
     setHistory(mags); setCampaigns(camps); setSecBanners(secs);
@@ -115,6 +121,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
     setEditIssueName(mag.issueName || '');
     setEditSelCampaign(mag.campaign?.id || '');
     setEditSelSecurity(mag.webCampaign || '');
+    setEditVideo(mag.video || { url: '', title: '', source: '', desc: '' });
   };
 
   const closeEditModal = () => setEditingReport(null);
@@ -140,6 +147,20 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
     setEditArticles(updated);
   };
 
+  const fetchEditYoutubeMeta = async () => {
+    if(!editVideo.url.trim()) return alert("유튜브 링크 URL을 먼저 입력해주세요!");
+    try {
+      const response = await fetch(`https://noembed.com/embed?url=${editVideo.url}`);
+      const data = await response.json();
+      setEditVideo({
+        ...editVideo,
+        title: data.title || '',
+        source: data.author_name || '',
+        desc: data.title || ''
+      });
+    } catch (e) { alert("유튜브 정보를 가져오지 못했습니다."); }
+  };
+
   const addNewArticleToEdit = () => {
     if(newArtImportant && editArticles.filter(a => a.isImportant).length >= 3) return alert("⚠️ 중요 기사는 최대 3개까지만 가능합니다.");
     if(!newArtTitle || !newArtLink) return alert("제목과 링크는 필수 입력입니다.");
@@ -155,7 +176,12 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
     const campaignData = editSelCampaign ? campaigns.find(v => v.id === editSelCampaign) || { securityImg: editSelCampaign } : null;
     try {
       await saveMagazine(editingReport.id, { 
-        ...editingReport, issueName: editIssueName, articles: editArticles, campaign: campaignData, webCampaign: editSelSecurity
+        ...editingReport, 
+        issueName: editIssueName, 
+        articles: editArticles, 
+        campaign: campaignData, 
+        webCampaign: editSelSecurity,
+        video: editVideo
       });
       alert("성공적으로 수정되었습니다!");
       closeEditModal();
@@ -210,7 +236,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
           </select>
         </div>
         <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-          <button className="btn btn-primary" onClick={previewCurrentDrafts} style={{ padding:'15px 30px', fontSize:16, background:'#3b82f6' }}><i className="fas fa-eye"></i> 1. 배포 전 미리보기</button>
+          <button className="btn btn-primary" onClick={() => setShowWebPreview(true)} style={{ padding:'15px 30px', fontSize:16, background:'#3b82f6' }}><i className="fas fa-eye"></i> 1. 배포 전 미리보기 (웹 매거진)</button>
           <button className="btn btn-dark" onClick={deploy} disabled={deploying} style={{ padding:'15px 30px', fontSize:16 }}>
             {deploying ? '배포 중...' : '🚀 2. 라이브 서버 배포'}
           </button>
@@ -279,6 +305,19 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
                 </div>
               </div>
 
+              <div style={{ background:'#fefce8', border:'1px solid #fef08a', padding:20, borderRadius:12, marginBottom:25 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:15 }}>
+                  <div style={{ fontSize:13, fontWeight:'bold', color:'#a16207' }}><i className="fab fa-youtube"></i> 메인 유튜브 정보 교체</div>
+                  <button className="btn" onClick={fetchEditYoutubeMeta} style={{ background:'#f59e0b', color:'white', fontSize:11, padding:'4px 12px' }}>정보 불러오기</button>
+                </div>
+                <input type="text" value={editVideo.url} onChange={e => setEditVideo({...editVideo, url: e.target.value})} placeholder="유튜브 링크 URL" style={{ marginBottom:10, width:'100%', padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
+                <div style={{ display:'grid', gridTemplateColumns: '1fr 1fr', gap:10, marginBottom:10 }}>
+                  <input type="text" value={editVideo.title} onChange={e => setEditVideo({...editVideo, title: e.target.value})} placeholder="영상 제목" style={{ padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
+                  <input type="text" value={editVideo.source} onChange={e => setEditVideo({...editVideo, source: e.target.value})} placeholder="채널명" style={{ padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
+                </div>
+                <input type="text" value={editVideo.desc} onChange={e => setEditVideo({...editVideo, desc: e.target.value})} placeholder="영상 코멘트" style={{ width:'100%', padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
+              </div>
+
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:10 }}>
                 <label style={{ fontSize:12, fontWeight:'bold', color:'#64748b' }}>현재 수록된 기사 관리 (중요 뱃지 ON/OFF)</label>
                 <span style={{ fontSize:11, color:'#ef4444', fontWeight:'bold' }}>*중요 기사는 최대 3개까지만 체크 가능</span>
@@ -299,7 +338,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
                         <option value="security">🛡️ 보안</option>
                       </select>
                       <span style={{ fontSize:13, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                        <b>[{art.brand}]</b> {art.title}
+                        <b>[{art.brand || 'N/A'}]</b> {art.title || '(제목 없음)'}
                       </span>
                     </div>
                     <div style={{ display:'flex', alignItems:'center', gap:15, flexShrink:0, marginLeft:10 }}>
@@ -346,6 +385,57 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
                 <button className="btn btn-dark" style={{ background:'#64748b' }} onClick={closeEditModal}>취소</button>
                 <button className="btn btn-primary" onClick={saveEditingReport}><i className="fas fa-save"></i> 변경사항 최종 서버 반영</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Web Preview Modal (New Magazine Preview) */}
+      {showWebPreview && (
+        <div style={{ position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(15,23,42,0.9)', zIndex:9999, display:'flex', justifyContent:'center', alignItems:'center' }}>
+          <div style={{ background:'#f1f5f9', width:'90%', height:'90%', borderRadius:20, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
+            <div style={{ padding:'15px 30px', background:'white', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ background:'#ef4444', color:'white', padding:'4px 12px', borderRadius:20, fontSize:12, fontWeight:900 }}>미리보기 모드</span>
+                <h3 style={{ margin:0, color:'#1e293b' }}>[배포 예정] {issueName || '미지정 호수'}</h3>
+              </div>
+              <button onClick={() => setShowWebPreview(false)} style={{ background:'#0f172a', color:'white', border:'none', padding:'8px 20px', borderRadius:8, fontWeight:'bold', cursor:'pointer' }}>닫기</button>
+            </div>
+            
+            <div style={{ padding:40, overflowY:'auto', flex:1 }}>
+              {[
+                { key: 'main', label: '🔥 FIRST DIVE (1면)' },
+                { key: 'macro', label: '🌐 MACRO VIEW' },
+                { key: 'platform', label: '🛒 BIZ & PLATFORM' },
+                { key: 'auto', label: '🚗 AUTO TRACK' },
+                { key: 'ai', label: '🤖 AI STRATEGY' },
+                { key: 'security', label: '🛡️ INFO-SECURE' }
+              ].map(sec => {
+                const articles = sec.key === 'main' ? (draftArticles.main ? [draftArticles.main] : []) : draftArticles[sec.key];
+                if (articles.length === 0) return null;
+                return (
+                  <div key={sec.key} style={{ marginBottom:50 }}>
+                    <div style={{ fontSize:20, fontWeight:900, color:'#1e293b', borderBottom:'3px solid #1e293b', paddingBottom:12, marginBottom:25 }}>{sec.label}</div>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:30 }}>
+                      {articles.map((a, i) => (
+                        <div key={i} style={{ background:'white', borderRadius:16, border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                          <div style={{ width:'100%', aspectRatio:'16/9', background:'#f1f5f9' }}>
+                            {a.img && <img src={a.img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />}
+                          </div>
+                          <div style={{ padding:20 }}>
+                            <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+                              {a.isImportant && <span style={{ background:'#ef4444', color:'white', padding:'2px 8px', borderRadius:4, fontSize:10, fontWeight:900 }}>HOT</span>}
+                              <span style={{ fontSize:11, fontWeight:800, color:'#3b82f6' }}>[{a.brand}]</span>
+                            </div>
+                            <div style={{ fontSize:16, fontWeight:900, color:'#1e293b', marginBottom:10, lineHeight:1.4 }}>{a.title}</div>
+                            <div style={{ fontSize:13, color:'#64748b', lineHeight:1.6 }}>{a.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
