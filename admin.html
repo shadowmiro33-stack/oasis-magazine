@@ -924,7 +924,7 @@
             
             const editCampaignSelect = document.getElementById('edit-campaign-select');
             editCampaignSelect.innerHTML = '<option value="">보안 캠페인 배너 선택 안 함 (없음)</option>' + 
-                (window.campaignImages || []).map(img => `<option value="${img.url}">${img.name || img.url.substring(0,20)}</option>`).join('');
+                (window.campaignImages || []).map(img => `<option value="${img.id}">${img.title || img.name || (img.url ? img.url.substring(0,20) : '영상')}</option>`).join('');
             
             editCampaignSelect.value = data.campaign?.securityImg || "";
 
