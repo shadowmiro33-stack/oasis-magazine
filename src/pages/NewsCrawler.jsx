@@ -37,7 +37,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     try {
       const response = await fetch('/.netlify/functions/analyze', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: aiInput.url })
+        body: JSON.stringify({ url: aiInput.url, apiKey: localStorage.getItem('GEMINI_API_KEY') })
       });
       if (!response.ok) throw new Error(await response.text());
       const data = await response.json();

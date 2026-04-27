@@ -21,6 +21,18 @@ export default function Settings() {
   const [extractedJson, setExtractedJson] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
 
+  // API Keys
+  const [geminiKey, setGeminiKey] = useState(localStorage.getItem('GEMINI_API_KEY') || '');
+  const [gmailUser, setGmailUser] = useState(localStorage.getItem('GMAIL_USER') || '');
+  const [gmailPass, setGmailPass] = useState(localStorage.getItem('GMAIL_PASS') || '');
+
+  const saveApiKeys = () => {
+    localStorage.setItem('GEMINI_API_KEY', geminiKey);
+    localStorage.setItem('GMAIL_USER', gmailUser);
+    localStorage.setItem('GMAIL_PASS', gmailPass);
+    alert('✅ API 키 및 인증 정보가 로컬 스토리지에 안전하게 저장되었습니다.');
+  };
+
   const handleDrop = useCallback((e) => {
     e.preventDefault(); setDragOver(false);
     const file = e.dataTransfer?.files[0] || e.target?.files?.[0];
@@ -75,6 +87,7 @@ export default function Settings() {
 
   const tabs = [
     { id: 'theme', icon: 'fas fa-cog', label: '기본 설정' },
+    { id: 'api', icon: 'fas fa-key', label: 'API 및 인증 관리' },
     { id: 'ai', icon: 'fas fa-palette', label: 'AI 디자인 추출기' },
     { id: 'tokens', icon: 'fas fa-swatchbook', label: '토큰 관리 (Tokens)' },
     { id: 'components', icon: 'fas fa-puzzle-piece', label: '퍼블리싱 가이드 (Components)' },
@@ -117,6 +130,40 @@ export default function Settings() {
               <label style={{ fontSize:12, fontWeight:'bold', color:'#64748b', display:'block', marginBottom:8 }}>카드 모서리 둥글기 (Radius): {tokens.radius}px</label>
               <input type="range" min="0" max="24" step="4" value={tokens.radius} onChange={e => setTokens({...tokens, radius:Number(e.target.value)})} style={{ marginTop:5, accentColor:'#4f46e5' }} />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* === API 관리 === */}
+      {activeTab === 'api' && (
+        <div className="card" style={{ padding:30 }}>
+          <h3 style={{ marginTop:0, marginBottom:25 }}><i className="fas fa-key"></i> 외부 서비스 API 키 및 인증 관리</h3>
+          <p style={{ fontSize:13, color:'#64748b', marginBottom:25 }}>
+            입력하신 정보는 서버에 전송되지 않고 사용 중인 브라우저(Local Storage)에만 안전하게 보관됩니다.
+          </p>
+          <div style={{ display:'flex', flexDirection:'column', gap:20, maxWidth:600 }}>
+            <div>
+              <label style={{ fontSize:13, fontWeight:'bold', color:'#334155', display:'block', marginBottom:8 }}>
+                Gemini API Key (뉴스 분석용)
+              </label>
+              <input type="password" value={geminiKey} onChange={e => setGeminiKey(e.target.value)} placeholder="AIzaSy..." style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #cbd5e1' }} />
+            </div>
+            <div>
+              <label style={{ fontSize:13, fontWeight:'bold', color:'#334155', display:'block', marginBottom:8 }}>
+                Gmail 계정 (뉴스레터 대량 발송용)
+              </label>
+              <input type="email" value={gmailUser} onChange={e => setGmailUser(e.target.value)} placeholder="example@gmail.com" style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #cbd5e1' }} />
+            </div>
+            <div>
+              <label style={{ fontSize:13, fontWeight:'bold', color:'#334155', display:'block', marginBottom:8 }}>
+                Gmail 앱 비밀번호 (16자리)
+              </label>
+              <input type="password" value={gmailPass} onChange={e => setGmailPass(e.target.value)} placeholder="abcd efgh ijkl mnop" style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #cbd5e1' }} />
+              <p style={{ fontSize:11, color:'#ef4444', marginTop:5, fontWeight:'bold' }}>* 구글 계정 설정에서 생성한 '앱 비밀번호'를 입력해야 합니다. (일반 비밀번호 아님)</p>
+            </div>
+            <button className="btn btn-primary" onClick={saveApiKeys} style={{ width:200, marginTop:10, padding:'14px 0' }}>
+              <i className="fas fa-save"></i> API 정보 로컬 저장
+            </button>
           </div>
         </div>
       )}
