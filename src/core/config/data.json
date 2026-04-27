@@ -1,0 +1,15 @@
+{
+  "reports": [
+    {
+      "date": "2026-03-31",
+      "issue": "NO.31",
+      "articles": [
+        {
+          "title": "복구된 31일차 기사 샘플",
+          "category": "모빌리티",
+          "summary": "데이터 금고(data.json) 생성 완료"
+        }
+      ]
+    }
+  ]
+}

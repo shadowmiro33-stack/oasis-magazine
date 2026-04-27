@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,83 +9,166 @@
     <meta property="og:url" content="https://ohmagazine.netlify.app/">
     <meta property="og:title" content="OASIS R&D 매거진">
     <meta property="og:description" content="오토핸즈 R&D 센터 최신 모빌리티 및 테크 인사이트">
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
 
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        
-        body { font-family: 'Pretendard', sans-serif; background-color: #f4f6f8; color: #1a1b1e; word-break: keep-all; }
-        
-        .article-card { transition: all 0.2s ease-in-out; border: 1px solid #e9ecef; }
-        .article-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0,0,0,0.1); border-color: #cbd5e1; }
-        
-        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-        .text-brand { color: #2563eb; }
-        .bg-brand { background-color: #2563eb; }
-        .accent-tag { background: #ef4444; color: white; }
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f4f6f8;
+            color: #1a1b1e;
+            word-break: keep-all;
+        }
 
-        .modal-base { display: none; }
-        .modal-base.active { display: flex; animation: fadeIn 0.2s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .article-card {
+            transition: all 0.2s ease-in-out;
+            border: 1px solid #e9ecef;
+        }
+
+        .article-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+            border-color: #cbd5e1;
+        }
+
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .text-brand {
+            color: #2563eb;
+        }
+
+        .bg-brand {
+            background-color: #2563eb;
+        }
+
+        .accent-tag {
+            background: #ef4444;
+            color: white;
+        }
+
+        .modal-base {
+            display: none;
+        }
+
+        .modal-base.active {
+            display: flex;
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
 
         /* 🔥 커스텀 캘린더 테마 미세 조정 (오토핸즈 톤앤매너) */
-        .flatpickr-calendar { font-family: 'Pretendard', sans-serif !important; border-radius: 12px !important; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1) !important; border: 1px solid #e2e8f0 !important; }
-        .flatpickr-day.selected { background: #2563eb !important; border-color: #2563eb !important; }
+        .flatpickr-calendar {
+            font-family: 'Pretendard', sans-serif !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+
+        .flatpickr-day.selected {
+            background: #2563eb !important;
+            border-color: #2563eb !important;
+        }
     </style>
 </head>
+
 <body class="antialiased selection:bg-blue-200">
 
     <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3 cursor-pointer" onclick="location.reload()">
-                <div class="bg-brand text-white font-black text-xl w-10 h-10 flex items-center justify-center rounded-lg shadow-md">O</div>
+            <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.href = window.location.pathname">
+                <div
+                    class="bg-brand text-white font-black text-xl w-10 h-10 flex items-center justify-center rounded-lg shadow-md">
+                    O</div>
                 <div>
-                    <h1 class="text-2xl font-black tracking-tight text-gray-900 leading-none">OASIS <span class="text-brand">R&D</span></h1>
-                    <p class="text-[11px] font-bold text-gray-400 mt-1 uppercase tracking-widest">Autohands Mobility Insight</p>
+                    <h1 class="text-2xl font-black tracking-tight text-gray-900 leading-none">OASIS <span
+                            class="text-brand">R&D</span></h1>
+                    <p class="text-[11px] font-bold text-gray-400 mt-1 uppercase tracking-widest">Autohands Mobility
+                        Insight</p>
                 </div>
             </div>
             <div class="flex items-center gap-4">
-                <div id="dummy-badge" class="hidden bg-red-100 text-red-600 font-bold text-[11px] px-2 py-1 rounded">미리보기 모드</div>
+                <div id="dummy-badge" class="hidden bg-red-100 text-red-600 font-bold text-[11px] px-2 py-1 rounded">
+                    미리보기 모드</div>
                 <div class="flex items-center gap-2 bg-gray-100 p-1.5 rounded-xl border border-gray-200">
-                    <input type="text" id="date-picker" class="bg-transparent border-none text-[14px] font-black text-gray-700 cursor-pointer outline-none px-2 w-[110px] text-center" readonly>
-                    <span id="display-issue" class="bg-white text-brand px-3 py-1 rounded-lg text-sm font-black shadow-sm">NO. --</span>
+                    <input type="text" id="date-picker"
+                        class="bg-transparent border-none text-[14px] font-black text-gray-700 cursor-pointer outline-none px-2 w-[110px] text-center"
+                        readonly>
+                    <span id="display-issue"
+                        class="bg-white text-brand px-3 py-1 rounded-lg text-sm font-black shadow-sm">NO. --</span>
                 </div>
-                <button onclick="openSubModal()" class="bg-gray-900 text-white text-[13px] font-black px-4 py-2.5 rounded-xl hover:bg-brand transition shadow-sm hidden md:flex items-center gap-2">
+                <button onclick="openSubModal()"
+                    class="bg-gray-900 text-white text-[13px] font-black px-4 py-2.5 rounded-xl hover:bg-brand transition shadow-sm hidden md:flex items-center gap-2">
                     구독하기 <i class="fas fa-envelope"></i>
                 </button>
             </div>
         </div>
-        
-        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center gap-2 text-[13px] font-bold text-gray-500 overflow-x-auto hide-scrollbar whitespace-nowrap">
-            <button onclick="renderMainDashboard()" class="menu-tab bg-[#1e293b] text-white px-5 py-2.5 rounded-full flex items-center gap-2 transition shadow-md">
+
+        <div
+            class="max-w-7xl mx-auto px-6 h-16 flex items-center gap-2 text-[13px] font-bold text-gray-500 overflow-x-auto hide-scrollbar whitespace-nowrap">
+            <button onclick="renderMainDashboard()"
+                class="menu-tab bg-[#1e293b] text-white px-5 py-2.5 rounded-full flex items-center gap-2 transition shadow-md">
                 <i class="fas fa-home text-[11px]"></i> OVERVIEW
             </button>
-            
+
             <div class="h-4 w-[1px] bg-gray-200 mx-2"></div>
-            
-            <button onclick="showCategoryList('macro', '🌐 MACRO VIEW (거시경제)')" class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
+
+            <button onclick="showCategoryList('macro', '🌐 MACRO VIEW (거시경제)')"
+                class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
                 MACRO VIEW <span class="text-[10px] font-medium ml-1.5 text-gray-400">경제</span>
             </button>
-            <button onclick="showCategoryList('platform', '🛒 BIZ & PLATFORM (비즈니스)')" class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
+            <button onclick="showCategoryList('platform', '🛒 BIZ & PLATFORM (비즈니스)')"
+                class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
                 BIZ & PLATFORM <span class="text-[10px] font-medium ml-1.5 text-gray-400">비즈</span>
             </button>
-            <button onclick="showCategoryList('auto', '🚗 AUTO TRACK (모빌리티)')" class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
+            <button onclick="showCategoryList('auto', '🚗 AUTO TRACK (모빌리티)')"
+                class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
                 AUTO TRACK <span class="text-[10px] font-medium ml-1.5 text-gray-400">산업</span>
             </button>
-            <button onclick="showCategoryList('ai', '🤖 AI STRATEGY (인공지능)')" class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
+            <button onclick="showCategoryList('ai', '🤖 AI STRATEGY (인공지능)')"
+                class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
                 AI STRATEGY <span class="text-[10px] font-medium ml-1.5 text-blue-500">AI</span>
             </button>
-            <button onclick="showCategoryList('security', '🛡️ INFO-SECURE (정보보안)')" class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
+            <button onclick="showCategoryList('security', '🛡️ INFO-SECURE (정보보안)')"
+                class="menu-tab hover:bg-gray-100 px-5 py-2.5 rounded-full flex items-center transition border border-transparent">
                 INFO-SECURE <span class="text-[10px] font-medium ml-1.5 text-gray-400">보안</span>
             </button>
         </div>
@@ -98,12 +182,16 @@
     </main>
 
     <section class="max-w-7xl mx-auto px-6 mb-24 mt-24" id="subscribe-banner-section">
-        <div class="relative bg-[#2563eb] rounded-3xl flex flex-col md:flex-row items-center justify-between p-8 md:p-12 shadow-2xl mt-16 md:mt-0">
-            <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 md:translate-x-0 md:left-8 w-56 md:w-72 z-10" style="margin-bottom: -10px;">
-                <img src="./bear.png" alt="OASIS Bear" class="w-full h-auto drop-shadow-2xl scale-125 md:scale-150 origin-bottom hover:scale-[1.35] md:hover:scale-[1.6] transition-transform duration-500">
+        <div
+            class="relative bg-[#2563eb] rounded-3xl flex flex-col md:flex-row items-center justify-between p-8 md:p-12 shadow-2xl mt-16 md:mt-0">
+            <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 md:translate-x-0 md:left-8 w-56 md:w-72 z-10"
+                style="margin-bottom: -10px;">
+                <img src="./bear.png" alt="OASIS Bear"
+                    class="w-full h-auto drop-shadow-2xl scale-125 md:scale-150 origin-bottom hover:scale-[1.35] md:hover:scale-[1.6] transition-transform duration-500">
             </div>
             <div class="z-20 w-full md:pl-80 text-center md:text-left mt-48 md:mt-0 mb-8 md:mb-0">
-                <h2 class="text-2xl md:text-[28px] font-black text-white leading-snug mb-3 tracking-tight drop-shadow-md">
+                <h2
+                    class="text-2xl md:text-[28px] font-black text-white leading-snug mb-3 tracking-tight drop-shadow-md">
                     뉴스... 어떤 것부터 봐야 할지 막막한가요?
                 </h2>
                 <p class="text-blue-100 text-[15px] md:text-base font-bold drop-shadow-sm">
@@ -111,53 +199,106 @@
                 </p>
             </div>
             <div class="z-20 flex-shrink-0">
-                <button onclick="openSubModal()" class="bg-gray-900 text-white font-black text-[16px] px-8 py-4 rounded-xl hover:bg-black hover:-translate-y-1 transition-all shadow-xl whitespace-nowrap flex items-center gap-2 border border-gray-700">
+                <button onclick="openSubModal()"
+                    class="bg-gray-900 text-white font-black text-[16px] px-8 py-4 rounded-xl hover:bg-black hover:-translate-y-1 transition-all shadow-xl whitespace-nowrap flex items-center gap-2 border border-gray-700">
                     이메일로 뉴스 받기
                 </button>
             </div>
         </div>
     </section>
 
-    <div id="subscribe-modal" class="fixed inset-0 bg-gray-900/80 z-[200] items-center justify-center p-4 backdrop-blur-sm modal-base" onclick="if(event.target===this) closeSubModal()">
-        <div class="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl relative" onclick="event.stopPropagation()">
+    <div id="subscribe-modal"
+        class="fixed inset-0 bg-gray-900/80 z-[200] items-center justify-center p-4 backdrop-blur-sm modal-base"
+        onclick="if(event.target===this) closeSubModal()">
+        <div class="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl relative"
+            onclick="event.stopPropagation()">
             <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                <h3 class="text-lg font-black text-gray-900"><i class="fas fa-envelope-open-text text-brand mr-2"></i> OASIS 뉴스레터 구독</h3>
-                <button onclick="closeSubModal()" class="text-gray-400 hover:text-gray-900 transition"><i class="fas fa-times text-xl"></i></button>
+                <h3 class="text-lg font-black text-gray-900"><i class="fas fa-envelope-open-text text-brand mr-2"></i>
+                    OASIS 뉴스레터 구독</h3>
+                <button onclick="closeSubModal()" class="text-gray-400 hover:text-gray-900 transition"><i
+                        class="fas fa-times text-xl"></i></button>
             </div>
             <div class="p-6 md:p-10">
                 <div class="flex items-center gap-4 mb-8">
-                    <div class="w-16 h-16 bg-blue-50 rounded-full border border-blue-100 overflow-hidden flex-shrink-0 pt-2"><img src="./bear.png" class="w-full h-full object-contain"></div>
-                    <div><p class="text-brand text-[12px] font-black tracking-wider uppercase mb-1">Step 1</p><p class="text-xl font-black text-gray-900 tracking-tight">어떤 인사이트를 중점적으로 받아보시겠어요?</p></div>
+                    <div
+                        class="w-16 h-16 bg-blue-50 rounded-full border border-blue-100 overflow-hidden flex-shrink-0 pt-2">
+                        <img src="./bear.png" class="w-full h-full object-contain"></div>
+                    <div>
+                        <p class="text-brand text-[12px] font-black tracking-wider uppercase mb-1">Step 1</p>
+                        <p class="text-xl font-black text-gray-900 tracking-tight">어떤 인사이트를 중점적으로 받아보시겠어요?</p>
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
-                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🌐</div><div class="font-black text-gray-900 text-sm">경제</div></label>
-                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🛒</div><div class="font-black text-gray-900 text-sm">비즈니스</div></label>
-                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🚗</div><div class="font-black text-gray-900 text-sm">모빌리티</div></label>
-                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🤖</div><div class="font-black text-gray-900 text-sm">인공지능</div></label>
-                    <label class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input type="checkbox" class="hidden" checked><div class="text-2xl mb-1">🛡️</div><div class="font-black text-gray-900 text-sm">정보보안</div></label>
+                    <label
+                        class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input
+                            type="checkbox" class="hidden" checked>
+                        <div class="text-2xl mb-1">🌐</div>
+                        <div class="font-black text-gray-900 text-sm">경제</div>
+                    </label>
+                    <label
+                        class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input
+                            type="checkbox" class="hidden" checked>
+                        <div class="text-2xl mb-1">🛒</div>
+                        <div class="font-black text-gray-900 text-sm">비즈니스</div>
+                    </label>
+                    <label
+                        class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input
+                            type="checkbox" class="hidden" checked>
+                        <div class="text-2xl mb-1">🚗</div>
+                        <div class="font-black text-gray-900 text-sm">모빌리티</div>
+                    </label>
+                    <label
+                        class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input
+                            type="checkbox" class="hidden" checked>
+                        <div class="text-2xl mb-1">🤖</div>
+                        <div class="font-black text-gray-900 text-sm">인공지능</div>
+                    </label>
+                    <label
+                        class="cursor-pointer border-2 border-gray-100 rounded-xl p-4 hover:border-blue-300 transition [&:has(:checked)]:border-brand [&:has(:checked)]:bg-blue-50"><input
+                            type="checkbox" class="hidden" checked>
+                        <div class="text-2xl mb-1">🛡️</div>
+                        <div class="font-black text-gray-900 text-sm">정보보안</div>
+                    </label>
                 </div>
                 <div class="mb-8">
                     <p class="text-brand text-[12px] font-black tracking-wider uppercase mb-2">Step 2</p>
-                    <input type="email" id="sub-email" placeholder="이메일 주소를 입력해주세요 (예: r&d@autohands.co.kr)" class="w-full bg-gray-50 border border-gray-200 px-5 py-4 rounded-xl font-bold text-gray-900 focus:outline-none focus:border-brand focus:ring-2 focus:ring-blue-100 transition">
+                    <input type="email" id="sub-email" placeholder="이메일 주소를 입력해주세요 (예: r&d@autohands.co.kr)"
+                        class="w-full bg-gray-50 border border-gray-200 px-5 py-4 rounded-xl font-bold text-gray-900 focus:outline-none focus:border-brand focus:ring-2 focus:ring-blue-100 transition">
                 </div>
-                <button onclick="submitSubscribe()" class="w-full bg-gray-900 text-white py-4 rounded-xl font-black text-lg hover:bg-brand transition shadow-lg flex justify-center items-center gap-2">구독 완료하기 <i class="fas fa-check"></i></button>
+                <button onclick="submitSubscribe()"
+                    class="w-full bg-gray-900 text-white py-4 rounded-xl font-black text-lg hover:bg-brand transition shadow-lg flex justify-center items-center gap-2">구독
+                    완료하기 <i class="fas fa-check"></i></button>
             </div>
         </div>
     </div>
 
-    <div id="article-modal" class="fixed inset-0 bg-gray-900/90 z-[100] items-center justify-center p-4 backdrop-blur-sm modal-base" onclick="if(event.target===this) closeArticle()">
-        <div class="bg-white w-full max-w-6xl h-[90vh] rounded-2xl overflow-hidden flex flex-col shadow-2xl relative transition-all" onclick="event.stopPropagation()">
+    <div id="article-modal"
+        class="fixed inset-0 bg-gray-900/90 z-[100] items-center justify-center p-4 backdrop-blur-sm modal-base"
+        onclick="if(event.target===this) closeArticle()">
+        <div class="bg-white w-full max-w-6xl h-[90vh] rounded-2xl overflow-hidden flex flex-col shadow-2xl relative transition-all"
+            onclick="event.stopPropagation()">
             <div class="p-4 border-b flex justify-between items-center bg-gray-50">
-                <div class="flex items-center gap-2 text-gray-600 font-bold text-sm"><i class="fas fa-newspaper text-brand"></i> 원문 브라우저</div>
-                <button type="button" onclick="closeArticle()" class="w-8 h-8 flex items-center justify-center bg-gray-200 text-gray-600 rounded-full hover:bg-gray-800 hover:text-white transition"><i class="fas fa-times"></i></button>
+                <div class="flex items-center gap-2 text-gray-600 font-bold text-sm"><i
+                        class="fas fa-newspaper text-brand"></i> 원문 브라우저</div>
+                <button type="button" onclick="closeArticle()"
+                    class="w-8 h-8 flex items-center justify-center bg-gray-200 text-gray-600 rounded-full hover:bg-gray-800 hover:text-white transition"><i
+                        class="fas fa-times"></i></button>
             </div>
             <iframe id="article-frame" src="" class="w-full h-full border-none bg-white"></iframe>
+            <div id="frame-loader" class="w-full h-full flex flex-col items-center justify-center bg-gray-50 hidden">
+                <i class="fas fa-circle-notch fa-spin text-4xl text-brand mb-4"></i>
+                <p class="text-gray-500 font-bold text-sm">보안 환경 확인 및 기사를 불러오는 중입니다...</p>
+            </div>
             <div id="fallback-ui" class="w-full h-full flex flex-col items-center justify-center bg-gray-50 hidden">
                 <div class="bg-white p-10 rounded-3xl shadow-sm text-center border border-gray-100 max-w-lg">
-                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl text-gray-400"><i class="fas fa-lock"></i></div>
+                    <div
+                        class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl text-gray-400">
+                        <i class="fas fa-lock"></i></div>
                     <h3 class="text-xl font-black text-gray-800 mb-3">해당 언론사는 외부 뷰어를 차단합니다</h3>
                     <p class="text-gray-500 text-sm mb-8 line-relaxed">보안 정책(X-Frame-Options)으로 인해 새 창에서만 읽을 수 있습니다.</p>
-                    <button id="fallback-btn" class="w-full bg-gray-900 text-white py-4 rounded-xl font-bold hover:bg-brand transition shadow-lg">새 창에서 안전하게 읽기 <i class="fas fa-arrow-right ml-2"></i></button>
+                    <button id="fallback-btn"
+                        class="w-full bg-gray-900 text-white py-4 rounded-xl font-bold hover:bg-brand transition shadow-lg">새
+                        창에서 안전하게 읽기 <i class="fas fa-arrow-right ml-2"></i></button>
                 </div>
             </div>
         </div>
@@ -170,7 +311,7 @@
         </div>
     </footer>
 
-<script type="module">
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, doc, getDoc, collection, getDocs, setDoc, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -186,29 +327,54 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const blockedSites = ['naver.com','daum.net','chosun.com','joongang.co.kr','donga.com','mk.co.kr','hankyung.com','etnews.com','yna.co.kr','autotribune.co.kr'];
-        
         window.currentArticles = [];
         window.currentMain = null;
         window.currentVideo = null;
         window.currentCampaign = null;
         window.lastValidDate = "";
 
-        // URL 및 모달 유틸리티
-        window.smartOpen = function(url) {
-            if(!url || url === '#') return alert("해당 컨텐츠는 원문이 존재하지 않습니다.");
-            document.getElementById('article-modal').classList.add('active'); document.body.style.overflow = 'hidden';
-            if (blockedSites.some(site => url.includes(site))) {
-                document.getElementById('article-frame').style.display = 'none'; document.getElementById('fallback-ui').style.display = 'flex'; 
-                document.getElementById('fallback-btn').onclick = () => { window.open(url, '_blank'); window.closeArticle(); };
-            } else { 
-                document.getElementById('article-frame').style.display = 'block'; document.getElementById('fallback-ui').style.display = 'none'; document.getElementById('article-frame').src = url; 
+        // URL 및 모달 유틸리티 (서버리스 함수 통한 자동 차단 감지)
+        window.smartOpen = async function (url) {
+            if (!url || url === '#') return alert("해당 컨텐츠는 원문이 존재하지 않습니다.");
+            
+            const modal = document.getElementById('article-modal');
+            const frame = document.getElementById('article-frame');
+            const fallback = document.getElementById('fallback-ui');
+            const loader = document.getElementById('frame-loader');
+            
+            modal.classList.add('active'); 
+            document.body.style.overflow = 'hidden';
+            
+            // 초기화 및 로딩 표시
+            frame.style.display = 'none';
+            fallback.style.display = 'none';
+            frame.src = "about:blank";
+            if (loader) loader.style.display = 'flex';
+            
+            try {
+                const res = await fetch(`/.netlify/functions/check-frame?url=${encodeURIComponent(url)}`);
+                const data = await res.json();
+                
+                if (loader) loader.style.display = 'none';
+                
+                if (data.blocked) {
+                    fallback.style.display = 'flex';
+                    document.getElementById('fallback-btn').onclick = () => { window.open(url, '_blank'); window.closeArticle(); };
+                } else {
+                    frame.style.display = 'block';
+                    frame.src = url;
+                }
+            } catch (error) {
+                console.error("Frame check failed", error);
+                if (loader) loader.style.display = 'none';
+                frame.style.display = 'block';
+                frame.src = url;
             }
         };
-        window.closeArticle = function() { document.getElementById('article-modal').classList.remove('active'); document.getElementById('article-frame').src = "about:blank"; document.body.style.overflow = 'auto'; };
-        
-        window.getYoutubeEmbed = function(url) {
-            if(!url) return ''; let id = '';
+        window.closeArticle = function () { document.getElementById('article-modal').classList.remove('active'); document.getElementById('article-frame').src = "about:blank"; document.body.style.overflow = 'auto'; };
+
+        window.getYoutubeEmbed = function (url) {
+            if (!url) return ''; let id = '';
             if (url.includes('youtu.be/')) id = url.split('youtu.be/')[1].split('?')[0]; else if (url.includes('v=')) id = url.split('v=')[1].split('&')[0]; else if (url.includes('embed/')) id = url.split('embed/')[1].split('?')[0];
             return id ? `https://www.youtube.com/embed/${id}?autoplay=0&rel=0` : '';
         };
@@ -217,26 +383,26 @@
         window.closeSubModal = () => { document.getElementById('subscribe-modal').classList.remove('active'); document.body.style.overflow = 'auto'; };
 
         // 구독 신청
-        window.submitSubscribe = async function() {
+        window.submitSubscribe = async function () {
             const email = document.getElementById('sub-email').value;
             const checkboxes = document.querySelectorAll('#subscribe-modal input[type="checkbox"]');
             const interests = [];
             const labels = ["거시경제", "비즈니스", "모빌리티", "인공지능", "정보보안"];
-            checkboxes.forEach((cb, idx) => { if(cb.checked) interests.push(labels[idx]); });
+            checkboxes.forEach((cb, idx) => { if (cb.checked) interests.push(labels[idx]); });
 
-            if(!email || !email.includes('@')) return alert('정확한 이메일 주소를 입력해주세요!');
-            if(interests.length === 0) return alert('최소 하나 이상의 관심 분야를 선택해주세요!');
+            if (!email || !email.includes('@')) return alert('정확한 이메일 주소를 입력해주세요!');
+            if (interests.length === 0) return alert('최소 하나 이상의 관심 분야를 선택해주세요!');
 
-            try { 
-                await setDoc(doc(db, "subscribers", email), { 
-                    email: email, 
-                    subscribeDate: new Date().toISOString(), 
+            try {
+                await setDoc(doc(db, "subscribers", email), {
+                    email: email,
+                    subscribeDate: new Date().toISOString(),
                     interests: interests,
-                    status: "active" 
-                }); 
-                alert(`🎉 구독이 완료되었습니다!\n관심 분야: ${interests.join(', ')}`); 
-                document.getElementById('sub-email').value = ''; 
-                window.closeSubModal(); 
+                    status: "active"
+                });
+                alert(`🎉 구독이 완료되었습니다!\n관심 분야: ${interests.join(', ')}`);
+                document.getElementById('sub-email').value = '';
+                window.closeSubModal();
             } catch (error) { alert("구독 에러: " + error.message); }
         };
 
@@ -255,49 +421,58 @@
             });
         };
 
-        // 개별 카드 생성 (Insight CSS 고도화 포함)
-        window.generateCardHtml = function(item) {
+        // 🔥 개별 카드 생성 (발행일 표시 기능 추가)
+        window.generateCardHtml = function (item, isSlider = false) {
+            const sliderClasses = isSlider ? 'w-[85vw] sm:w-[320px] lg:w-auto shrink-0 snap-start' : '';
             if (item.isCampaign) {
                 return `
-                    <div class="bg-white rounded-2xl flex flex-col h-full min-h-[250px] relative overflow-hidden border border-gray-200 shadow-sm cursor-pointer" onclick="smartOpen('${item.link}')">
-                        <img src="${item.img}" class="w-full h-full object-cover absolute inset-0">
-                        <div class="absolute top-4 left-4 bg-black/60 text-white text-[11px] font-black px-2 py-1 rounded-md tracking-widest z-10 backdrop-blur-sm shadow-sm border border-white/20">보안 캠페인</div>
+                    <div class="flex flex-col h-full relative overflow-hidden rounded-2xl cursor-default group border border-gray-100 shadow-sm bg-white ${sliderClasses}">
+                        <div class="aspect-[16/10] w-full bg-gray-900 relative h-full">
+                            <img src="${item.img}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300">
+                            <div class="absolute bottom-4 left-4 bg-black/80 text-white text-[12px] font-black px-3 py-1.5 rounded-md tracking-widest z-10 backdrop-blur-sm border border-white/10">🚨 보안 캠페인</div>
+                        </div>
                     </div>
                 `;
             }
-            
+
             const thumb = item.img && item.img.includes('http') ? item.img : 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400';
-            const badgeHtml = item.isImportant ? `<span class="accent-tag px-2 py-0.5 rounded text-[10px] font-black tracking-widest mr-2 shadow-sm animate-pulse">HOT</span>` : '';
-            
+            const badgeHtml = item.isImportant ? `<span class="bg-red-500 text-white px-2 py-0.5 rounded text-[10px] font-black tracking-widest mr-2 animate-pulse">HOT</span>` : '';
+
             return `
-                <article class="bg-white rounded-2xl p-5 article-card cursor-pointer flex flex-col h-full group" onclick="smartOpen('${item.link}')">
-                    <div class="aspect-[4/3] w-full rounded-xl overflow-hidden mb-4 bg-gray-100 shrink-0">
+                <article class="flex flex-col h-full group cursor-pointer bg-white rounded-2xl p-5 border border-gray-100 hover:border-gray-300 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${sliderClasses}" onclick="smartOpen('${item.link}')">
+                    <div class="aspect-[16/10] w-full overflow-hidden bg-gray-100 rounded-xl mb-4 relative shrink-0">
                         <img src="${thumb}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="flex items-center">
-                            ${badgeHtml}
-                            <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-md text-[11px] font-bold tracking-wider">[${item.brand}]</span>
+                    <div class="flex flex-col flex-grow">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center">
+                                ${badgeHtml}
+                                <span class="text-brand font-bold text-[12px] tracking-tight">${item.brand}</span>
+                            </div>
+                            <span class="text-gray-400 text-[11px] font-medium truncate max-w-[80px] text-right">${item.source}</span>
                         </div>
-                        <span class="text-gray-400 text-[10px] font-bold">${item.source}</span>
+                        
+                        <h4 class="text-[18px] sm:text-[20px] font-black text-gray-900 leading-[1.4] mb-2 group-hover:text-brand transition word-break-keep">${item.title}</h4>
+                        <p class="text-gray-500 text-[14px] leading-relaxed mb-4" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: keep-all;">${item.desc}</p>
+                        
+                        ${item.insight ? `
+                        <div class="mt-auto pt-4 border-t border-gray-100">
+                            <div class="flex items-center gap-1.5 mb-1.5">
+                                <i class="fas fa-bolt text-brand text-[12px]"></i>
+                                <span class="text-gray-900 text-[11px] font-black tracking-wider">R&D INSIGHT</span>
+                            </div>
+                            <p class="text-[13px] text-gray-700 font-bold leading-relaxed break-keep" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                                ${item.insight}
+                            </p>
+                        </div>` : ''}
                     </div>
-                    <h4 class="text-lg font-bold text-gray-900 leading-snug mb-3 group-hover:text-brand transition line-clamp-2">${item.title}</h4>
-                    <p class="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-5 flex-grow">${item.desc}</p>
-                    
-                    ${item.insight ? `
-                    <div class="mt-auto bg-blue-50/70 p-3 rounded-xl border-t-2 border-brand/10">
-                        <p class="text-[10px] font-black text-brand mb-1 uppercase tracking-tighter">💡 R&D Insight</p>
-                        <p class="text-[11px] text-gray-700 font-bold leading-snug line-clamp-2">
-                            ${item.insight}
-                        </p>
-                    </div>` : ''}
                 </article>
             `;
         };
 
         // 🔥 메인 대시보드 렌더링 (에러 해결 완료)
-        window.renderMainDashboard = function() {
+        window.renderMainDashboard = function () {
             const content = document.getElementById('magazine-content');
             if (!content) return;
 
@@ -314,7 +489,7 @@
                         <p class="text-gray-500 font-bold text-[16px]">R&D 센터에서 더욱 유익한 인사이트로 찾아올게요! 🐻</p>
                     </div>
                 `;
-                return; 
+                return;
             }
 
             let videoHtml = ''; let mainHtml = ''; let sectionsHtml = '';
@@ -369,20 +544,31 @@
 
             const getCat = (cat) => window.currentArticles.filter(a => a.category === cat && !a.isCampaign);
             const renderGrid = (items, title, categoryKey) => {
-                if(!items || items.length === 0) return '';
+                if (!items || items.length === 0) return '';
                 let gridHtml = `
                 <section class="mb-24">
                     <div class="flex justify-between items-end pb-3 mb-6 border-b-2 border-gray-800">
                         <h2 class="text-xl font-black text-gray-900 tracking-tight">${title}</h2>
-                        <button onclick="window.showCategoryList('${categoryKey}', '${title}')" class="text-[14px] text-gray-500 hover:text-brand font-bold transition flex items-center gap-1">더보기 <i class="fas fa-chevron-right text-[12px]"></i></button>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">`;
-                items.slice(0, 4).forEach(item => { gridHtml += window.generateCardHtml(item); });
-                return gridHtml + `</div></section>`;
+                    <div class="flex overflow-x-auto lg:grid lg:grid-cols-4 gap-4 lg:gap-6 pb-6 snap-x hide-scrollbar">`;
+                
+                items.slice(0, 3).forEach(item => { gridHtml += window.generateCardHtml(item, true); });
+                
+                gridHtml += `
+                    <article class="flex flex-col h-full items-center justify-center cursor-pointer bg-gray-50 rounded-2xl p-5 border border-gray-100 hover:bg-gray-100 hover:shadow-md transition-all duration-300 group min-h-[250px] w-[85vw] sm:w-[320px] lg:w-auto shrink-0 snap-start" onclick="window.showCategoryList('${categoryKey}', '${title}')">
+                        <div class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-arrow-right text-brand text-2xl"></i>
+                        </div>
+                        <span class="font-black text-gray-800 text-lg mb-1">전체 리포트 보기</span>
+                        <span class="text-xs text-gray-500 font-bold">${title} 히스토리 더보기</span>
+                    </article>
+                </div></section>`;
+                
+                return gridHtml;
             };
 
             let securityItems = getCat('security');
-            if(window.currentCampaign && window.currentCampaign.securityImg) {
+            if (window.currentCampaign && window.currentCampaign.securityImg) {
                 securityItems.unshift({ isCampaign: true, img: window.currentCampaign.securityImg, link: '#' });
             }
 
@@ -395,12 +581,16 @@
             content.innerHTML = videoHtml + mainHtml + sectionsHtml;
         };
 
-        // 특정 카테고리 모아보기
-        window.showCategoryList = async function(categoryKey, title) {
+        // 🔥 특정 카테고리 전체 모아보기 (URL 파라미터 연동)
+        window.showCategoryList = async function (categoryKey, title) {
             document.getElementById('subscribe-banner-section').style.display = 'none';
-            const tabName = title.split(' (')[0].split(' ').slice(1).join(' '); 
+            const tabName = title.split(' (')[0].split(' ').slice(1).join(' ');
             window.updateTabUI(tabName);
-            
+
+            // 🔥 URL 공유를 위해 주소창에 ?category=xxx 파라미터 추가 (새로고침 없음)
+            const newUrl = '?category=' + categoryKey;
+            if (window.location.search !== newUrl) window.history.pushState(null, '', newUrl);
+
             const content = document.getElementById('magazine-content');
             content.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-32">
@@ -412,38 +602,61 @@
             try {
                 const querySnapshot = await getDocs(collection(db, "magazines"));
                 let allItems = [];
-                
+
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     const articles = data.articles || [];
                     const filtered = articles.filter(a => a.category === categoryKey);
+                    // 🔥 기사 객체에 문서 ID(발행일) 주입
                     filtered.forEach(item => { item.issueDate = doc.id; allItems.push(item); });
                 });
 
+                // 최신순 정렬
                 allItems.sort((a, b) => b.issueDate.localeCompare(a.issueDate));
 
-                if(categoryKey === 'security' && window.currentCampaign && window.currentCampaign.securityImg) {
+                if (categoryKey === 'security' && window.currentCampaign && window.currentCampaign.securityImg) {
                     allItems.unshift({ isCampaign: true, img: window.currentCampaign.securityImg, link: '#' });
                 }
 
                 let html = `
                     <div class="mb-12 flex justify-between items-end pb-4 border-b-2 border-gray-800">
                         <div class="flex items-center gap-4">
-                            <button onclick="window.renderMainDashboard()" class="w-10 h-10 bg-white shadow-sm border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-900 hover:text-white transition cursor-pointer text-lg"><i class="fas fa-arrow-left"></i></button>
+                            <button onclick="window.history.pushState(null, '', window.location.pathname); window.renderMainDashboard();" class="w-10 h-10 bg-white shadow-sm border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-900 hover:text-white transition cursor-pointer text-lg"><i class="fas fa-arrow-left"></i></button>
                             <div>
                                 <h2 class="text-[28px] font-black text-gray-900 leading-tight">${title}</h2>
-                                <p class="text-gray-500 font-bold text-sm mt-1">지금까지 발행된 전체 아카이브</p>
+                                <p class="text-gray-500 font-bold text-sm mt-1">최신 등록일 기준 일자별 정렬</p>
                             </div>
                         </div>
                         <span class="text-brand bg-blue-50 px-3 py-1 rounded-md font-bold text-[14px]">총 ${allItems.length}건</span>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">`;
-                
-                allItems.forEach(item => { html += window.generateCardHtml(item); });
-                if(allItems.length === 0) html += `<div class="col-span-full py-20 text-center text-gray-400 font-bold">등록된 기사가 없습니다.</div>`;
-                
-                content.innerHTML = html + `</div>`; 
-                window.scrollTo({ top: 0, behavior: 'smooth' }); 
+                `;
+
+                if (allItems.length === 0) {
+                    html += `<div class="py-20 text-center text-gray-400 font-bold">등록된 기사가 없습니다.</div>`;
+                } else {
+                    // 발행일(issueDate) 기준으로 그룹화
+                    const grouped = {};
+                    allItems.forEach(item => {
+                        const dateStr = item.issueDate ? item.issueDate.split('_')[0] : '기타';
+                        if (!grouped[dateStr]) grouped[dateStr] = [];
+                        grouped[dateStr].push(item);
+                    });
+
+                    for (const [date, items] of Object.entries(grouped)) {
+                        html += `
+                        <div class="mb-14">
+                            <h3 class="text-xl font-black text-gray-800 mb-6 flex items-center gap-2">
+                                <i class="far fa-calendar-check text-brand"></i> ${date} 발행 리포트
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        `;
+                        items.forEach(item => { html += window.generateCardHtml(item); });
+                        html += `</div></div>`;
+                    }
+                }
+
+                content.innerHTML = html;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             } catch (error) {
                 console.error("전체 기사 로드 실패:", error);
                 content.innerHTML = `<div class="py-20 text-center text-gray-500 font-bold">기사를 불러오는 중 오류가 발생했습니다.</div>`;
@@ -451,72 +664,92 @@
         };
 
         // 🔥 스마트 로드 (과거 포맷 2026-04-20_NO.34 와 신규 포맷 모두 검색)
-        window.loadReport = async function(date) {
+        window.loadReport = async function (date) {
             const content = document.getElementById('magazine-content');
             try {
                 const q = query(collection(db, "magazines"));
                 const querySnapshot = await getDocs(q);
-                
+
                 let targetDoc = null;
                 querySnapshot.forEach((doc) => {
                     if (doc.id === date || doc.id.startsWith(date + "_")) {
                         targetDoc = doc;
                     }
                 });
-                
+
                 if (targetDoc) {
                     const data = targetDoc.data();
                     window.currentArticles = data.articles || [];
                     window.currentMain = window.currentArticles.find(a => a.category === 'main');
                     window.currentVideo = data.video || null;
                     window.currentCampaign = data.campaign || null;
-                    
-                    if(document.getElementById('dummy-badge')) document.getElementById('dummy-badge').classList.add('hidden'); 
-                    if(document.getElementById('display-issue')) document.getElementById('display-issue').textContent = data.issueName || targetDoc.id.split('_')[1] || "NO.--";
-                } else { 
+
+                    if (document.getElementById('dummy-badge')) document.getElementById('dummy-badge').classList.add('hidden');
+                    if (document.getElementById('display-issue')) document.getElementById('display-issue').textContent = data.issueName || targetDoc.id.split('_')[1] || "NO.--";
+                } else {
                     window.currentArticles = [];
                     window.currentMain = null;
                     window.currentVideo = null;
                     window.currentCampaign = null;
-                    
-                    if(document.getElementById('display-issue')) document.getElementById('display-issue').textContent = "NO. --";
+
+                    if (document.getElementById('display-issue')) document.getElementById('display-issue').textContent = "NO. --";
                 }
 
                 window.renderMainDashboard();
-            } catch (error) { 
+            } catch (error) {
                 console.error("데이터 로드 실패:", error);
-                if(content) content.innerHTML = `<div class="py-20 text-center text-gray-500 font-bold">데이터를 불러올 수 없습니다.</div>`; 
+                if (content) content.innerHTML = `<div class="py-20 text-center text-gray-500 font-bold">데이터를 불러올 수 없습니다.</div>`;
             }
         };
 
-        // 시스템 초기화
-        window.initDashboard = function() {
+        // 🔥 시스템 초기화 (주소창에 카테고리가 있으면 바로 모아보기로 렌더링)
+        window.initDashboard = function () {
             const now = new Date();
-            if (now.getDay() === 0) now.setDate(now.getDate() - 2); 
-            else if (now.getDay() === 6) now.setDate(now.getDate() - 1); 
+            if (now.getDay() === 0) now.setDate(now.getDate() - 2);
+            else if (now.getDay() === 6) now.setDate(now.getDate() - 1);
 
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             window.lastValidDate = todayStr;
 
             const pickerEl = document.getElementById('date-picker');
-            if(pickerEl) {
+            if (pickerEl) {
                 flatpickr(pickerEl, {
-                    locale: "ko",              
-                    defaultDate: todayStr,     
-                    maxDate: "today",          
+                    locale: "ko",
+                    defaultDate: todayStr,
+                    maxDate: "today",
                     disable: [
-                        function(date) { return (date.getDay() === 0 || date.getDay() === 6); }
+                        function (date) { return (date.getDay() === 0 || date.getDay() === 6); }
                     ],
-                    onChange: function(selectedDates, dateStr, instance) {
+                    onChange: function (selectedDates, dateStr, instance) {
+                        window.history.pushState(null, '', window.location.pathname); // 달력 날짜 변경 시 파라미터 제거
                         window.lastValidDate = dateStr;
                         window.loadReport(dateStr);
                     }
                 });
             }
-            window.loadReport(todayStr);
+
+            // 🔥 주소창 분석 로직: ?category=auto 등으로 접속 시 바로 해당 화면 연결
+            const urlParams = new URLSearchParams(window.location.search);
+            const categoryMode = urlParams.get('category');
+
+            if (categoryMode) {
+                const categoryTitles = {
+                    'macro': '🌐 MACRO VIEW (거시경제)',
+                    'platform': '🛒 BIZ & PLATFORM (비즈니스)',
+                    'auto': '🚗 AUTO TRACK (모빌리티)',
+                    'ai': '🤖 AI STRATEGY (인공지능)',
+                    'security': '🛡️ INFO-SECURE (정보보안)'
+                };
+                // 파라미터가 있으면 전체 모아보기 실행
+                window.showCategoryList(categoryMode, categoryTitles[categoryMode] || categoryMode);
+            } else {
+                // 파라미터가 없으면 기본값인 '오늘 날짜'의 리포트 실행
+                window.loadReport(todayStr);
+            }
         };
 
         window.initDashboard();
     </script>
 </body>
+
 </html>

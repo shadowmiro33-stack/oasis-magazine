@@ -1,0 +1,79 @@
+/* S-Core Dream 폰트 (눈누 제공 CDN 예시) */
+@font-face {
+    font-family: 'S-CoreDream-3Light';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-3Light.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'S-CoreDream-5Medium';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-5Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+}
+@font-face {
+    font-family: 'S-CoreDream-6Bold';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-6Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+}
+
+:root {
+  --black: #000000;
+  --white: #ffffff;
+}
+
+body {
+  margin: 0;
+  font-family: 'S-CoreDream-5Medium', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f0f0f0;
+  color: var(--black);
+}
+
+/* Brutalism UI 공통 클래스 */
+.brutalist-card {
+  background: var(--white);
+  border: 3px solid var(--black);
+  box-shadow: 8px 8px 0px var(--black);
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.brutalist-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 10px 10px 0px var(--black);
+}
+
+.brutalist-button {
+  background: var(--white);
+  border: 3px solid var(--black);
+  box-shadow: 4px 4px 0px var(--black);
+  padding: 10px 20px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'S-CoreDream-6Bold';
+  transition: all 0.1s ease;
+}
+
+.brutalist-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px var(--black);
+}
+
+.brutalist-input {
+  border: 3px solid var(--black);
+  padding: 12px;
+  font-family: 'S-CoreDream-5Medium';
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+h1, h2, h3 {
+  font-family: 'S-CoreDream-6Bold';
+  margin-top: 0;
+}
