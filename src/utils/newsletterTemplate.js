@@ -89,6 +89,14 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
       const isShorts = !!campaignData.shortsUrl;
       const imgUrl = isShorts ? campaignData.securityImg : (campaignData.securityImg || campaignData);
       
+      const getDeepLinkUrl = (url) => {
+          if(!url) return '';
+          if(url.includes('youtube.com/shorts/')) return `https://www.youtube.com/watch?v=${url.split('/shorts/')[1].split('?')[0]}`;
+          if(url.includes('youtu.be/')) return `https://www.youtube.com/watch?v=${url.split('youtu.be/')[1].split('?')[0]}`;
+          return url;
+      };
+      const safeUrl = getDeepLinkUrl(campaignData.shortsUrl);
+
       if(isShorts) {
           html += `
           <div style="margin-bottom: 40px; text-align: left; background: #fdf2f8; border-radius: 20px; overflow: hidden; border: 1px solid #fbcfe8; box-shadow: 0 10px 25px rgba(219,39,119,0.1);">
@@ -97,7 +105,7 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
                   <span style="background: #db2777; color: white; font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: bold;">Trending</span>
               </div>
               <div style="padding: 25px; display: flex; gap: 20px; align-items: center;">
-                  <a href="${campaignData.shortsUrl}" target="_blank" style="display: block; width: 140px; height: 250px; border-radius: 12px; overflow: hidden; position: relative; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                  <a href="${safeUrl}" target="_blank" style="display: block; width: 140px; height: 250px; border-radius: 12px; overflow: hidden; position: relative; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
                       <img src="${imgUrl}" style="width: 100%; height: 100%; object-fit: cover; display: block;" alt="숏츠 썸네일">
                       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: rgba(219,39,119,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
                           <span style="color: white; font-size: 24px; margin-left: 4px;">▶</span>
@@ -105,7 +113,7 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
                   </a>
                   <div style="flex: 1;">
                       <div style="font-size: 20px; font-weight: 900; color: #1e293b; margin-bottom: 15px; line-height: 1.4; word-break: keep-all;">${campaignData.title}</div>
-                      <a href="${campaignData.shortsUrl}" target="_blank" style="display: inline-block; background: #1e293b; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 14px;">영상 바로보기</a>
+                      <a href="${safeUrl}" target="_blank" style="display: inline-block; background: #1e293b; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 14px;">앱에서 영상 바로보기</a>
                   </div>
               </div>
           </div>`;
