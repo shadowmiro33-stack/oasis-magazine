@@ -11,6 +11,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
   const [secBanners, setSecBanners] = useState([]);
   const [selCampaign, setSelCampaign] = useState('');
   const [selSecurity, setSelSecurity] = useState('');
+  const [video, setVideo] = useState({ url: '', title: '', source: '', desc: '' });
   const [deploying, setDeploying] = useState(false);
 
   // Edit Modal State
@@ -54,10 +55,10 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
     try {
       const docId = new Date().toISOString().split('T')[0];
       const campaignData = selCampaign ? campaigns.find(v => v.id === selCampaign) || null : null;
-      await saveMagazine(docId, { issueName, publishDate: new Date().toISOString(), articles: allDrafts, video: {}, campaign: campaignData, webCampaign: selSecurity });
+      await saveMagazine(docId, { issueName, publishDate: new Date().toISOString(), articles: allDrafts, video, campaign: campaignData, webCampaign: selSecurity });
       alert('서버에 배포되었습니다.');
       setDraftArticles({ main: null, macro: [], platform: [], auto: [], ai: [], security: [] });
-      setIssueName(''); load();
+      setIssueName(''); setVideo({ url:'', title:'', source:'', desc:'' }); load();
     } catch (e) { alert('배포 실패: ' + e.message); }
     finally { setDeploying(false); }
   };
@@ -105,7 +106,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
 
   const sendCurrentDrafts = async () => {
     if (allDrafts.length === 0) return alert('배포할 기사가 없습니다. 최종 발행 후 메일을 발송하는 것을 권장합니다.');
-    const mag = { issueName: issueName || '임시 호수', articles: draftArticles, campaign: selCampaign ? campaigns.find(v => v.id === selCampaign) : null, webCampaign: selSecurity };
+    const mag = { issueName: issueName || '임시 호수', articles: draftArticles, campaign: selCampaign ? campaigns.find(v => v.id === selCampaign) : null, webCampaign: selSecurity, video };
     await sendEmail(mag);
   };
 
@@ -233,6 +234,25 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
             <option value="">보안 캠페인 선택 (없음)</option>
             {secBanners.map(img => <option key={img.id} value={img.url}>{img.name || '배너'}</option>)}
           </select>
+        </div>
+        <div style={{ background:'#fefce8', border:'1px solid #fef08a', padding:20, borderRadius:12, marginBottom:20 }}>
+          <div style={{ fontSize:13, fontWeight:'bold', color:'#a16207', marginBottom:12 }}><i className="fab fa-youtube"></i> 메거진 메인 유튜브 자동 세팅</div>
+          <div style={{ display:'flex', gap:10, marginBottom:10 }}>
+            <input value={video.url} onChange={e => setVideo({...video, url:e.target.value})} placeholder="유튜브 링크 URL" style={{ flex:1, padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
+            <button className="btn" onClick={async () => {
+              if(!video.url) return alert("URL을 입력하세요.");
+              try {
+                const res = await fetch(`https://noembed.com/embed?url=${video.url}`);
+                const data = await res.json();
+                setVideo({...video, title:data.title||'', source:data.author_name||'', desc:data.title||''});
+              } catch(e) { alert("불러오기 실패"); }
+            }} style={{ background:'#f59e0b', color:'white', fontWeight:'bold', width:120 }}>정보 불러오기</button>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+            <input value={video.title} onChange={e => setVideo({...video, title:e.target.value})} placeholder="영상 제목" style={{ padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
+            <input value={video.source} onChange={e => setVideo({...video, source:e.target.value})} placeholder="채널명" style={{ padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
+            <input value={video.desc} onChange={e => setVideo({...video, desc:e.target.value})} placeholder="영상 코멘트" style={{ padding:10, borderRadius:8, border:'1px solid #fcd34d' }} />
+          </div>
         </div>
         <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
           <button className="btn" onClick={previewCurrentDrafts} style={{ padding:'12px 25px', fontSize:14, background:'#6366f1', color:'white', fontWeight:'bold' }}>
@@ -421,6 +441,12 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
                   <div key={sec.key} style={{ marginBottom:50 }}>
                     <div style={{ fontSize:20, fontWeight:900, color:'#1e293b', borderBottom:'3px solid #1e293b', paddingBottom:12, marginBottom:25 }}>{sec.label}</div>
                     <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:30 }}>
+                      {sec.key === 'security' && selSecurity && (
+                        <div style={{ background:'white', borderRadius:16, border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)', position:'relative', minHeight:280 }}>
+                          <div style={{ position:'absolute', top:16, left:16, background:'rgba(0,0,0,0.65)', color:'white', padding:'4px 10px', borderRadius:6, fontSize:11, fontWeight:900, zIndex:10, backdropFilter:'blur(4px)' }}>캠페인</div>
+                          <img src={selSecurity} alt="Campaign" style={{ width:'100%', height:'100%', objectFit:'cover', position:'absolute', inset:0 }} />
+                        </div>
+                      )}
                       {articles.map((a, i) => (
                         <div key={i} style={{ background:'white', borderRadius:16, border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                           <div style={{ width:'100%', aspectRatio:'16/9', background:'#f1f5f9' }}>
