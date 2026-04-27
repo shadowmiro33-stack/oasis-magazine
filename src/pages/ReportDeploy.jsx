@@ -13,6 +13,8 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
   const [selSecurity, setSelSecurity] = useState('');
   const [video, setVideo] = useState({ url: '', title: '', source: '', desc: '' });
   const [deploying, setDeploying] = useState(false);
+  const [expandedRows, setExpandedRows] = useState({}); // historyRow 확장 상태
+  const [pastPreviewReport, setPastPreviewReport] = useState(null); // 과거 리포트 웹 미리보기용
 
   // Edit Modal State
   const [editingReport, setEditingReport] = useState(null);
@@ -97,11 +99,16 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
     viewer.document.close();
   };
 
-  const previewPastReport = (mag) => {
+  const previewPastEmail = (mag) => {
     const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', new Date(mag.publishDate || mag.id).toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), mag.campaign || mag.webCampaign, mag.articles);
     const viewer = window.open('', '_blank', 'width=800,height=1000,scrollbars=yes');
-    viewer.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>과거 리포트 미리보기 - ' + mag.issueName + '</title></head><body style="margin:0; background-color: #f4f6f8;">' + htmlContent + '</body></html>');
+    viewer.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>과거 리포트 메일 미리보기 - ' + mag.issueName + '</title></head><body style="margin:0; background-color: #f4f6f8;">' + htmlContent + '</body></html>');
     viewer.document.close();
+  };
+
+  const previewPastWeb = (mag) => {
+    setPastPreviewReport(mag);
+    setShowWebPreview(true);
   };
 
   const sendCurrentDrafts = async () => {
@@ -277,22 +284,46 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
             {history.length === 0 ? (
               <tr><td colSpan="5" style={{ textAlign:'center', padding:30, color:'#94a3b8' }}>발행된 리포트가 없습니다.</td></tr>
             ) : history.map(m => (
-              <tr key={m.id}>
-                <td>{m.id}</td>
-                <td><b>{m.issueName}</b></td>
-                <td>{m.articles?.length || 0}건</td>
-                <td><span style={{ color:'#10b981', fontWeight:'bold' }}>배포완료</span></td>
-                <td>
-                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                    <button className="btn btn-primary" style={{ background:'#3b82f6', padding:'6px 12px', fontSize:11, width:'100%' }} onClick={() => previewPastReport(m)}><i className="fas fa-eye"></i> 미리보기</button>
+              <React.Fragment key={m.id}>
+                <tr style={{ cursor:'pointer' }} onClick={() => setExpandedRows({...expandedRows, [m.id]: !expandedRows[m.id]})}>
+                  <td style={{ textAlign:'center' }}>{expandedRows[m.id] ? <i className="fas fa-chevron-up"></i> : <i className="fas fa-chevron-down"></i>}</td>
+                  <td>{m.id}</td>
+                  <td><b>{m.issueName}</b></td>
+                  <td>{m.articles?.length || 0}건</td>
+                  <td><span style={{ color:'#10b981', fontWeight:'bold' }}>배포완료</span></td>
+                  <td>
                     <div style={{ display:'flex', gap:5 }}>
-                      <button className="btn btn-success" style={{ padding:'6px 12px', fontSize:11, flex:1 }} onClick={() => sendEmail(m)}>발송</button>
-                      <button className="btn" style={{ background:'#f1f5f9', color:'#3b82f6', padding:'6px 12px', fontSize:11, flex:1 }} onClick={() => openEditModal(m)}>관리</button>
+                      <button className="btn btn-outline" style={{ padding:'4px 8px', fontSize:10, flex:1 }} onClick={(e) => { e.stopPropagation(); openEditModal(m); }}>관리/수정</button>
+                      <button className="btn btn-danger" style={{ padding:'4px 8px', fontSize:10, background:'#fef2f2', color:'#ef4444' }} onClick={(e) => { e.stopPropagation(); deleteReport(m.id); }}>삭제</button>
                     </div>
-                    <button className="btn btn-danger" style={{ padding:'6px 12px', fontSize:11, width:'100%', background:'#fef2f2', color:'#ef4444', borderColor:'#fecaca' }} onClick={() => deleteReport(m.id)}>삭제</button>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                </tr>
+                {expandedRows[m.id] && (
+                  <tr>
+                    <td colSpan="6" style={{ background:'#f8fafc', padding:20 }}>
+                      <div style={{ display:'flex', gap:20 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:12, fontWeight:900, color:'#64748b', marginBottom:10 }}>📑 수록 기사 리스트</div>
+                          <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                            {m.articles?.map((a, idx) => (
+                              <div key={idx} style={{ fontSize:11, color:'#1e293b', background:'white', padding:'6px 10px', borderRadius:4, border:'1px solid #e2e8f0' }}>
+                                <span style={{ fontWeight:900, marginRight:5 }}>[{a.category}]</span> {a.title}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{ width:180, display:'flex', flexDirection:'column', gap:8 }}>
+                          <div style={{ fontSize:12, fontWeight:900, color:'#64748b', marginBottom:2 }}>🔍 미리보기</div>
+                          <button className="btn btn-primary" style={{ background:'#6366f1', fontSize:11, padding:'10px' }} onClick={() => previewPastEmail(m)}><i className="fas fa-envelope"></i> 메일 미리보기</button>
+                          <button className="btn btn-primary" style={{ background:'#3b82f6', fontSize:11, padding:'10px' }} onClick={() => previewPastWeb(m)}><i className="fas fa-desktop"></i> 웹 미리보기</button>
+                          <div style={{ margin:'5px 0' }}></div>
+                          <button className="btn btn-success" style={{ fontSize:11, padding:'10px' }} onClick={() => sendEmail(m)}><i className="fas fa-paper-plane"></i> 즉시 재발송</button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
@@ -421,9 +452,11 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
             <div style={{ padding:'15px 30px', background:'white', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                 <span style={{ background:'#ef4444', color:'white', padding:'4px 12px', borderRadius:20, fontSize:12, fontWeight:900 }}>미리보기 모드</span>
-                <h3 style={{ margin:0, color:'#1e293b' }}>[배포 예정] {issueName || '미지정 호수'}</h3>
+                <h3 style={{ margin:0, color:'#1e293b' }}>
+                  {pastPreviewReport ? `[과거 리포트] ${pastPreviewReport.issueName}` : `[배포 예정] ${issueName || '미지정 호수'}`}
+                </h3>
               </div>
-              <button onClick={() => setShowWebPreview(false)} style={{ background:'#0f172a', color:'white', border:'none', padding:'8px 20px', borderRadius:8, fontWeight:'bold', cursor:'pointer' }}>닫기</button>
+              <button onClick={() => { setShowWebPreview(false); setPastPreviewReport(null); }} style={{ background:'#0f172a', color:'white', border:'none', padding:'8px 20px', borderRadius:8, fontWeight:'bold', cursor:'pointer' }}>닫기</button>
             </div>
             
             <div style={{ padding:40, overflowY:'auto', flex:1 }}>
@@ -435,19 +468,25 @@ export default function ReportDeploy({ draftArticles, setDraftArticles }) {
                 { key: 'ai', label: '🤖 AI STRATEGY' },
                 { key: 'security', label: '🛡️ INFO-SECURE' }
               ].map(sec => {
-                const articles = sec.key === 'main' ? (draftArticles.main ? [draftArticles.main] : []) : draftArticles[sec.key];
-                if (articles.length === 0) return null;
+                const sourceData = pastPreviewReport ? pastPreviewReport.articles : draftArticles;
+                const articles = sec.key === 'main' ? (sourceData.main ? [sourceData.main] : (Array.isArray(sourceData) ? [sourceData.find(a => a.category === 'main')] : [])) : (Array.isArray(sourceData) ? sourceData.filter(a => a.category === sec.key) : sourceData[sec.key]);
+                
+                const filteredArticles = articles.filter(Boolean);
+                if (filteredArticles.length === 0) return null;
+                
+                const currentSecurityBanner = pastPreviewReport ? (pastPreviewReport.webCampaign || pastPreviewReport.campaign?.securityImg) : selSecurity;
+
                 return (
                   <div key={sec.key} style={{ marginBottom:50 }}>
                     <div style={{ fontSize:20, fontWeight:900, color:'#1e293b', borderBottom:'3px solid #1e293b', paddingBottom:12, marginBottom:25 }}>{sec.label}</div>
                     <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:30 }}>
-                      {sec.key === 'security' && selSecurity && (
+                      {sec.key === 'security' && currentSecurityBanner && (
                         <div style={{ background:'white', borderRadius:16, border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)', position:'relative', minHeight:280 }}>
                           <div style={{ position:'absolute', top:16, left:16, background:'rgba(0,0,0,0.65)', color:'white', padding:'4px 10px', borderRadius:6, fontSize:11, fontWeight:900, zIndex:10, backdropFilter:'blur(4px)' }}>캠페인</div>
-                          <img src={selSecurity} alt="Campaign" style={{ width:'100%', height:'100%', objectFit:'cover', position:'absolute', inset:0 }} />
+                          <img src={currentSecurityBanner} alt="Campaign" style={{ width:'100%', height:'100%', objectFit:'cover', position:'absolute', inset:0 }} />
                         </div>
                       )}
-                      {articles.map((a, i) => (
+                      {filteredArticles.map((a, i) => (
                         <div key={i} style={{ background:'white', borderRadius:16, border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                           <div style={{ width:'100%', aspectRatio:'16/9', background:'#f1f5f9' }}>
                             {a.img && <img src={a.img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />}
