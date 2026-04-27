@@ -43,7 +43,7 @@ exports.handler = async function(event, context) {
             
             const promises = chunk.map(targetEmail => {
                 const mailOptions = {
-                    from: `"오아시스 매거진" <${gmailUser}>`,
+                    from: `"OASIS R&D" <${gmailUser}>`,
                     to: targetEmail, // 숨은 참조(BCC) 대신 개별 수신자로 지정
                     subject: subject,
                     html: html
