@@ -7,6 +7,13 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   const [aiInput, setAiInput] = useState({ url:'', title:'', brand:'', source:'', desc:'', insight:'', img:'', category:'auto', isImportant:false });
   const [aiLoading, setAiLoading] = useState(false);
 
+  // YouTube Info State
+  const [ytUrl, setYtUrl] = useState('');
+  const [ytTitle, setYtTitle] = useState('');
+  const [ytChannel, setYtChannel] = useState('');
+  const [ytDesc, setYtDesc] = useState('');
+  const [fetchingYt, setFetchingYt] = useState(false);
+
   React.useEffect(() => { loadPolicies(); }, []);
 
   const loadPolicies = async () => { setPoliciesState(await getPolicies()); };
@@ -38,6 +45,23 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
     } catch (e) { alert('통신 실패: ' + e.message); }
     finally { setAiLoading(false); }
+  };
+
+  const fetchYoutubeMeta = async () => {
+    if(!ytUrl.trim()) return alert("유튜브 링크 URL을 먼저 입력해주세요!");
+    try {
+      setFetchingYt(true);
+      const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(ytUrl)}`);
+      const data = await res.json();
+      if(data.error) {
+        alert("정보를 불러오지 못했습니다. 유튜브 링크가 맞는지 확인해주세요.");
+      } else {
+        setYtTitle(data.title || '');
+        setYtChannel(data.author_name || '');
+        alert("✅ 유튜브 영상 제목과 채널명을 성공적으로 불러왔습니다!");
+      }
+    } catch(e) { alert("네트워크 오류가 발생했습니다."); } 
+    finally { setFetchingYt(false); }
   };
 
   const addToDraft = () => {
@@ -75,14 +99,16 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       <div className="card" style={{ border:'2px solid #f59e0b', background:'#fffbeb', marginBottom:25 }}>
         <div className="card-title" style={{ color:'#b45309', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div><i className="fab fa-youtube"></i> 매거진 메인 유튜브 자동 세팅</div>
-          <button className="btn btn-primary" style={{ background:'#f59e0b', color:'white', borderRadius:8, padding:'6px 12px', fontSize:12 }}>정보 불러오기</button>
+          <button className="btn btn-primary" onClick={fetchYoutubeMeta} disabled={fetchingYt} style={{ background:'#f59e0b', color:'white', borderRadius:8, padding:'6px 12px', fontSize:12 }}>
+            {fetchingYt ? '불러오는 중...' : '정보 불러오기'}
+          </button>
         </div>
-        <input placeholder="유튜브 링크를 붙여넣으세요 (예: https://youtu.be/...)" style={{ marginBottom:10, borderColor:'#fcd34d' }} />
+        <input value={ytUrl} onChange={e => setYtUrl(e.target.value)} placeholder="유튜브 링크를 붙여넣으세요 (예: https://youtu.be/...)" style={{ marginBottom:10, borderColor:'#fcd34d', width:'100%', padding:10, borderRadius:8 }} />
         <div className="grid-2" style={{ marginBottom:10 }}>
-          <input placeholder="영상 제목 (자동 입력)" style={{ borderColor:'#fcd34d' }} />
-          <input placeholder="채널명 (자동 입력)" style={{ borderColor:'#fcd34d' }} />
+          <input value={ytTitle} onChange={e => setYtTitle(e.target.value)} placeholder="영상 제목 (자동 입력)" style={{ borderColor:'#fcd34d', width:'100%', padding:10, borderRadius:8 }} />
+          <input value={ytChannel} onChange={e => setYtChannel(e.target.value)} placeholder="채널명 (자동 입력)" style={{ borderColor:'#fcd34d', width:'100%', padding:10, borderRadius:8 }} />
         </div>
-        <input placeholder="영상에 대한 짧은 코멘트를 입력하세요 (선택)" style={{ borderColor:'#fcd34d', width:'100%' }} />
+        <input value={ytDesc} onChange={e => setYtDesc(e.target.value)} placeholder="영상에 대한 짧은 코멘트를 입력하세요 (선택)" style={{ borderColor:'#fcd34d', width:'100%', padding:10, borderRadius:8 }} />
       </div>
 
       {/* Policies */}
