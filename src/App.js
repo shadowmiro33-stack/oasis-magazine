@@ -12,6 +12,7 @@ import SecurityBanner from './pages/SecurityBanner';
 import Subscribers from './pages/Subscribers';
 import Settings from './pages/Settings';
 import ApiSettings from './pages/ApiSettings';
+import DesignSystem from './pages/DesignSystem';
 
 function App() {
   const { user, userName, loading, login, logout } = useAuth();
@@ -42,6 +43,7 @@ function App() {
       case 'security': return <SecurityBanner />;
       case 'subscribe': return <Subscribers />;
       case 'settings': return <Settings />;
+      case 'design': return <DesignSystem />;
       case 'api': return <ApiSettings />;
       default: return <Dashboard draftArticles={draftArticles} />;
     }
