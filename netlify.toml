@@ -3,7 +3,8 @@
   publish = "."
 
 [build]
-  publish = "."
+  command = "chmod +x build.sh && ./build.sh"
+  publish = "build"
 
 [functions]
   directory = "netlify/functions"
