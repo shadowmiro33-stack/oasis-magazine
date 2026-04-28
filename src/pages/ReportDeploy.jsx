@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { getAllMagazines, saveMagazine, deleteMagazine, getAllSubscribers, getCampaigns, getSecurityBanners } from '../services/dataService';
+import { getAllMagazines, saveMagazine, deleteMagazine, getAllSubscribers } from '../services/dataService';
 import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
 import { getPremiumNewsletterHTML } from '../utils/newsletterTemplate';
+import MagazineWebPreview from '../components/MagazineWebPreview';
 
 export default function ReportDeploy({ draftArticles, setDraftArticles, issueName, setIssueName, selCampaign, setSelCampaign, selSecurity, setSelSecurity, video, setVideo, campaigns, secBanners }) {
   const [history, setHistory] = useState([]);
@@ -31,6 +32,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
 
   // Web Preview Modal State
   const [showWebPreview, setShowWebPreview] = useState(false);
+  const [emailPreview, setEmailPreview] = useState(null);
 
   const fetchData = async () => {
     const mags = await getAllMagazines();
@@ -51,14 +53,14 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
       await saveMagazine(docId, { issueName, publishDate: new Date().toISOString(), articles: allDrafts, video, campaign: campaignData, webCampaign: selSecurity });
       alert('서버에 배포되었습니다.');
       setDraftArticles({ main: null, macro: [], platform: [], auto: [], ai: [], security: [] });
-      setIssueName(''); setVideo({ url:'', title:'', source:'', desc:'' }); load();
+      setIssueName(''); setVideo({ url:'', title:'', source:'', desc:'' }); fetchData();
     } catch (e) { alert('배포 실패: ' + e.message); }
     finally { setDeploying(false); }
   };
 
   const deleteReport = async (docId) => {
     if (!window.confirm('⚠️ 삭제하시겠습니까?')) return;
-    await deleteMagazine(docId); alert('삭제되었습니다.'); load();
+    await deleteMagazine(docId); alert('삭제되었습니다.'); fetchData();
   };
 
   const sendEmail = async (mag) => {
@@ -84,17 +86,12 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     if (allDrafts.length === 0) return alert('배포할 기사가 없습니다.');
     const campaignData = selCampaign ? campaigns.find(v => v.id === selCampaign) || null : null;
     const htmlContent = getPremiumNewsletterHTML(issueName || '임시 호수', new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), campaignData || selSecurity, draftArticles);
-    
-    const viewer = window.open('', '_blank', 'width=800,height=1000,scrollbars=yes');
-    viewer.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>뉴스레터 미리보기</title></head><body style="margin:0; background-color: #f4f6f8;">' + htmlContent + '</body></html>');
-    viewer.document.close();
+    setEmailPreview({ title: '뉴스레터 미리보기', html: htmlContent });
   };
 
   const previewPastEmail = (mag) => {
     const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', new Date(mag.publishDate || mag.id).toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), mag.campaign || mag.webCampaign, mag.articles);
-    const viewer = window.open('', '_blank', 'width=800,height=1000,scrollbars=yes');
-    viewer.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>과거 리포트 메일 미리보기 - ' + mag.issueName + '</title></head><body style="margin:0; background-color: #f4f6f8;">' + htmlContent + '</body></html>');
-    viewer.document.close();
+    setEmailPreview({ title: `과거 리포트 메일 미리보기 - ${mag.issueName}`, html: htmlContent });
   };
 
   const previewPastWeb = (mag) => {
@@ -251,7 +248,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
       <div className="card-title" style={{ marginTop:30 }}>📚 지난 리포트 DB</div>
       <div className="card" id="history-container" style={{ padding:0, overflow:'hidden' }}>
         <table>
-          <thead><tr><th>발행일</th><th>리포트 호수</th><th>수록 기사수</th><th>상태</th><th style={{ width:200 }}>관리</th></tr></thead>
+          <thead><tr><th style={{ width:40 }}></th><th>발행일</th><th>리포트 호수</th><th>수록 기사수</th><th>상태</th><th style={{ width:200 }}>관리</th></tr></thead>
           <tbody>
             {history.length === 0 ? (
               <tr><td colSpan="5" style={{ textAlign:'center', padding:30, color:'#94a3b8' }}>발행된 리포트가 없습니다.</td></tr>
@@ -417,8 +414,34 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
         </div>
       )}
 
-      {/* Web Preview Modal (New Magazine Preview) */}
-      {showWebPreview && (
+      <MagazineWebPreview
+        open={showWebPreview}
+        onClose={() => { setShowWebPreview(false); setPastPreviewReport(null); }}
+        modeLabel={pastPreviewReport ? '과거 리포트 미리보기' : '미리보기 모드'}
+        title={pastPreviewReport ? `[과거 리포트] ${pastPreviewReport.issueName}` : `[배포 예정] ${issueName || '미지정 호수'}`}
+        articlesSource={pastPreviewReport ? pastPreviewReport.articles : allDrafts}
+        video={pastPreviewReport ? pastPreviewReport.video : video}
+        securityBanner={pastPreviewReport ? (pastPreviewReport.webCampaign || pastPreviewReport.campaign?.securityImg) : selSecurity}
+      />
+
+      {emailPreview && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.86)', zIndex:10000, display:'flex', justifyContent:'center', alignItems:'center' }}>
+          <div style={{ width:'min(900px, 92vw)', height:'90vh', background:'#f8fafc', borderRadius:16, overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 24px 60px rgba(0,0,0,0.35)' }}>
+            <div style={{ padding:'14px 20px', background:'white', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <h3 style={{ margin:0, fontSize:16, color:'#1e293b' }}>{emailPreview.title}</h3>
+              <button onClick={() => setEmailPreview(null)} style={{ border:'none', background:'#0f172a', color:'white', borderRadius:8, padding:'8px 16px', fontWeight:900, cursor:'pointer' }}>닫기</button>
+            </div>
+            <iframe
+              title={emailPreview.title}
+              srcDoc={`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${emailPreview.title}</title></head><body style="margin:0; background-color:#f4f6f8;">${emailPreview.html}</body></html>`}
+              style={{ flex:1, border:0, width:'100%', background:'#f4f6f8' }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Legacy inline preview kept disabled while the shared component is active. */}
+      {false && showWebPreview && (
         <div style={{ position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(15,23,42,0.9)', zIndex:9999, display:'flex', justifyContent:'center', alignItems:'center' }}>
           <div style={{ background:'#f1f5f9', width:'90%', height:'90%', borderRadius:20, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
             <div style={{ padding:'15px 30px', background:'white', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>

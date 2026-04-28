@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getPolicies, savePolicies } from '../services/dataService';
+import MagazineWebPreview from '../components/MagazineWebPreview';
 
 export default function NewsCrawler({ draftArticles, setDraftArticles, companies, issueName, selCampaign, selSecurity, video, setVideo, campaigns, secBanners }) {
   const [showWebPreview, setShowWebPreview] = useState(false);
@@ -271,8 +272,19 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
         </div>
       </div>
 
-      {/* Web Preview Modal (Replicated from ReportDeploy for zero-deployment verification) */}
-      {showWebPreview && (
+      <MagazineWebPreview
+        open={showWebPreview}
+        onClose={() => setShowWebPreview(false)}
+        modeLabel="최종 미리보기 모드"
+        title={`[배포 예정] ${issueName || '미지정 호수'}`}
+        articlesSource={allDrafts}
+        mainArticle={draftArticles.main}
+        video={video}
+        securityBanner={selSecurity}
+      />
+
+      {/* Legacy inline preview kept disabled while the shared component is active. */}
+      {false && showWebPreview && (
         <div style={{ position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(15,23,42,0.9)', zIndex:9999, display:'flex', justifyContent:'center', alignItems:'center' }}>
           <div style={{ background:'#f1f5f9', width:'90%', height:'90%', borderRadius:20, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
             <div style={{ padding:'15px 30px', background:'white', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>

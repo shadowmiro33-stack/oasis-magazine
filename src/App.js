@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import './styles/global.css';
 import { useAuth } from './hooks/useAuth';
-import { getCampaigns, getSecBanners } from './services/dataService';
+import { getCampaigns, getSecurityBanners } from './services/dataService';
 import Sidebar from './components/Sidebar';
 import LoginOverlay from './components/LoginOverlay';
 import Dashboard from './pages/Dashboard';
@@ -14,7 +15,17 @@ import Subscribers from './pages/Subscribers';
 import Settings from './pages/Settings';
 import ApiSettings from './pages/ApiSettings';
 
-function App() {
+function LegacyMagazineFrame() {
+  return (
+    <iframe
+      title="OASIS R&D Magazine"
+      src="/legacy-index.html"
+      style={{ width:'100vw', height:'100vh', border:0, display:'block', background:'white' }}
+    />
+  );
+}
+
+function AdminApp() {
   const { user, userName, loading, login, logout } = useAuth();
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [draftArticles, setDraftArticles] = useState({ main: null, macro: [], platform: [], auto: [], ai: [], security: [] });
@@ -26,14 +37,14 @@ function App() {
   const [secBanners, setSecBanners] = useState([]);
 
   React.useEffect(() => {
+    if (!['news', 'deploy'].includes(activeMenu)) return;
     const loadShared = async () => {
-      const c = await getCampaigns();
+      const [c, s] = await Promise.all([getCampaigns(), getSecurityBanners()]);
       setCampaigns(c);
-      const s = await getSecBanners();
       setSecBanners(s);
     };
     loadShared();
-  }, []);
+  }, [activeMenu]);
 
   const companies = JSON.parse(localStorage.getItem('oasis_companies') || '[]');
 
@@ -70,6 +81,17 @@ function App() {
       <Sidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} userName={userName} onLogout={logout} />
       <main className="main-content">{renderPage()}</main>
     </>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LegacyMagazineFrame />} />
+      <Route path="/admin" element={<AdminApp />} />
+      <Route path="/admin.html" element={<AdminApp />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 

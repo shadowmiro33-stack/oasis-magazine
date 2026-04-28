@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -336,27 +336,27 @@
         // URL 및 모달 유틸리티 (서버리스 함수 통한 자동 차단 감지)
         window.smartOpen = async function (url) {
             if (!url || url === '#') return alert("해당 컨텐츠는 원문이 존재하지 않습니다.");
-            
+
             const modal = document.getElementById('article-modal');
             const frame = document.getElementById('article-frame');
             const fallback = document.getElementById('fallback-ui');
             const loader = document.getElementById('frame-loader');
-            
-            modal.classList.add('active'); 
+
+            modal.classList.add('active');
             document.body.style.overflow = 'hidden';
-            
+
             // 초기화 및 로딩 표시
             frame.style.display = 'none';
             fallback.style.display = 'none';
             frame.src = "about:blank";
             if (loader) loader.style.display = 'flex';
-            
+
             try {
                 const res = await fetch(`/.netlify/functions/check-frame?url=${encodeURIComponent(url)}`);
                 const data = await res.json();
-                
+
                 if (loader) loader.style.display = 'none';
-                
+
                 if (data.blocked) {
                     fallback.style.display = 'flex';
                     document.getElementById('fallback-btn').onclick = () => { window.open(url, '_blank'); window.closeArticle(); };
@@ -443,7 +443,7 @@
                     <div class="aspect-[16/10] w-full overflow-hidden bg-gray-100 rounded-xl mb-4 relative shrink-0">
                         <img src="${thumb}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
-                    
+
                     <div class="flex flex-col flex-grow">
                         <div class="flex justify-between items-center mb-2">
                             <div class="flex items-center">
@@ -452,10 +452,10 @@
                             </div>
                             <span class="text-gray-400 text-[11px] font-medium truncate max-w-[80px] text-right">${item.source}</span>
                         </div>
-                        
+
                         <h4 class="text-[18px] sm:text-[20px] font-black text-gray-900 leading-[1.4] mb-2 group-hover:text-brand transition word-break-keep">${item.title}</h4>
                         <p class="text-gray-500 text-[14px] leading-relaxed mb-4" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: keep-all;">${item.desc}</p>
-                        
+
                         ${item.insight ? `
                         <div class="mt-auto pt-4 border-t border-gray-100">
                             <div class="flex items-center gap-1.5 mb-1.5">
@@ -551,9 +551,9 @@
                         <h2 class="text-xl font-black text-gray-900 tracking-tight">${title}</h2>
                     </div>
                     <div class="flex overflow-x-auto lg:grid lg:grid-cols-4 gap-4 lg:gap-6 pb-6 snap-x hide-scrollbar">`;
-                
+
                 items.slice(0, 3).forEach(item => { gridHtml += window.generateCardHtml(item, true); });
-                
+
                 gridHtml += `
                     <article class="flex flex-col h-full items-center justify-center cursor-pointer bg-gray-50 rounded-2xl p-5 border border-gray-100 hover:bg-gray-100 hover:shadow-md transition-all duration-300 group min-h-[250px] w-[85vw] sm:w-[320px] lg:w-auto shrink-0 snap-start" onclick="window.showCategoryList('${categoryKey}', '${title}')">
                         <div class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -563,7 +563,7 @@
                         <span class="text-xs text-gray-500 font-bold">${title} 히스토리 더보기</span>
                     </article>
                 </div></section>`;
-                
+
                 return gridHtml;
             };
 
