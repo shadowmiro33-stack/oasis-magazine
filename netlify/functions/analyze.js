@@ -188,6 +188,18 @@ exports.handler = async function(event) {
     return { statusCode: 200, headers, body: '' };
   }
 
+  if (event.httpMethod === 'GET') {
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        ok: true,
+        message: 'analyze 함수는 정상입니다. 기사 분석은 관리자 화면의 분석 버튼에서 실행해주세요.',
+        method: 'POST'
+      })
+    };
+  }
+
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'POST 요청만 지원합니다.' }) };
   }
