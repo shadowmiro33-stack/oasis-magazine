@@ -3,16 +3,16 @@ import React, { useState } from 'react';
 export default function LoginOverlay({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     setLoading(true);
-    setError(false);
+    setError('');
     try {
       await onLogin(email, password);
     } catch (e) {
-      setError(true);
+      setError(getLoginErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -50,7 +50,7 @@ export default function LoginOverlay({ onLogin }) {
           {loading ? '접속 중...' : '시스템 접속'}
         </button>
         {error && (
-          <p style={styles.error}>로그인 정보가 올바르지 않습니다.</p>
+          <p style={styles.error}>{error}</p>
         )}
       </div>
     </div>
@@ -96,3 +96,14 @@ const styles = {
     color: '#ef4444', fontSize: 12, marginTop: 15, fontWeight: 'bold',
   },
 };
+
+function getLoginErrorMessage(error) {
+  const code = error?.code || '';
+  if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) {
+    return '로그인 정보가 올바르지 않습니다. 관리자 이메일과 Firebase 로그인 비밀번호를 확인해주세요.';
+  }
+  if (code.includes('invalid-api-key')) {
+    return 'Firebase API 키 설정을 확인해주세요.';
+  }
+  return `로그인 실패: ${code || error?.message || '알 수 없는 오류'}`;
+}

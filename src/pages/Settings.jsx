@@ -29,7 +29,7 @@ export default function Settings() {
   const saveApiKeys = () => {
     localStorage.setItem('GEMINI_API_KEY', geminiKey);
     localStorage.setItem('GMAIL_USER', gmailUser);
-    localStorage.setItem('GMAIL_PASS', gmailPass);
+    localStorage.setItem('GMAIL_PASS', gmailPass.replace(/\s+/g, ''));
     alert('✅ API 키 및 인증 정보가 로컬 스토리지에 안전하게 저장되었습니다.');
   };
 

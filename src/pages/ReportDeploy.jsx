@@ -77,7 +77,11 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: emails.join(','), subject: `[OASIS R&D] 오늘의 모빌리티 딥다이브 - ISSUE ${mag.issueName}`, html: htmlContent, gmailUser, gmailPass })
       });
-      if (!response.ok) throw new Error((await response.json()).error);
+      if (!response.ok) {
+        let errorData = {};
+        try { errorData = await response.json(); } catch (_) {}
+        throw new Error(errorData.error || `메일 발송 서버 오류 (${response.status})`);
+      }
       alert(`🎉 ${emails.length}명에게 발송 완료!`);
     } catch (e) { alert('발송 실패: ' + e.message); }
   };

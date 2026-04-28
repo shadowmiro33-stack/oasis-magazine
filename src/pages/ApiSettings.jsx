@@ -20,7 +20,7 @@ export default function ApiSettings() {
   const saveGmail = () => {
     if (!gmailUser.trim() || !gmailPass.trim()) return alert('이메일과 앱 비밀번호를 모두 입력해주세요.');
     localStorage.setItem('GMAIL_USER', gmailUser.trim());
-    localStorage.setItem('GMAIL_PASS', gmailPass.trim());
+    localStorage.setItem('GMAIL_PASS', gmailPass.replace(/\s+/g, ''));
     alert('✅ Gmail 발송 계정 정보가 안전하게 저장되었습니다.');
   };
 
