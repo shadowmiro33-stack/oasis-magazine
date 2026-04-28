@@ -121,7 +121,7 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
               </div>
           </div>`;
       } else {
-          html += `<div style="margin-bottom: 40px; padding: 24px; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; box-sizing: border-box; background-color: #ffffff; text-align: center;"><img src="${imgUrl}" style="width: 100%; max-width: 420px; max-height: 360px; height: auto; object-fit: contain; display: block; margin: 0 auto;" alt="캠페인 배너"></div>`;
+          html += `<div style="margin-bottom: 20px; padding: 12px; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-sizing: border-box; background-color: #ffffff; text-align: center;"><img src="${imgUrl}" width="320" style="width: 320px; max-width: 100%; height: auto; display: block; margin: 0 auto;" alt="캠페인 배너"></div>`;
       }
   }
   html += `
