@@ -1,106 +1,157 @@
-exports.handler = async function(event, context) {
-    // 1. CORS 처리
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTION'
+const headers = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+};
+
+const decodeEntities = (text = '') => text
+  .replace(/&nbsp;/g, ' ')
+  .replace(/&amp;/g, '&')
+  .replace(/&quot;/g, '"')
+  .replace(/&#39;/g, "'")
+  .replace(/&lt;/g, '<')
+  .replace(/&gt;/g, '>');
+
+const cleanText = (text = '') => decodeEntities(text)
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const truncate = (text = '', max = 80) => {
+  const clean = cleanText(text);
+  return clean.length > max ? `${clean.slice(0, max - 1)}...` : clean;
+};
+
+const pickMeta = (html, names) => {
+  for (const name of names) {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const patterns = [
+      new RegExp(`<meta[^>]+(?:property|name)=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i'),
+      new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${escaped}["'][^>]*>`, 'i')
+    ];
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match?.[1]) return cleanText(match[1]);
+    }
+  }
+  return '';
+};
+
+const splitSentences = (text) => cleanText(text)
+  .split(/(?<=[.!?。！？]|다\.|임\.|함\.|됨\.|전망\.|필요\.)\s+/)
+  .map(s => cleanText(s))
+  .filter(s => s.length >= 18 && !/구독|광고|저작권|copyright|cookie|login|로그인/i.test(s));
+
+const getHostname = (url) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch (_) {
+    return '';
+  }
+};
+
+const guessBrand = (text, source) => {
+  const candidates = [
+    'OpenAI', 'Google', 'Microsoft', 'Apple', 'Amazon', 'Meta', 'Tesla', 'NVIDIA',
+    'Hyundai', 'Kia', 'Samsung', 'LG', 'Anthropic', 'Cisco', 'Oracle', 'Toyota',
+    'BYD', 'Volkswagen', 'GM', 'Ford'
+  ];
+  const found = candidates.find(name => new RegExp(`\\b${name}\\b`, 'i').test(text));
+  if (found) return found;
+
+  const korean = text.match(/([가-힣A-Za-z0-9&.-]{2,20})(?:은|는|이|가|의|에서|와|과)\s/);
+  if (korean?.[1] && !/(정부|미국|중국|한국|시장|기업|업계|산업|보안|이번|해당)/.test(korean[1])) {
+    return korean[1];
+  }
+  return source || '산업일반';
+};
+
+const guessInsight = (text) => {
+  const lower = text.toLowerCase();
+  if (/보안|해킹|랜섬|악성|침해|취약|security|hack|ransom|malware|breach/.test(lower)) {
+    return '보안 위협 확산으로 기업의 취약점 관리와 사고 대응 체계 강화 필요';
+  }
+  if (/ai|인공지능|llm|openai|생성형|모델|반도체|nvidia/.test(lower)) {
+    return 'AI 경쟁 심화로 기술 투자와 데이터 인프라 확보의 전략적 중요성 확대';
+  }
+  if (/전기차|배터리|충전|ev|vehicle|자동차|모빌리티/.test(lower)) {
+    return '모빌리티 시장 재편 속 공급망과 수익성 관리가 핵심 과제로 부상';
+  }
+  if (/금리|물가|환율|경제|투자|시장|매출|실적|인수|합병/.test(lower)) {
+    return '시장 변동성 확대에 따라 기업의 비용 통제와 성장 전략 점검 필요';
+  }
+  return '산업 환경 변화에 따라 기업의 리스크 관리와 실행 전략 재점검 필요';
+};
+
+exports.handler = async function(event) {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'POST 요청만 지원합니다.' }) };
+  }
+
+  try {
+    const body = JSON.parse(event.body || '{}');
+    const targetUrl = cleanText(body.url || '');
+    const rawText = cleanText(body.text || '');
+
+    if (!targetUrl && !rawText) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: '분석할 기사 URL 또는 텍스트가 필요합니다.' }) };
+    }
+
+    let articleText = rawText;
+    let title = '';
+    let source = '';
+
+    if (!articleText) {
+      const response = await fetch(targetUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+
+      if (!response.ok) {
+        return {
+          statusCode: 502,
+          headers,
+          body: JSON.stringify({ error: `기사 페이지 접근 실패 (${response.status}). 본문을 복사해 수동 분석을 사용해주세요.` })
+        };
+      }
+
+      const html = await response.text();
+      title = pickMeta(html, ['og:title', 'twitter:title']) || cleanText(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '');
+      source = pickMeta(html, ['og:site_name', 'article:publisher']) || getHostname(targetUrl);
+      articleText = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ');
+    }
+
+    const normalized = cleanText(articleText).slice(0, 7000);
+    const sentences = splitSentences(normalized);
+    const firstSentence = sentences[0] || normalized;
+    const computedTitle = title || firstSentence;
+    const computedSource = source || (targetUrl ? getHostname(targetUrl) : '수동입력');
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        title: truncate(computedTitle.replace(/\s*[-|]\s*[^-|]+$/, ''), 45),
+        brand: truncate(guessBrand(normalized, ''), 20),
+        source: truncate(computedSource, 24),
+        desc: truncate(firstSentence, 80),
+        insight: truncate(guessInsight(normalized), 100)
+      })
     };
-
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 200, headers, body: '' };
-    }
-
-    try {
-        // 2. 파라미터 및 키 수신
-        const body = JSON.parse(event.body);
-        const targetUrl = body.url;
-        const rawText = body.text; // 수동 텍스트 입력 지원
-        const apiKey = body.apiKey || process.env.GEMINI_API_KEY;
-
-        if (!targetUrl && !rawText) throw new Error("분석할 기사 URL 또는 텍스트가 전달되지 않았습니다.");
-        if (!apiKey) throw new Error("Gemini API Key가 없습니다. 시스템 관리 탭에서 키를 저장하거나 넷리파이 환경변수에 등록해주세요.");
-
-        let bodyText;
-
-        if (rawText) {
-            // 수동 텍스트 입력: 그대로 사용
-            bodyText = rawText.substring(0, 5000);
-        } else {
-            // URL 스크래핑
-            const htmlResponse = await fetch(targetUrl, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                }
-            });
-            
-            if (!htmlResponse.ok) throw new Error(`기사 페이지 접근 실패 (상태코드: ${htmlResponse.status})`);
-            
-            const htmlText = await htmlResponse.text();
-            bodyText = htmlText.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '')
-                               .replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, '')
-                               .replace(/<[^>]+>/g, ' ')
-                               .replace(/\s+/g, ' ')
-                               .substring(0, 5000);
-        }
-
-        // 5. AI 기사 분석 프롬프트
-        const prompt = `
-        당신은 글로벌 산업·경제 전문 애널리스트입니다.
-        아래 기사를 읽고 핵심만 압축하여 JSON으로 출력하세요.
-
-        [절대 규칙]
-        - desc: 반드시 1문장, 최대 80자 이내. 기사의 핵심 팩트만 요약.
-        - insight: 반드시 1문장, 최대 100자 이내. 이 기사가 글로벌 경제·산업·사회에 미치는 영향이나 시사점을 분석.
-        - 특정 회사 관점이 아닌 거시적·객관적 시각으로 분석할 것.
-        - 문장 끝은 '~임', '~전망', '~필요' 등 명사형 종결.
-
-        [JSON 형식 - 이 형식만 출력]
-        {
-            "title": "기사 핵심 제목 (팩트 위주, 30자 이내)",
-            "brand": "관련 기업/브랜드명 (없으면 '산업일반')",
-            "source": "언론사명",
-            "desc": "핵심 요약 1문장 (80자 이내)",
-            "insight": "글로벌 시사점 1문장 (100자 이내)"
-        }
-
-        기사 본문:
-        ${bodyText}
-        `;
-
-        // 6. 🔥 오류 수정: Gemini 2.5 Flash 모델로 엔드포인트 정상화
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        const geminiRes = await fetch(geminiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { response_mime_type: "application/json" }
-            })
-        });
-
-        if (!geminiRes.ok) {
-            const errData = await geminiRes.json();
-            throw new Error(`Gemini 응답 에러: ${errData.error?.message || '알 수 없음'}`);
-        }
-
-        const geminiData = await geminiRes.json();
-        const resultText = geminiData.candidates[0].content.parts[0].text;
-        
-        // 7. 반환
-        const resultJson = JSON.parse(resultText);
-
-        return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify(resultJson)
-        };
-
-    } catch (error) {
-        console.error("AI 분석 백엔드 에러:", error);
-        return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ error: error.message })
-        };
-    }
+  } catch (error) {
+    console.error('Free analyzer error:', error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: error.message || '분석 중 오류가 발생했습니다.' })
+    };
+  }
 };
