@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getAllMagazines, saveMagazine, deleteMagazine, getAllSubscribers } from '../services/dataService';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../api/firebase';
 import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
 import { getPremiumNewsletterHTML } from '../utils/newsletterTemplate';
@@ -43,6 +45,52 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
 
   const allDrafts = [...(draftArticles.main ? [draftArticles.main] : []), ...draftArticles.macro, ...draftArticles.platform, ...draftArticles.auto, ...draftArticles.ai, ...draftArticles.security];
 
+  const resizeImageUrlForEmail = (url, maxWidth = 560, maxHeight = 420) => new Promise((resolve) => {
+    if (!url) return resolve(url);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = async () => {
+      try {
+        const scale = Math.min(maxWidth / img.naturalWidth, maxHeight / img.naturalHeight, 1);
+        const width = Math.round(img.naturalWidth * scale);
+        const height = Math.round(img.naturalHeight * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(async blob => {
+          if (!blob) return resolve(url);
+          try {
+            const imageRef = ref(storage, `security/email/generated_${Date.now()}.jpg`);
+            await uploadBytes(imageRef, blob, { contentType: 'image/jpeg' });
+            resolve(await getDownloadURL(imageRef));
+          } catch (_) {
+            resolve(url);
+          }
+        }, 'image/jpeg', 0.86);
+      } catch (_) {
+        resolve(url);
+      }
+    };
+    img.onerror = () => resolve(url);
+    img.src = url;
+  });
+
+  const resolveSecurityBanner = (value) => {
+    if (!value || typeof value !== 'string') return value;
+    return secBanners.find(b => b.url === value || b.emailUrl === value) || value;
+  };
+
+  const buildEmailCampaign = async (value) => {
+    const campaign = resolveSecurityBanner(value);
+    if (!campaign || campaign.shortsUrl) return campaign;
+    if (typeof campaign === 'string') {
+      return { url: campaign, emailUrl: await resizeImageUrlForEmail(campaign) };
+    }
+    return { ...campaign, emailUrl: campaign.emailUrl || await resizeImageUrlForEmail(campaign.url) };
+  };
+
   const deploy = async () => {
     if (!issueName) return alert('호수를 입력하세요.');
     if (allDrafts.length === 0) return alert('배포할 기사가 없습니다.');
@@ -72,7 +120,8 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
       const subs = await getAllSubscribers();
       const emails = subs.map(s => s.email);
       if (emails.length === 0) return alert('구독자가 없습니다.');
-      const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), mag.campaign || mag.webCampaign, mag.articles);
+      const emailCampaign = await buildEmailCampaign(mag.campaign || mag.webCampaign);
+      const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), emailCampaign, mag.articles);
       const response = await fetch('/.netlify/functions/send-email', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: emails.join(','), subject: `[OASIS R&D] 오늘의 모빌리티 딥다이브 - ISSUE ${mag.issueName}`, html: htmlContent, gmailUser, gmailPass })
@@ -86,15 +135,17 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     } catch (e) { alert('발송 실패: ' + e.message); }
   };
 
-  const previewCurrentDrafts = () => {
+  const previewCurrentDrafts = async () => {
     if (allDrafts.length === 0) return alert('배포할 기사가 없습니다.');
     const campaignData = selCampaign ? campaigns.find(v => v.id === selCampaign) || null : null;
-    const htmlContent = getPremiumNewsletterHTML(issueName || '임시 호수', new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), campaignData || selSecurity, draftArticles);
+    const emailCampaign = await buildEmailCampaign(campaignData || selSecurity);
+    const htmlContent = getPremiumNewsletterHTML(issueName || '임시 호수', new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), emailCampaign, draftArticles);
     setEmailPreview({ title: '뉴스레터 미리보기', html: htmlContent });
   };
 
-  const previewPastEmail = (mag) => {
-    const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', new Date(mag.publishDate || mag.id).toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), mag.campaign || mag.webCampaign, mag.articles);
+  const previewPastEmail = async (mag) => {
+    const emailCampaign = await buildEmailCampaign(mag.campaign || mag.webCampaign);
+    const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', new Date(mag.publishDate || mag.id).toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), emailCampaign, mag.articles);
     setEmailPreview({ title: `과거 리포트 메일 미리보기 - ${mag.issueName}`, html: htmlContent });
   };
 

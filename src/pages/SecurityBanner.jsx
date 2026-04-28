@@ -11,14 +11,44 @@ export default function SecurityBanner() {
   const load = async () => { setBanners(await getSecurityBanners()); };
   useEffect(() => { load(); }, []);
 
+  const resizeForEmail = (file, maxWidth = 560, maxHeight = 420) => new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+      const width = Math.round(img.width * scale);
+      const height = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob => {
+        if (!blob) return reject(new Error('Failed to create email image.'));
+        resolve(blob);
+      }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.86);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to read image.'));
+    };
+    img.src = url;
+  });
+
   const upload = async () => {
     if (!fileRef) return alert('이미지 파일을 먼저 선택해주세요.');
     setUploading(true);
     try {
-      const storageRef = ref(storage, `security/${Date.now()}_${fileRef.name}`);
+      const now = Date.now();
+      const storageRef = ref(storage, `security/${now}_${fileRef.name}`);
       await uploadBytes(storageRef, fileRef);
       const url = await getDownloadURL(storageRef);
-      const updated = [...banners, { id: Date.now().toString(), url, name: fileRef.name }];
+      const emailBlob = await resizeForEmail(fileRef);
+      const emailRef = ref(storage, `security/email/${now}_${fileRef.name}`);
+      await uploadBytes(emailRef, emailBlob, { contentType: emailBlob.type || fileRef.type });
+      const emailUrl = await getDownloadURL(emailRef);
+      const updated = [...banners, { id: now.toString(), url, emailUrl, name: fileRef.name }];
       await saveSecurityBanners(updated);
       setFileRef(null);
       load();

@@ -94,7 +94,7 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
   html += `<div style="background-color: #ffffff; padding: 40px 24px; text-align: center; border-top: 1px solid #e2e8f0; box-sizing: border-box;">`;
   if(campaignData) {
       const isShorts = !!campaignData.shortsUrl;
-      const imgUrl = isShorts ? campaignData.securityImg : (campaignData.securityImg || campaignData);
+      const imgUrl = isShorts ? campaignData.securityImg : (campaignData.emailUrl || campaignData.emailImg || campaignData.url || campaignData.securityImg || campaignData);
       
       const getDeepLinkUrl = (url) => {
           if(!url) return '';
@@ -121,7 +121,7 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
               </div>
           </div>`;
       } else {
-          html += `<div style="margin-bottom: 20px; padding: 12px; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-sizing: border-box; background-color: #ffffff; text-align: center;"><img src="${imgUrl}" width="320" style="width: 320px; max-width: 100%; height: auto; display: block; margin: 0 auto;" alt="캠페인 배너"></div>`;
+          html += `<div style="margin-bottom: 28px; padding: 14px; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-sizing: border-box; background-color: #ffffff; text-align: center;"><img src="${imgUrl}" width="560" style="width: 100%; max-width: 560px; height: auto; display: block; margin: 0 auto;" alt="캠페인 배너"></div>`;
       }
   }
   html += `
