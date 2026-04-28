@@ -17,53 +17,60 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
       security = articlesSource?.security || [];
   }
 
+  const linkOpen = (url) => url ? `<a href="${url}" target="_blank" rel="noopener noreferrer" style="display:block; color: inherit; text-decoration: none;">` : '<div>';
+  const linkClose = (url) => url ? '</a>' : '</div>';
+
   const buildPremiumCard = (items) => items.map(a => `
-      <div style="background-color: #ffffff; padding: 25px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #f1f5f9;">
+      ${linkOpen(a.link)}
+      <div style="background-color: #ffffff; padding: 24px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; box-sizing: border-box; width: 100%;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
               <span style="color: #2563eb; font-size: 13px; font-weight: 900; letter-spacing: -0.5px;">${a.brand || 'OASIS 뉴스'}</span>
               ${a.isImportant ? '<span style="background-color: #ef4444; color: #ffffff; font-size: 10px; font-weight: 900; padding: 3px 8px; border-radius: 4px; letter-spacing: 1px;">HOT</span>' : ''}
           </div>
-          <div style="font-size: 20px; font-weight: 900; color: #1e293b; margin-bottom: 12px; line-height: 1.4; word-break: keep-all;"><a href="${a.link}" style="color: #1e293b; text-decoration: none;" target="_blank">${a.title}</a></div>
+          <div style="font-size: 20px; font-weight: 900; color: #1e293b; margin-bottom: 12px; line-height: 1.4; word-break: keep-all;">${a.title}</div>
           <div style="font-size: 15px; color: #475569; line-height: 1.7; word-break: keep-all; margin-bottom: 15px;">${a.desc || ''}</div>
           ${a.insight ? `
-          <div style="background-color: #f8fafc; padding: 15px; border-radius: 12px; border-left: 3px solid #3b82f6;">
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 12px; border-left: 3px solid #3b82f6; box-sizing: border-box;">
               <div style="font-size: 12px; font-weight: 900; color: #3b82f6; margin-bottom: 6px; letter-spacing: 1px;">R&D INSIGHT</div>
               <div style="font-size: 14px; font-weight: bold; color: #334155; line-height: 1.6;">${a.insight}</div>
           </div>` : ''}
           <div style="margin-top: 15px; text-align: right;">
-              <a href="${a.link}" style="display: inline-block; color: #94a3b8; font-size: 13px; font-weight: bold; text-decoration: underline;" target="_blank">원문 읽기</a>
+              <span style="display: inline-block; color: #94a3b8; font-size: 13px; font-weight: bold; text-decoration: underline;">원문 읽기</span>
           </div>
       </div>
+      ${linkClose(a.link)}
   `).join('');
 
   let html = `
-  <div style="background-color: #f4f6f8; padding: 40px 10px; font-family: 'Pretendard', -apple-system, sans-serif;">
-      <div style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.08);">
+  <div style="background-color: #f4f6f8; padding: 24px 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; width: 100%; box-sizing: border-box;">
+      <div style="width: 100%; max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.08); box-sizing: border-box;">
           <div style="background-color: #ffffff; padding: 50px 40px; text-align: center; border-bottom: 1px solid #f1f5f9;">
               <div style="color: #2563eb; font-size: 18px; font-weight: 900; margin-bottom: 15px; letter-spacing: 2px;">OASIS R&D</div>
               <div style="color: #0f172a; font-size: 32px; font-weight: 900; line-height: 1.3; word-break: keep-all; margin-bottom: 25px;">바쁜 아침,<br>오늘의 모빌리티 핵심만 빠르게 🚙</div>
               <div style="display: inline-block; background-color: #f8fafc; color: #475569; padding: 8px 20px; border-radius: 30px; font-size: 14px; font-weight: bold; border: 1px solid #e2e8f0;">${today} • ISSUE ${issueName}</div>
           </div>
-          <div style="padding: 40px 30px; background-color: #f4f6f8;">`;
+          <div style="padding: 32px 24px; background-color: #f4f6f8; box-sizing: border-box;">`;
 
   if(main) {
       html += `
               <div style="margin-bottom: 50px;">
                   <div style="font-size: 14px; font-weight: 900; color: #2563eb; margin-bottom: 15px; letter-spacing: 2px;">FOCUS DIVE</div>
-                  <div style="background-color: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                      ${main.img ? `<img src="${main.img}" style="width: 100%; height: auto; border-bottom: 1px solid #f1f5f9;" />` : ''}
+                  ${linkOpen(main.link)}
+                  <div style="background-color: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03); box-sizing: border-box; width: 100%;">
+                      ${main.img ? `<img src="${main.img}" style="width: 100%; max-width: 100%; height: auto; border-bottom: 1px solid #f1f5f9; display: block;" />` : ''}
                       <div style="padding: 25px;">
-                          <div style="font-size: 26px; font-weight: 900; color: #0f172a; margin-bottom: 15px; line-height: 1.4; word-break: keep-all;"><a href="${main.link}" style="color: #0f172a; text-decoration: none;" target="_blank">${main.isImportant ? '<span style="color: #ef4444; font-size:18px; margin-right: 5px;">[단독]</span>' : ''}${main.title}</a></div>
+                          <div style="font-size: 26px; font-weight: 900; color: #0f172a; margin-bottom: 15px; line-height: 1.4; word-break: keep-all;">${main.isImportant ? '<span style="color: #ef4444; font-size:18px; margin-right: 5px;">[단독]</span>' : ''}${main.title}</div>
                           <div style="font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 25px; word-break: keep-all;">${main.desc}</div>
-                          <div style="background-color: #eff6ff; padding: 20px; border-radius: 12px; border: 1px solid #bfdbfe;">
+                          <div style="background-color: #eff6ff; padding: 20px; border-radius: 12px; border: 1px solid #bfdbfe; box-sizing: border-box;">
                               <div style="font-size: 13px; font-weight: 900; color: #1d4ed8; margin-bottom: 8px; letter-spacing: 1px;">💡 오아시스의 시선</div>
                               <div style="font-size: 15px; font-weight: bold; color: #1e3a8a; line-height: 1.7;">"${main.insight || '핵심 인사이트를 확인하세요.'}"</div>
                           </div>
                           <div style="margin-top: 25px; text-align: center;">
-                              <a href="${main.link}" style="display: inline-block; background-color: #0f172a; color: #ffffff; font-size: 15px; font-weight: bold; text-decoration: none; padding: 14px 28px; border-radius: 12px;" target="_blank">기사 전문 읽기 &rarr;</a>
+                              <span style="display: inline-block; background-color: #0f172a; color: #ffffff; font-size: 15px; font-weight: bold; text-decoration: none; padding: 14px 28px; border-radius: 12px;">기사 전문 읽기 &rarr;</span>
                           </div>
                       </div>
                   </div>
+                  ${linkClose(main.link)}
               </div>`;
   }
 
@@ -84,7 +91,7 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
 
   html += `</div>`; 
 
-  html += `<div style="background-color: #ffffff; padding: 50px 30px; text-align: center; border-top: 1px solid #e2e8f0;">`;
+  html += `<div style="background-color: #ffffff; padding: 40px 24px; text-align: center; border-top: 1px solid #e2e8f0; box-sizing: border-box;">`;
   if(campaignData) {
       const isShorts = !!campaignData.shortsUrl;
       const imgUrl = isShorts ? campaignData.securityImg : (campaignData.securityImg || campaignData);
@@ -99,26 +106,22 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
 
       if(isShorts) {
           html += `
-          <div style="margin-bottom: 40px; text-align: left; background: #fdf2f8; border-radius: 20px; overflow: hidden; border: 1px solid #fbcfe8; box-shadow: 0 10px 25px rgba(219,39,119,0.1);">
-              <div style="padding: 20px 25px; border-bottom: 1px solid #fce7f3; display: flex; align-items: center; justify-content: space-between;">
+          <div style="margin-bottom: 40px; text-align: left; background: #fdf2f8; border-radius: 20px; overflow: hidden; border: 1px solid #fbcfe8; box-shadow: 0 10px 25px rgba(219,39,119,0.1); box-sizing: border-box;">
+              <div style="padding: 20px 25px; border-bottom: 1px solid #fce7f3;">
                   <div style="font-size: 16px; font-weight: 900; color: #be185d;">📱 큐레이션 ${campaignData.platform}</div>
-                  <span style="background: #db2777; color: white; font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: bold;">Trending</span>
               </div>
-              <div style="padding: 25px; display: flex; gap: 20px; align-items: center;">
-                  <a href="${safeUrl}" target="_blank" style="display: block; width: 140px; height: 250px; border-radius: 12px; overflow: hidden; position: relative; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-                      <img src="${imgUrl}" style="width: 100%; height: 100%; object-fit: cover; display: block;" alt="숏츠 썸네일">
-                      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: rgba(219,39,119,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-                          <span style="color: white; font-size: 24px; margin-left: 4px;">▶</span>
-                      </div>
+              <div style="padding: 24px; box-sizing: border-box;">
+                  <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display: block; text-decoration: none;">
+                      <img src="${imgUrl}" style="width: 100%; max-width: 100%; height: auto; border-radius: 12px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.1);" alt="숏츠 썸네일">
                   </a>
-                  <div style="flex: 1;">
-                      <div style="font-size: 20px; font-weight: 900; color: #1e293b; margin-bottom: 15px; line-height: 1.4; word-break: keep-all;">${campaignData.title}</div>
+                  <div style="padding-top: 18px;">
+                      <div style="font-size: 18px; font-weight: 900; color: #1e293b; margin-bottom: 15px; line-height: 1.4; word-break: keep-all;">${campaignData.title}</div>
                       <a href="${safeUrl}" target="_blank" style="display: inline-block; background: #1e293b; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 14px;">앱에서 영상 바로보기</a>
                   </div>
               </div>
           </div>`;
       } else {
-          html += `<div style="margin-bottom: 40px; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;"><img src="${imgUrl}" style="width: 100%; height: auto; display: block;" alt="캠페인 배너"></div>`;
+          html += `<div style="margin-bottom: 40px; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; box-sizing: border-box;"><img src="${imgUrl}" style="width: 100%; max-width: 100%; height: auto; display: block;" alt="캠페인 배너"></div>`;
       }
   }
   html += `
