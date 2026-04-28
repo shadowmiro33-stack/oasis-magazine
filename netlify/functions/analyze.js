@@ -12,9 +12,7 @@ const decodeEntities = (text = '') => text
   .replace(/&lt;/g, '<')
   .replace(/&gt;/g, '>');
 
-const cleanText = (text = '') => decodeEntities(text)
-  .replace(/\s+/g, ' ')
-  .trim();
+const cleanText = (text = '') => decodeEntities(text).replace(/\s+/g, ' ').trim();
 
 const truncate = (text = '', max = 80) => {
   const clean = cleanText(text);
@@ -82,6 +80,109 @@ const guessInsight = (text) => {
   return '산업 환경 변화에 따라 기업의 리스크 관리와 실행 전략 재점검 필요';
 };
 
+const extractArticle = async (targetUrl, rawText) => {
+  let articleText = rawText;
+  let title = '';
+  let source = '';
+
+  if (!articleText) {
+    const response = await fetch(targetUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    if (!response.ok) {
+      const error = new Error(`기사 페이지 접근 실패 (${response.status}). 본문을 복사해 수동 분석을 사용해주세요.`);
+      error.statusCode = 502;
+      throw error;
+    }
+
+    const html = await response.text();
+    title = pickMeta(html, ['og:title', 'twitter:title']) || cleanText(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '');
+    source = pickMeta(html, ['og:site_name', 'article:publisher']) || getHostname(targetUrl);
+    articleText = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ');
+  }
+
+  return {
+    text: cleanText(articleText).slice(0, 7000),
+    title,
+    source: source || (targetUrl ? getHostname(targetUrl) : '수동입력')
+  };
+};
+
+const fallbackAnalyze = ({ text, title, source }) => {
+  const sentences = splitSentences(text);
+  const firstSentence = sentences[0] || text;
+  const computedTitle = title || firstSentence;
+
+  return {
+    title: truncate(computedTitle.replace(/\s*[-|]\s*[^-|]+$/, ''), 45),
+    brand: truncate(guessBrand(text, ''), 20),
+    source: truncate(source || '수동입력', 24),
+    desc: truncate(firstSentence, 80),
+    insight: truncate(guessInsight(text), 100),
+    analyzer: 'fallback'
+  };
+};
+
+const runGemini = async ({ apiKey, text, title, source }) => {
+  if (!apiKey) return null;
+
+  const prompt = `
+You are a Korean mobility, technology, economy, and security newsletter editor.
+Read the article text and return only valid JSON.
+
+Rules:
+- title: Korean, factual, within 45 characters.
+- brand: related company/brand. If none, use "산업일반".
+- source: media/source name. Prefer the supplied source if appropriate.
+- desc: Korean, one sentence, within 80 characters, fact summary only.
+- insight: Korean, one sentence, within 100 characters, business/industry implication.
+- Do not wrap JSON in markdown.
+
+Supplied title: ${title || ''}
+Supplied source: ${source || ''}
+
+Article text:
+${text}
+`;
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { response_mime_type: 'application/json' }
+    })
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const error = new Error(data.error?.message || `Gemini HTTP ${response.status}`);
+    error.statusCode = response.status;
+    throw error;
+  }
+
+  const data = await response.json();
+  const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!resultText) throw new Error('Gemini 응답이 비어 있습니다.');
+
+  const parsed = JSON.parse(resultText);
+  return {
+    title: truncate(parsed.title || title || '', 45),
+    brand: truncate(parsed.brand || guessBrand(text, ''), 20),
+    source: truncate(parsed.source || source || '수동입력', 24),
+    desc: truncate(parsed.desc || '', 80),
+    insight: truncate(parsed.insight || '', 100),
+    analyzer: 'gemini-2.5-flash'
+  };
+};
+
 exports.handler = async function(event) {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
@@ -95,61 +196,32 @@ exports.handler = async function(event) {
     const body = JSON.parse(event.body || '{}');
     const targetUrl = cleanText(body.url || '');
     const rawText = cleanText(body.text || '');
+    const apiKey = cleanText(body.apiKey || process.env.GEMINI_API_KEY || '');
 
     if (!targetUrl && !rawText) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: '분석할 기사 URL 또는 텍스트가 필요합니다.' }) };
     }
 
-    let articleText = rawText;
-    let title = '';
-    let source = '';
+    const article = await extractArticle(targetUrl, rawText);
 
-    if (!articleText) {
-      const response = await fetch(targetUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-      });
-
-      if (!response.ok) {
-        return {
-          statusCode: 502,
-          headers,
-          body: JSON.stringify({ error: `기사 페이지 접근 실패 (${response.status}). 본문을 복사해 수동 분석을 사용해주세요.` })
-        };
+    try {
+      const geminiResult = await runGemini({ apiKey, ...article });
+      if (geminiResult) {
+        return { statusCode: 200, headers, body: JSON.stringify(geminiResult) };
       }
-
-      const html = await response.text();
-      title = pickMeta(html, ['og:title', 'twitter:title']) || cleanText(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '');
-      source = pickMeta(html, ['og:site_name', 'article:publisher']) || getHostname(targetUrl);
-      articleText = html
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
-        .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
-        .replace(/<[^>]+>/g, ' ');
+    } catch (error) {
+      console.warn('Gemini analyzer failed. Falling back to local analyzer:', error.message);
     }
-
-    const normalized = cleanText(articleText).slice(0, 7000);
-    const sentences = splitSentences(normalized);
-    const firstSentence = sentences[0] || normalized;
-    const computedTitle = title || firstSentence;
-    const computedSource = source || (targetUrl ? getHostname(targetUrl) : '수동입력');
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        title: truncate(computedTitle.replace(/\s*[-|]\s*[^-|]+$/, ''), 45),
-        brand: truncate(guessBrand(normalized, ''), 20),
-        source: truncate(computedSource, 24),
-        desc: truncate(firstSentence, 80),
-        insight: truncate(guessInsight(normalized), 100)
-      })
+      body: JSON.stringify(fallbackAnalyze(article))
     };
   } catch (error) {
-    console.error('Free analyzer error:', error);
+    console.error('Analyzer error:', error);
     return {
-      statusCode: 500,
+      statusCode: error.statusCode || 500,
       headers,
       body: JSON.stringify({ error: error.message || '분석 중 오류가 발생했습니다.' })
     };
