@@ -120,7 +120,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
       const subs = await getAllSubscribers();
       const emails = subs.map(s => s.email);
       if (emails.length === 0) return alert('구독자가 없습니다.');
-      const emailCampaign = await buildEmailCampaign(mag.campaign || mag.webCampaign);
+      const emailCampaign = await buildEmailCampaign(mag.campaign);
       const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), emailCampaign, mag.articles);
       const response = await fetch('/.netlify/functions/send-email', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -138,13 +138,13 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
   const previewCurrentDrafts = async () => {
     if (allDrafts.length === 0) return alert('배포할 기사가 없습니다.');
     const campaignData = selCampaign ? campaigns.find(v => v.id === selCampaign) || null : null;
-    const emailCampaign = await buildEmailCampaign(campaignData || selSecurity);
+    const emailCampaign = await buildEmailCampaign(campaignData);
     const htmlContent = getPremiumNewsletterHTML(issueName || '임시 호수', new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), emailCampaign, draftArticles);
     setEmailPreview({ title: '뉴스레터 미리보기', html: htmlContent });
   };
 
   const previewPastEmail = async (mag) => {
-    const emailCampaign = await buildEmailCampaign(mag.campaign || mag.webCampaign);
+    const emailCampaign = await buildEmailCampaign(mag.campaign);
     const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', new Date(mag.publishDate || mag.id).toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), emailCampaign, mag.articles);
     setEmailPreview({ title: `과거 리포트 메일 미리보기 - ${mag.issueName}`, html: htmlContent });
   };
