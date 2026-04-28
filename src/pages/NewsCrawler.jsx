@@ -8,7 +8,10 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   const [policyForm, setPolicyForm] = useState({ company:'', url:'', keyword:'' });
   const [aiInput, setAiInput] = useState({ url:'', title:'', brand:'', source:'', desc:'', insight:'', img:'', category:'auto', isImportant:false });
   const [aiLoading, setAiLoading] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState('');
+  const [analysisResult, setAnalysisResult] = useState('');
   const [manualText, setManualText] = useState('');
+  const [toast, setToast] = useState(null);
 
   const [fetchingYt, setFetchingYt] = useState(false);
 
@@ -16,12 +19,19 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
 
   const loadPolicies = async () => { setPoliciesState(await getPolicies()); };
 
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => setToast(null), 3200);
+  };
+
   const savePolicy = async () => {
-    if (!policyForm.url || !policyForm.keyword) return alert('필수 입력 누락');
+    if (!policyForm.url || !policyForm.keyword) return showToast('필수 입력값을 확인해주세요.', 'error');
     const updated = [...policies, { id: Date.now(), company: policyForm.company || companies?.[0]?.name || '', url: policyForm.url, keyword: policyForm.keyword }];
     await savePolicies(updated);
     setPolicyForm({ company:'', url:'', keyword:'' });
     loadPolicies();
+    showToast('추적 정책을 추가했습니다.', 'success');
   };
 
   const deletePolicy = async (id) => {
@@ -30,8 +40,10 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   };
 
   const runAI = async () => {
-    if (!aiInput.url) return alert('분석할 기사 URL을 입력하세요.');
+    if (!aiInput.url) return showToast('분석할 기사 URL을 입력하세요.', 'error');
     setAiLoading(true);
+    setAnalysisResult('');
+    setAnalysisStatus('Gemini 2.5 Flash 우선 시도 중입니다. 실패하면 자동정리로 전환됩니다.');
     try {
       const response = await fetch('/.netlify/functions/analyze', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -41,13 +53,19 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       const data = await response.json();
       if (data.error) throw new Error(data.error);
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
-    } catch (e) { alert('통신 실패: ' + e.message); }
+      const label = data.analyzer === 'gemini-2.5-flash' ? 'Gemini 2.5 Flash' : '자동정리 fallback';
+      setAnalysisResult(label);
+      setAnalysisStatus(`${label}로 분석 완료`);
+      showToast(`${label}로 기사 분석을 완료했습니다.`, 'success');
+    } catch (e) { showToast('분석 실패: ' + e.message, 'error'); }
     finally { setAiLoading(false); }
   };
 
   const runManualAI = async () => {
-    if (!manualText.trim()) return alert('분석할 기사 내용을 붙여넣어 주세요.');
+    if (!manualText.trim()) return showToast('분석할 기사 내용을 붙여넣어 주세요.', 'error');
     setAiLoading(true);
+    setAnalysisResult('');
+    setAnalysisStatus('Gemini 2.5 Flash 우선 시도 중입니다. 실패하면 자동정리로 전환됩니다.');
     try {
       const response = await fetch('/.netlify/functions/analyze', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -58,37 +76,44 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       if (data.error) throw new Error(data.error);
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
       setManualText('');
-    } catch (e) { alert('분석 실패: ' + e.message); }
+      const label = data.analyzer === 'gemini-2.5-flash' ? 'Gemini 2.5 Flash' : '자동정리 fallback';
+      setAnalysisResult(label);
+      setAnalysisStatus(`${label}로 분석 완료`);
+      showToast(`${label}로 기사 분석을 완료했습니다.`, 'success');
+    } catch (e) { showToast('분석 실패: ' + e.message, 'error'); }
     finally { setAiLoading(false); }
   };
 
   const fetchYoutubeMeta = async () => {
-    if(!video.url) return alert("유튜브 링크 URL을 먼저 입력해주세요!");
+    if(!video.url) return showToast("유튜브 링크 URL을 먼저 입력해주세요.", 'error');
     try {
       setFetchingYt(true);
       const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(video.url)}`);
       const data = await res.json();
       if(data.error) {
-        alert("정보를 불러오지 못했습니다. 유튜브 링크가 맞는지 확인해주세요.");
+        showToast("정보를 불러오지 못했습니다. 유튜브 링크를 확인해주세요.", 'error');
       } else {
         setVideo({ ...video, title: data.title || '', source: data.author_name || '', desc: data.title || '' });
-        alert("✅ 유튜브 영상 제목과 채널명을 성공적으로 불러왔습니다!");
+        showToast("유튜브 영상 정보를 불러왔습니다.", 'success');
       }
-    } catch(e) { alert("네트워크 오류가 발생했습니다."); } 
+    } catch(e) { showToast("네트워크 오류가 발생했습니다.", 'error'); } 
     finally { setFetchingYt(false); }
   };
 
   const addToDraft = () => {
-    if (!aiInput.title) return alert('기사가 없습니다.');
+    if (!aiInput.title) return showToast('추가할 기사 내용이 없습니다.', 'error');
     if (aiInput.isImportant) {
       const all = [...(draftArticles.main ? [draftArticles.main] : []), ...draftArticles.macro, ...draftArticles.platform, ...draftArticles.auto, ...draftArticles.ai, ...draftArticles.security];
-      if (all.filter(a => a.isImportant).length >= 3) { alert('⚠️ 중요 기사는 최대 3개까지만 가능'); return; }
+      if (all.filter(a => a.isImportant).length >= 3) { showToast('중요 기사는 최대 3개까지만 가능합니다.', 'error'); return; }
     }
     const article = { ...aiInput, link: aiInput.url };
     const cat = aiInput.category;
     if (cat === 'main') setDraftArticles(prev => ({ ...prev, main: article }));
     else setDraftArticles(prev => ({ ...prev, [cat]: [...(prev[cat]||[]), article] }));
     setAiInput({ url:'', title:'', brand:'', source:'', desc:'', insight:'', img:'', category:'auto', isImportant:false });
+    setAnalysisResult('');
+    setAnalysisStatus('');
+    showToast('발행 대기열에 기사를 추가했습니다.', 'success');
   };
 
   const allDrafts = [...(draftArticles.main ? [draftArticles.main] : []), ...draftArticles.macro, ...draftArticles.platform, ...draftArticles.auto, ...draftArticles.ai, ...draftArticles.security];
@@ -118,6 +143,19 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
 
   return (
     <div className="animate-fade">
+      {toast && (
+        <div style={{
+          position:'fixed', top:20, right:20, zIndex:20000,
+          background: toast.type === 'error' ? '#fef2f2' : toast.type === 'success' ? '#ecfdf5' : '#eff6ff',
+          color: toast.type === 'error' ? '#b91c1c' : toast.type === 'success' ? '#047857' : '#1d4ed8',
+          border: `1px solid ${toast.type === 'error' ? '#fecaca' : toast.type === 'success' ? '#a7f3d0' : '#bfdbfe'}`,
+          borderRadius:12, padding:'12px 16px', boxShadow:'0 16px 40px rgba(15,23,42,0.18)',
+          fontSize:13, fontWeight:900, maxWidth:360
+        }}>
+          <i className={`fas ${toast.type === 'error' ? 'fa-circle-exclamation' : toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-info'}`} style={{ marginRight:8 }}></i>
+          {toast.message}
+        </div>
+      )}
       <div className="page-header"><div><h2>🤖 뉴스 수집 및 AI 분석기</h2></div></div>
 
       {/* YouTube */}
@@ -163,6 +201,23 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
             {aiLoading ? <><i className="fas fa-spinner fa-spin"></i> 분석 중...</> : <><i className="fas fa-magic"></i> AI 분석 실행</>}
           </button>
         </div>
+        {(aiLoading || analysisStatus || analysisResult) && (
+          <div style={{
+            display:'flex', alignItems:'center', gap:10, marginBottom:16,
+            background: aiLoading ? '#fff7ed' : analysisResult === 'Gemini 2.5 Flash' ? '#eef2ff' : '#f8fafc',
+            border: `1px solid ${aiLoading ? '#fed7aa' : analysisResult === 'Gemini 2.5 Flash' ? '#c7d2fe' : '#e2e8f0'}`,
+            color: aiLoading ? '#c2410c' : analysisResult === 'Gemini 2.5 Flash' ? '#4338ca' : '#475569',
+            padding:'10px 14px', borderRadius:10, fontSize:12, fontWeight:900
+          }}>
+            <i className={`fas ${aiLoading ? 'fa-spinner fa-spin' : analysisResult === 'Gemini 2.5 Flash' ? 'fa-magic' : 'fa-gears'}`}></i>
+            <span>{analysisStatus}</span>
+            {analysisResult && (
+              <span style={{ marginLeft:'auto', background:'white', border:'1px solid currentColor', borderRadius:999, padding:'4px 10px' }}>
+                {analysisResult}
+              </span>
+            )}
+          </div>
+        )}
         <div style={{ background:'#fefce8', border:'1px solid #fef08a', padding:15, borderRadius:12, marginBottom:20 }}>
           <div style={{ fontSize:12, fontWeight:900, color:'#a16207', marginBottom:8 }}><i className="fas fa-paste"></i> URL 접근 불가 시 — 기사 본문 복사하여 수동 분석</div>
           <textarea value={manualText} onChange={e => setManualText(e.target.value)} rows="3" placeholder="기사 내용을 여기에 붙여넣으세요. AI가 요약과 인사이트를 자동 생성합니다." style={{ width:'100%', borderRadius:8, border:'1px solid #fcd34d', padding:10, fontFamily:'inherit', fontSize:13, marginBottom:10 }}></textarea>
