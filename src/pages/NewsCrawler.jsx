@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getPolicies, savePolicies } from '../services/dataService';
 import MagazineWebPreview from '../components/MagazineWebPreview';
+import { analyzeTextLocally, htmlToArticle } from '../utils/localAnalyzer';
 
 export default function NewsCrawler({ draftArticles, setDraftArticles, companies, issueName, selCampaign, selSecurity, video, setVideo, campaigns, secBanners }) {
   const [showWebPreview, setShowWebPreview] = useState(false);
@@ -43,21 +44,24 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     if (!aiInput.url) return showToast('분석할 기사 URL을 입력하세요.', 'error');
     setAiLoading(true);
     setAnalysisResult('');
-    setAnalysisStatus('Gemini 2.5 Flash 우선 시도 중입니다. 실패하면 자동정리로 전환됩니다.');
+    setAnalysisStatus('브라우저에서 기사 본문을 읽고 Chrome 내장 AI를 확인 중입니다.');
     try {
-      const response = await fetch('/.netlify/functions/analyze', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: aiInput.url, apiKey: localStorage.getItem('GEMINI_API_KEY') })
-      });
-      if (!response.ok) throw new Error(await response.text());
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      const response = await fetch(aiInput.url, { mode: 'cors' });
+      if (!response.ok) throw new Error(`기사 페이지 접근 실패 (${response.status})`);
+      const html = await response.text();
+      const article = htmlToArticle(html, aiInput.url);
+      if (!article.text || article.text.length < 80) throw new Error('본문을 충분히 읽지 못했습니다.');
+      setAnalysisStatus('Chrome 내장 AI를 우선 사용하고, 불가하면 자동정리로 전환합니다.');
+      const data = await analyzeTextLocally(article);
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
-      const label = data.analyzer === 'gemini-2.5-flash' ? 'Gemini 2.5 Flash' : '자동정리 fallback';
+      const label = data.analyzer || '자동정리 fallback';
       setAnalysisResult(label);
       setAnalysisStatus(`${label}로 분석 완료`);
       showToast(`${label}로 기사 분석을 완료했습니다.`, 'success');
-    } catch (e) { showToast('분석 실패: ' + e.message, 'error'); }
+    } catch (e) {
+      setAnalysisStatus('브라우저에서 URL 본문을 읽지 못했습니다. 본문을 복사해 수동 분석을 사용해주세요.');
+      showToast('URL 직접 분석 실패: 본문 복사 후 수동 분석을 사용해주세요.', 'error');
+    }
     finally { setAiLoading(false); }
   };
 
@@ -65,18 +69,12 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     if (!manualText.trim()) return showToast('분석할 기사 내용을 붙여넣어 주세요.', 'error');
     setAiLoading(true);
     setAnalysisResult('');
-    setAnalysisStatus('Gemini 2.5 Flash 우선 시도 중입니다. 실패하면 자동정리로 전환됩니다.');
+    setAnalysisStatus('Chrome 내장 AI를 우선 사용하고, 불가하면 자동정리로 전환합니다.');
     try {
-      const response = await fetch('/.netlify/functions/analyze', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: manualText, apiKey: localStorage.getItem('GEMINI_API_KEY') })
-      });
-      if (!response.ok) throw new Error(await response.text());
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      const data = await analyzeTextLocally({ text: manualText });
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
       setManualText('');
-      const label = data.analyzer === 'gemini-2.5-flash' ? 'Gemini 2.5 Flash' : '자동정리 fallback';
+      const label = data.analyzer || '자동정리 fallback';
       setAnalysisResult(label);
       setAnalysisStatus(`${label}로 분석 완료`);
       showToast(`${label}로 기사 분석을 완료했습니다.`, 'success');
@@ -194,7 +192,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
 
       {/* AI Analysis */}
       <div className="card" style={{ border:'2px solid #3b82f6', background:'#f8fafc', marginBottom:25 }}>
-        <div className="card-title" style={{ color:'#3b82f6' }}><div><i className="fas fa-brain"></i> Gemini 2.5 Flash 기반 심층 기사 분석</div></div>
+        <div className="card-title" style={{ color:'#3b82f6' }}><div><i className="fas fa-brain"></i> 무료 로컬 기사 분석</div></div>
         <div style={{ display:'flex', gap:10, marginBottom:10, background:'#eff6ff', padding:20, borderRadius:12 }}>
           <input value={aiInput.url} onChange={e => setAiInput({...aiInput, url:e.target.value})} placeholder="분석할 기사 원문 URL" style={{ flex:1, border:'2px solid #93c5fd', fontWeight:'bold' }} />
           <button className="btn btn-primary" onClick={runAI} disabled={aiLoading} style={{ width:180 }}>
@@ -204,12 +202,12 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
         {(aiLoading || analysisStatus || analysisResult) && (
           <div style={{
             display:'flex', alignItems:'center', gap:10, marginBottom:16,
-            background: aiLoading ? '#fff7ed' : analysisResult === 'Gemini 2.5 Flash' ? '#eef2ff' : '#f8fafc',
-            border: `1px solid ${aiLoading ? '#fed7aa' : analysisResult === 'Gemini 2.5 Flash' ? '#c7d2fe' : '#e2e8f0'}`,
-            color: aiLoading ? '#c2410c' : analysisResult === 'Gemini 2.5 Flash' ? '#4338ca' : '#475569',
+            background: aiLoading ? '#fff7ed' : analysisResult === 'Chrome 내장 AI' ? '#eef2ff' : '#f8fafc',
+            border: `1px solid ${aiLoading ? '#fed7aa' : analysisResult === 'Chrome 내장 AI' ? '#c7d2fe' : '#e2e8f0'}`,
+            color: aiLoading ? '#c2410c' : analysisResult === 'Chrome 내장 AI' ? '#4338ca' : '#475569',
             padding:'10px 14px', borderRadius:10, fontSize:12, fontWeight:900
           }}>
-            <i className={`fas ${aiLoading ? 'fa-spinner fa-spin' : analysisResult === 'Gemini 2.5 Flash' ? 'fa-magic' : 'fa-gears'}`}></i>
+            <i className={`fas ${aiLoading ? 'fa-spinner fa-spin' : analysisResult === 'Chrome 내장 AI' ? 'fa-magic' : 'fa-gears'}`}></i>
             <span>{analysisStatus}</span>
             {analysisResult && (
               <span style={{ marginLeft:'auto', background:'white', border:'1px solid currentColor', borderRadius:999, padding:'4px 10px' }}>
