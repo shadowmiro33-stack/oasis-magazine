@@ -11,7 +11,9 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   const [aiLoading, setAiLoading] = useState(false);
   const [analysisStatus, setAnalysisStatus] = useState('');
   const [analysisResult, setAnalysisResult] = useState('');
+  const [analysisMode, setAnalysisMode] = useState('auto');
   const [manualText, setManualText] = useState('');
+  const [jsonInput, setJsonInput] = useState('');
   const [toast, setToast] = useState(null);
 
   const [fetchingYt, setFetchingYt] = useState(false);
@@ -51,16 +53,16 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       const html = await response.text();
       const article = htmlToArticle(html, aiInput.url);
       if (!article.text || article.text.length < 80) throw new Error('본문을 충분히 읽지 못했습니다.');
-      setAnalysisStatus('Chrome 내장 AI를 우선 사용하고, 불가하면 자동정리로 전환합니다.');
-      const data = await analyzeTextLocally(article);
+      setAnalysisStatus(analysisMode === 'chrome' ? 'Chrome 내장 AI만 사용해 분석합니다.' : analysisMode === 'fallback' ? '자동정리 방식으로 분석합니다.' : 'Chrome 내장 AI를 우선 사용하고, 불가하면 자동정리로 전환합니다.');
+      const data = await analyzeTextLocally({ ...article, mode: analysisMode });
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
       const label = data.analyzer || '자동정리 fallback';
       setAnalysisResult(label);
       setAnalysisStatus(`${label}로 분석 완료`);
       showToast(`${label}로 기사 분석을 완료했습니다.`, 'success');
     } catch (e) {
-      setAnalysisStatus('브라우저에서 URL 본문을 읽지 못했습니다. 본문을 복사해 수동 분석을 사용해주세요.');
-      showToast('URL 직접 분석 실패: 본문 복사 후 수동 분석을 사용해주세요.', 'error');
+      setAnalysisStatus(e.message.includes('Chrome Summarizer') ? 'Chrome Summarizer API를 사용할 수 없습니다. 자동정리 모드로 바꾸거나 본문을 붙여넣어 주세요.' : '브라우저에서 URL 본문을 읽지 못했습니다. 본문을 복사해 수동 분석을 사용해주세요.');
+      showToast(e.message.includes('Chrome Summarizer') ? 'Chrome 내장 AI를 사용할 수 없습니다.' : 'URL 직접 분석 실패: 본문 복사 후 수동 분석을 사용해주세요.', 'error');
     }
     finally { setAiLoading(false); }
   };
@@ -69,17 +71,62 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     if (!manualText.trim()) return showToast('분석할 기사 내용을 붙여넣어 주세요.', 'error');
     setAiLoading(true);
     setAnalysisResult('');
-    setAnalysisStatus('Chrome 내장 AI를 우선 사용하고, 불가하면 자동정리로 전환합니다.');
+    setAnalysisStatus(analysisMode === 'chrome' ? 'Chrome 내장 AI만 사용해 분석합니다.' : analysisMode === 'fallback' ? '자동정리 방식으로 분석합니다.' : 'Chrome 내장 AI를 우선 사용하고, 불가하면 자동정리로 전환합니다.');
     try {
-      const data = await analyzeTextLocally({ text: manualText });
+      const data = await analyzeTextLocally({ text: manualText, mode: analysisMode });
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
       setManualText('');
       const label = data.analyzer || '자동정리 fallback';
       setAnalysisResult(label);
       setAnalysisStatus(`${label}로 분석 완료`);
       showToast(`${label}로 기사 분석을 완료했습니다.`, 'success');
-    } catch (e) { showToast('분석 실패: ' + e.message, 'error'); }
+    } catch (e) {
+      setAnalysisStatus('Chrome Summarizer API를 사용할 수 없습니다. 자동정리 모드로 바꿔 다시 실행해 주세요.');
+      showToast('분석 실패: ' + e.message, 'error');
+    }
     finally { setAiLoading(false); }
+  };
+
+  const normalizeImportedArticle = (item) => ({
+    category: item.category || 'auto',
+    brand: item.brand || item.company || item.tags?.[0] || '산업일반',
+    source: item.source || '',
+    title: item.title || '',
+    link: item.link || item.url || item.originallink || '',
+    img: item.img || item.thumbnail_url || item.image || '',
+    desc: item.desc || item.summary || item.description || '',
+    insight: item.insight || '',
+    isImportant: !!item.isImportant
+  });
+
+  const importJsonArticles = () => {
+    try {
+      const parsed = JSON.parse(jsonInput);
+      const items = Array.isArray(parsed) ? parsed : (parsed.articles || parsed.items || []);
+      if (!Array.isArray(items) || items.length === 0) throw new Error('기사 배열을 찾지 못했습니다.');
+      const valid = items.map(normalizeImportedArticle).filter(item => item.title && item.link);
+      if (valid.length === 0) throw new Error('title/link가 있는 기사가 없습니다.');
+      setDraftArticles(prev => {
+        const next = {
+          main: prev.main,
+          macro: [...(prev.macro || [])],
+          platform: [...(prev.platform || [])],
+          auto: [...(prev.auto || [])],
+          ai: [...(prev.ai || [])],
+          security: [...(prev.security || [])]
+        };
+        valid.forEach(item => {
+          const cat = ['main', 'macro', 'platform', 'auto', 'ai', 'security'].includes(item.category) ? item.category : 'auto';
+          if (cat === 'main' && !next.main) next.main = { ...item, category: 'main' };
+          else next[cat === 'main' ? 'auto' : cat].push({ ...item, category: cat === 'main' ? 'auto' : cat });
+        });
+        return next;
+      });
+      setJsonInput('');
+      showToast(`${valid.length}건을 발행 대기열에 가져왔습니다.`, 'success');
+    } catch (e) {
+      showToast('JSON 가져오기 실패: ' + e.message, 'error');
+    }
   };
 
   const fetchYoutubeMeta = async () => {
@@ -193,6 +240,28 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       {/* AI Analysis */}
       <div className="card" style={{ border:'2px solid #3b82f6', background:'#f8fafc', marginBottom:25 }}>
         <div className="card-title" style={{ color:'#3b82f6' }}><div><i className="fas fa-brain"></i> 무료 로컬 기사 분석</div></div>
+        <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+          {[
+            { id:'auto', label:'자동', hint:'Chrome 내장 AI 우선' },
+            { id:'chrome', label:'Chrome 내장 AI', hint:'미지원 시 실패 표시' },
+            { id:'fallback', label:'자동정리만', hint:'서버/API 사용 없음' }
+          ].map(mode => (
+            <button
+              key={mode.id}
+              type="button"
+              onClick={() => setAnalysisMode(mode.id)}
+              style={{
+                flex:1, border:'1px solid ' + (analysisMode === mode.id ? '#3b82f6' : '#cbd5e1'),
+                background: analysisMode === mode.id ? '#eff6ff' : '#ffffff',
+                color: analysisMode === mode.id ? '#1d4ed8' : '#475569',
+                borderRadius:10, padding:'10px 12px', fontWeight:900, cursor:'pointer', textAlign:'left'
+              }}
+            >
+              <div style={{ fontSize:13 }}>{mode.label}</div>
+              <div style={{ fontSize:10, opacity:0.75, marginTop:3 }}>{mode.hint}</div>
+            </button>
+          ))}
+        </div>
         <div style={{ display:'flex', gap:10, marginBottom:10, background:'#eff6ff', padding:20, borderRadius:12 }}>
           <input value={aiInput.url} onChange={e => setAiInput({...aiInput, url:e.target.value})} placeholder="분석할 기사 원문 URL" style={{ flex:1, border:'2px solid #93c5fd', fontWeight:'bold' }} />
           <button className="btn btn-primary" onClick={runAI} disabled={aiLoading} style={{ width:180 }}>
@@ -283,6 +352,25 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ border:'2px solid #10b981', background:'#f0fdf4', marginBottom:25 }}>
+        <div className="card-title" style={{ color:'#047857' }}><div><i className="fas fa-file-import"></i> Gemini JSON 대량 가져오기</div></div>
+        <textarea
+          value={jsonInput}
+          onChange={e => setJsonInput(e.target.value)}
+          rows="7"
+          placeholder='[{"category":"auto","brand":"Carvana","title":"...","source":"...","link":"https://...","img":"https://...","desc":"...","insight":"..."}]'
+          style={{ width:'100%', borderRadius:12, border:'1px solid #86efac', padding:12, fontFamily:'Consolas, monospace', fontSize:12, marginBottom:10 }}
+        />
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
+          <div style={{ fontSize:12, color:'#047857', fontWeight:800 }}>
+            summary/thumbnail_url 필드도 자동으로 desc/img로 변환합니다. 이 과정은 Netlify Function을 호출하지 않습니다.
+          </div>
+          <button className="btn btn-success" onClick={importJsonArticles} style={{ minWidth:180, fontWeight:900 }}>
+            <i className="fas fa-plus-circle"></i> JSON 기사 가져오기
+          </button>
         </div>
       </div>
 

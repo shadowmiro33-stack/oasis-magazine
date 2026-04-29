@@ -122,19 +122,25 @@ export const summarizeWithChrome = async (text) => {
   return cleanText(result);
 };
 
-export const analyzeTextLocally = async ({ text, title = '', source = '' }) => {
+export const analyzeTextLocally = async ({ text, title = '', source = '', mode = 'auto' }) => {
   const normalized = cleanText(text).slice(0, 12000);
   let desc = '';
   let analyzer = '자동정리 fallback';
 
-  try {
-    const availability = await getChromeSummarizerStatus();
-    if (availability !== 'unavailable') {
-      desc = truncate(await summarizeWithChrome(normalized), 80);
-      analyzer = 'Chrome 내장 AI';
+  if (mode !== 'fallback') {
+    try {
+      const availability = await getChromeSummarizerStatus();
+      if (availability === 'unavailable' && mode === 'chrome') {
+        throw new Error('Chrome Summarizer API unavailable');
+      }
+      if (availability !== 'unavailable') {
+        desc = truncate(await summarizeWithChrome(normalized), 80);
+        analyzer = 'Chrome 내장 AI';
+      }
+    } catch (error) {
+      if (mode === 'chrome') throw error;
+      desc = '';
     }
-  } catch (_) {
-    desc = '';
   }
 
   if (!desc) {
