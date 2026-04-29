@@ -45,7 +45,8 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
   <div style="background-color: #f4f6f8; padding: 24px 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; width: 100%; box-sizing: border-box;">
       <div style="width: 100%; max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.08); box-sizing: border-box;">
           <div style="background-color: #ffffff; padding: 50px 40px; text-align: center; border-bottom: 1px solid #f1f5f9;">
-              <div style="color: #2563eb; font-size: 18px; font-weight: 900; margin-bottom: 15px; letter-spacing: 2px;">OASIS R&D</div>
+              <div style="color: #2563eb; font-size: 18px; font-weight: 900; margin-bottom: 8px; letter-spacing: 2px;">OASIS</div>
+              <div style="color: #64748b; font-size: 13px; font-weight: 800; margin-bottom: 15px;">오토핸즈의 아침을 시작하는 스마트한 리포트</div>
               <div style="color: #0f172a; font-size: 32px; font-weight: 900; line-height: 1.3; word-break: keep-all; margin-bottom: 25px;">바쁜 아침,<br>오늘의 모빌리티 핵심만 빠르게 🚙</div>
               <div style="display: inline-block; background-color: #f8fafc; color: #475569; padding: 8px 20px; border-radius: 30px; font-size: 14px; font-weight: bold; border: 1px solid #e2e8f0;">${today} • ISSUE ${issueName}</div>
           </div>
@@ -131,7 +132,7 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
           </div>
       </div>
       <div style="text-align: center; margin-top: 40px; color: #94a3b8; font-size: 13px; font-weight: bold; line-height: 1.6;">
-          AUTOHANDS R&D CENTER<br>본 메일은 사내 대외비 자산입니다. 외부 유출을 금합니다.
+          OASIS는 오토핸즈 구성원이 아침마다 산업, 모빌리티, AI, 보안 이슈를 빠르게 파악할 수 있도록 정리한 데일리 R&D 리포트입니다.
       </div>
   </div>`;
   return html;
