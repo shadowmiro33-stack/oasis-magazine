@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { getPolicies, savePolicies } from '../services/dataService';
 import MagazineWebPreview from '../components/MagazineWebPreview';
-import { analyzeTextLocally, htmlToArticle } from '../utils/localAnalyzer';
+import { analyzeTextLocally, getChromeSummarizerStatus, htmlToArticle } from '../utils/localAnalyzer';
+
+const DEFAULT_THUMB = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300';
 
 export default function NewsCrawler({ draftArticles, setDraftArticles, companies, issueName, selCampaign, selSecurity, video, setVideo, campaigns, secBanners }) {
   const [showWebPreview, setShowWebPreview] = useState(false);
@@ -12,13 +14,17 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   const [analysisStatus, setAnalysisStatus] = useState('');
   const [analysisResult, setAnalysisResult] = useState('');
   const [analysisMode, setAnalysisMode] = useState('auto');
+  const [chromeStatus, setChromeStatus] = useState('checking');
   const [manualText, setManualText] = useState('');
   const [jsonInput, setJsonInput] = useState('');
   const [toast, setToast] = useState(null);
 
   const [fetchingYt, setFetchingYt] = useState(false);
 
-  React.useEffect(() => { loadPolicies(); }, []);
+  React.useEffect(() => {
+    loadPolicies();
+    refreshChromeStatus();
+  }, []);
 
   const loadPolicies = async () => { setPoliciesState(await getPolicies()); };
 
@@ -26,6 +32,12 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     setToast({ message, type });
     window.clearTimeout(showToast.timer);
     showToast.timer = window.setTimeout(() => setToast(null), 3200);
+  };
+
+  const refreshChromeStatus = async () => {
+    setChromeStatus('checking');
+    const status = await getChromeSummarizerStatus();
+    setChromeStatus(status);
   };
 
   const savePolicy = async () => {
@@ -87,13 +99,29 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     finally { setAiLoading(false); }
   };
 
+  const normalizeUrl = (url = '') => {
+    const trimmed = String(url || '').trim().replace(/&amp;/g, '&');
+    if (trimmed.startsWith('//')) return `https:${trimmed}`;
+    return trimmed;
+  };
+
+  const normalizeCategory = (value = '') => {
+    const raw = String(value || '').toLowerCase();
+    if (raw.includes('macro') || raw.includes('경제')) return 'macro';
+    if (raw.includes('platform') || raw.includes('biz') || raw.includes('비즈')) return 'platform';
+    if (raw.includes('ai') || raw.includes('인공지능')) return 'ai';
+    if (raw.includes('security') || raw.includes('secure') || raw.includes('보안')) return 'security';
+    if (raw.includes('main') || raw.includes('first') || raw.includes('메인')) return 'main';
+    return 'auto';
+  };
+
   const normalizeImportedArticle = (item) => ({
-    category: item.category || 'auto',
+    category: normalizeCategory(item.category),
     brand: item.brand || item.company || item.tags?.[0] || '산업일반',
     source: item.source || '',
     title: item.title || '',
-    link: item.link || item.url || item.originallink || '',
-    img: item.img || item.thumbnail_url || item.image || '',
+    link: normalizeUrl(item.link || item.url || item.originallink || ''),
+    img: normalizeUrl(item.img || item.thumbnail_url || item.thumbnailUrl || item.image || item.image_url || ''),
     desc: item.desc || item.summary || item.description || '',
     insight: item.insight || '',
     isImportant: !!item.isImportant
@@ -262,6 +290,13 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
             </button>
           ))}
         </div>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, fontSize:12, fontWeight:900, color: chromeStatus === 'unavailable' ? '#b91c1c' : '#047857', background: chromeStatus === 'unavailable' ? '#fef2f2' : '#ecfdf5', border:'1px solid ' + (chromeStatus === 'unavailable' ? '#fecaca' : '#a7f3d0'), borderRadius:10, padding:'9px 12px' }}>
+          <i className={`fas ${chromeStatus === 'checking' ? 'fa-spinner fa-spin' : chromeStatus === 'unavailable' ? 'fa-circle-exclamation' : 'fa-circle-check'}`}></i>
+          <span>
+            Chrome Summarizer API 상태: {chromeStatus === 'checking' ? '확인 중' : chromeStatus === 'unavailable' ? '현재 브라우저에서 사용 불가' : chromeStatus}
+          </span>
+          <button type="button" onClick={refreshChromeStatus} style={{ marginLeft:'auto', border:'none', background:'transparent', color:'inherit', fontWeight:900, cursor:'pointer' }}>다시 확인</button>
+        </div>
         <div style={{ display:'flex', gap:10, marginBottom:10, background:'#eff6ff', padding:20, borderRadius:12 }}>
           <input value={aiInput.url} onChange={e => setAiInput({...aiInput, url:e.target.value})} placeholder="분석할 기사 원문 URL" style={{ flex:1, border:'2px solid #93c5fd', fontWeight:'bold' }} />
           <button className="btn btn-primary" onClick={runAI} disabled={aiLoading} style={{ width:180 }}>
@@ -326,7 +361,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
               <div style={{ border:'1px solid #e2e8f0', borderRadius:12, overflow:'hidden', background:'white', boxShadow:'0 10px 15px -3px rgba(0,0,0,0.1)', display:'flex', flexDirection:'column' }}>
                 <div style={{ width:'100%', height:200, background: aiInput.img ? '#f1f5f9' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', position:'relative', display:'flex', justifyContent:'center', alignItems:'center' }}>
                   {aiInput.img ? (
-                    <img src={aiInput.img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.target.parentElement.style.background='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'; e.target.style.display='none'; }} />
+                  <img src={aiInput.img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_THUMB; }} />
                   ) : (
                     <i className="fas fa-newspaper" style={{ fontSize:40, color:'rgba(255,255,255,0.5)' }}></i>
                   )}
@@ -386,11 +421,11 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
           {allDrafts.length === 0 ? (
             <div style={{ textAlign:'center', padding:50, color:'#cbd5e1', border:'2px dashed #e2e8f0', borderRadius:20 }}>수집된 기사가 없습니다.</div>
           ) : allDrafts.map((a, i) => {
-            const thumbImg = a.img && a.img.includes('http') ? a.img : 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300';
+            const thumbImg = a.img && a.img.includes('http') ? a.img : DEFAULT_THUMB;
             return (
               <div key={i} className="card" style={{ display:'flex', gap:15, padding:15, alignItems:'center', border:'1px solid #e2e8f0', borderRadius:15, background:'white' }}>
                 <div style={{ width:100, height:70, borderRadius:10, overflow:'hidden', background:'#f1f5f9', flexShrink:0 }}>
-                  <img src={thumbImg} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  <img src={thumbImg} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_THUMB; }} />
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
