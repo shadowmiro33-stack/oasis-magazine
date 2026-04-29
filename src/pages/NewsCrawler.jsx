@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getPolicies, savePolicies } from '../services/dataService';
+import { getAllMagazines, getPolicies, savePolicies } from '../services/dataService';
 import MagazineWebPreview from '../components/MagazineWebPreview';
 import { analyzeTextLocally, getChromeSummarizerStatus, htmlToArticle } from '../utils/localAnalyzer';
 
@@ -8,6 +8,7 @@ const DEFAULT_THUMB = 'https://images.unsplash.com/photo-1492144534655-ae79c964c
 export default function NewsCrawler({ draftArticles, setDraftArticles, companies, issueName, selCampaign, selSecurity, video, setVideo, campaigns, secBanners }) {
   const [showWebPreview, setShowWebPreview] = useState(false);
   const [policies, setPoliciesState] = useState([]);
+  const [publishedArticles, setPublishedArticles] = useState([]);
   const [policyForm, setPolicyForm] = useState({ company:'', url:'', keyword:'' });
   const [aiInput, setAiInput] = useState({ url:'', title:'', brand:'', source:'', desc:'', insight:'', img:'', category:'auto', isImportant:false });
   const [aiLoading, setAiLoading] = useState(false);
@@ -23,10 +24,23 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
 
   React.useEffect(() => {
     loadPolicies();
+    loadPublishedArticles();
     refreshChromeStatus();
   }, []);
 
   const loadPolicies = async () => { setPoliciesState(await getPolicies()); };
+  const loadPublishedArticles = async () => {
+    try {
+      const magazines = await getAllMagazines();
+      const articles = magazines.flatMap(mag => (mag.articles || []).map(article => ({
+        ...article,
+        issueName: mag.issueName || mag.issue || mag.id
+      })));
+      setPublishedArticles(articles);
+    } catch (_) {
+      setPublishedArticles([]);
+    }
+  };
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
@@ -134,6 +148,13 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       if (!Array.isArray(items) || items.length === 0) throw new Error('기사 배열을 찾지 못했습니다.');
       const valid = items.map(normalizeImportedArticle).filter(item => item.title && item.link);
       if (valid.length === 0) throw new Error('title/link가 있는 기사가 없습니다.');
+      const unique = [];
+      let duplicateCount = 0;
+      valid.forEach(item => {
+        if (isDuplicateArticle(item, [...allKnownArticles, ...unique])) duplicateCount += 1;
+        else unique.push(item);
+      });
+      if (unique.length === 0) throw new Error('새로 가져올 기사가 없습니다. 모두 중복입니다.');
       setDraftArticles(prev => {
         const next = {
           main: prev.main,
@@ -143,7 +164,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
           ai: [...(prev.ai || [])],
           security: [...(prev.security || [])]
         };
-        valid.forEach(item => {
+        unique.forEach(item => {
           const cat = ['main', 'macro', 'platform', 'auto', 'ai', 'security'].includes(item.category) ? item.category : 'auto';
           if (cat === 'main' && !next.main) next.main = { ...item, category: 'main' };
           else next[cat === 'main' ? 'auto' : cat].push({ ...item, category: cat === 'main' ? 'auto' : cat });
@@ -151,7 +172,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
         return next;
       });
       setJsonInput('');
-      showToast(`${valid.length}건을 발행 대기열에 가져왔습니다.`, 'success');
+      showToast(`${unique.length}건을 발행 대기열에 가져왔습니다.${duplicateCount ? ` 중복 ${duplicateCount}건은 제외했습니다.` : ''}`, 'success');
     } catch (e) {
       showToast('JSON 가져오기 실패: ' + e.message, 'error');
     }
@@ -180,6 +201,10 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       if (all.filter(a => a.isImportant).length >= 3) { showToast('중요 기사는 최대 3개까지만 가능합니다.', 'error'); return; }
     }
     const article = { ...aiInput, link: aiInput.url };
+    if (isDuplicateArticle(article)) {
+      showToast('이미 발행 대기열에 있는 기사입니다.', 'error');
+      return;
+    }
     const cat = aiInput.category;
     if (cat === 'main') setDraftArticles(prev => ({ ...prev, main: article }));
     else setDraftArticles(prev => ({ ...prev, [cat]: [...(prev[cat]||[]), article] }));
@@ -190,6 +215,25 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   };
 
   const allDrafts = [...(draftArticles.main ? [draftArticles.main] : []), ...draftArticles.macro, ...draftArticles.platform, ...draftArticles.auto, ...draftArticles.ai, ...draftArticles.security];
+  const allKnownArticles = [...allDrafts, ...publishedArticles];
+
+  const normalizeDuplicateKey = (value = '') => value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\/(www\.)?/, '')
+    .replace(/[?#].*$/, '')
+    .replace(/\/$/, '');
+
+  const isDuplicateArticle = (article, list = allKnownArticles) => {
+    const linkKey = normalizeDuplicateKey(article.link);
+    const titleKey = normalizeDuplicateKey(article.title);
+    return list.some(item => {
+      const itemLink = normalizeDuplicateKey(item.link);
+      const itemTitle = normalizeDuplicateKey(item.title);
+      return (linkKey && itemLink && linkKey === itemLink) || (titleKey && itemTitle && titleKey === itemTitle);
+    });
+  };
 
   const deleteArticle = (index) => {
     const target = allDrafts[index];

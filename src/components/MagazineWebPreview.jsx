@@ -63,7 +63,7 @@ export default function MagazineWebPreview({
                 </div>
                 <div style={{ display:'flex', background:'white', borderRadius:24, overflow:'hidden', border:'1px solid #e2e8f0', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                   <div style={{ width:'50%', height:400, position:'relative' }}>
-                    <img src={sourceMain.img || fallbackMainImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                    <img src={sourceMain.img || fallbackMainImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = fallbackMainImage; }} />
                     <div style={{ position:'absolute', bottom:0, left:0, padding:30, background:'linear-gradient(transparent, rgba(0,0,0,0.8))', width:'100%' }}>
                       <span style={{ background:'#2563eb', color:'white', padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:900, marginBottom:10, display:'inline-block' }}>FOCUS</span>
                       <h3 style={{ color:'white', fontSize:26, fontWeight:900 }}>{sourceMain.title}</h3>
@@ -98,14 +98,14 @@ export default function MagazineWebPreview({
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:25 }}>
                     {section.key === 'security' && securityBanner && (
                       <div style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', position:'relative', minHeight:300 }}>
-                        <img src={securityBanner} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                        <img src={securityBanner} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = fallbackImage; }} />
                         <div style={{ position:'absolute', bottom:20, left:20, background:'rgba(0,0,0,0.8)', color:'white', padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:900 }}>🚨 보안 캠페인</div>
                       </div>
                     )}
                     {articles.map((article, index) => (
                       <div key={index} style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
                         <div style={{ width:'100%', aspectRatio:'16/10' }}>
-                          <img src={article.img || fallbackImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                          <img src={article.img || fallbackImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = fallbackImage; }} />
                         </div>
                         <div style={{ padding:20, flex:1, display:'flex', flexDirection:'column' }}>
                           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>

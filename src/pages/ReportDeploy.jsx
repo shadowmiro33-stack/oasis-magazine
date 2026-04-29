@@ -198,6 +198,12 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     setEditArticles(updated);
   };
 
+  const changeEditArticle = (idx, key, value) => {
+    const updated = [...editArticles];
+    updated[idx] = { ...updated[idx], [key]: value };
+    setEditArticles(updated);
+  };
+
   const fetchEditYoutubeMeta = async () => {
     if(!editVideo.url.trim()) return alert("유튜브 링크 URL을 먼저 입력해주세요!");
     try {
@@ -419,6 +425,12 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                     <div style={{ flex:1, display:'flex', gap:8, minWidth:0 }}>
                       <input value={art.brand || ''} onChange={e => { const updated = [...editArticles]; updated[idx].brand = e.target.value; setEditArticles(updated); }} placeholder="기업" style={{ width:80, padding:'6px 10px', fontSize:12, borderRadius:6, border:'1px solid #e2e8f0', flexShrink:0 }} />
                       <input value={art.title || ''} onChange={e => { const updated = [...editArticles]; updated[idx].title = e.target.value; setEditArticles(updated); }} placeholder="기사 제목을 입력하세요" style={{ flex:1, padding:'6px 10px', fontSize:13, borderRadius:6, border:'1px solid #e2e8f0', fontWeight:'bold' }} />
+                    </div>
+                    <div style={{ width:180, display:'flex', gap:6, alignItems:'center', flexShrink:0 }}>
+                      <div style={{ width:44, height:32, border:'1px solid #cbd5e1', borderRadius:6, overflow:'hidden', background:'#e2e8f0' }}>
+                        <img src={art.img || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300'} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300'; }} />
+                      </div>
+                      <input value={art.img || ''} onChange={e => changeEditArticle(idx, 'img', e.target.value)} placeholder="이미지 URL" style={{ width:120, padding:'6px 8px', fontSize:11, borderRadius:6, border:'1px solid #cbd5e1' }} />
                     </div>
                     <div style={{ display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
                       <label style={{ fontSize:12, fontWeight:'bold', cursor:'pointer', color: art.isImportant ? '#ef4444' : '#64748b', display:'flex', alignItems:'center', gap:4 }}>

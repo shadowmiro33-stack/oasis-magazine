@@ -427,7 +427,7 @@
                 return `
                     <div class="flex flex-col h-full relative overflow-hidden rounded-2xl cursor-default group border border-gray-100 shadow-sm bg-white ${sliderClasses}">
                         <div class="aspect-[16/10] w-full bg-gray-900 relative h-full">
-                            <img src="${item.img}" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300">
+                            <img src="${item.img}" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400'" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300">
                             <div class="absolute bottom-4 left-4 bg-black/80 text-white text-[12px] font-black px-3 py-1.5 rounded-md tracking-widest z-10 backdrop-blur-sm border border-white/10">🚨 보안 캠페인</div>
                         </div>
                     </div>
@@ -440,7 +440,7 @@
             return `
                 <article class="flex flex-col h-full group cursor-pointer bg-white rounded-2xl p-5 border border-gray-100 hover:border-gray-300 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${sliderClasses}" onclick="smartOpen('${item.link}')">
                     <div class="aspect-[16/10] w-full overflow-hidden bg-gray-100 rounded-xl mb-4 relative shrink-0">
-                        <img src="${thumb}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <img src="${thumb}" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
                     
                     <div class="flex flex-col flex-grow">
@@ -518,7 +518,7 @@
                     </div>
                     <div class="bg-white rounded-3xl overflow-hidden article-card flex flex-col lg:flex-row shadow-sm border border-gray-100">
                         <div class="w-full lg:w-1/2 h-[300px] lg:h-[400px] relative overflow-hidden">
-                            <img src="${window.currentMain.img || 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            <img src="${window.currentMain.img || 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800'}" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                             <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                             <div class="absolute bottom-0 left-0 p-8 w-full">
                                 <span class="bg-brand text-white px-3 py-1 rounded-full text-xs font-black tracking-widest shadow-lg mb-3 inline-block">FOCUS</span>
