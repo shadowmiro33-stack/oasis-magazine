@@ -231,7 +231,8 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     return list.some(item => {
       const itemLink = normalizeDuplicateKey(item.link);
       const itemTitle = normalizeDuplicateKey(item.title);
-      return (linkKey && itemLink && linkKey === itemLink) || (titleKey && itemTitle && titleKey === itemTitle);
+      if (linkKey && itemLink) return linkKey === itemLink;
+      return !linkKey && !itemLink && titleKey && itemTitle && titleKey === itemTitle;
     });
   };
 
