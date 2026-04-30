@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
 import { getAllMagazines, getPolicies, savePolicies } from '../services/dataService';
 import MagazineWebPreview from '../components/MagazineWebPreview';
+import CollapsibleCard from '../components/CollapsibleCard';
 import { analyzeTextLocally, getChromeSummarizerStatus, htmlToArticle } from '../utils/localAnalyzer';
 import { dedupeArticles, isDuplicateArticle } from '../utils/articleDeduper';
 
 const DEFAULT_THUMB = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300';
+const CATEGORY_OPTIONS = [
+  { value: 'main', label: '🔥 1면' },
+  { value: 'macro', label: '🌐 경제' },
+  { value: 'platform', label: '🛒 비즈' },
+  { value: 'auto', label: '🚗 산업' },
+  { value: 'ai', label: '🤖 AI' },
+  { value: 'security', label: '🛡️ 보안' },
+];
+const LIST_CATEGORIES = ['macro', 'platform', 'auto', 'ai', 'security'];
 
 export default function NewsCrawler({ draftArticles, setDraftArticles, companies, issueName, selCampaign, selSecurity, video, setVideo, campaigns, secBanners }) {
   const [showWebPreview, setShowWebPreview] = useState(false);
+  const [openSections, setOpenSections] = useState({ youtube:true, policies:true, analysis:true, json:true, drafts:true });
   const [policies, setPoliciesState] = useState([]);
   const [publishedArticles, setPublishedArticles] = useState([]);
   const [policyForm, setPolicyForm] = useState({ company:'', url:'', keyword:'' });
@@ -23,6 +34,9 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   const [toast, setToast] = useState(null);
 
   const [fetchingYt, setFetchingYt] = useState(false);
+
+  const isSectionOpen = (key) => openSections[key] !== false;
+  const toggleSection = (key) => setOpenSections(prev => ({ ...prev, [key]: !isSectionOpen(key) }));
 
   React.useEffect(() => {
     loadPolicies();
@@ -224,13 +238,36 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     }
   };
 
-  const setMainArticle = (index) => {
+  const changeDraftCategory = (index, nextCategory) => {
     const target = allDrafts[index];
-    ['macro','platform','auto','ai','security'].forEach(c => {
-      if (draftArticles[c]?.includes(target)) setDraftArticles(prev => ({ ...prev, [c]: prev[c].filter(a => a !== target) }));
+    if (!target) return;
+    setDraftArticles(prev => {
+      const next = {
+        main: prev.main,
+        macro: [...(prev.macro || [])],
+        platform: [...(prev.platform || [])],
+        auto: [...(prev.auto || [])],
+        ai: [...(prev.ai || [])],
+        security: [...(prev.security || [])]
+      };
+      LIST_CATEGORIES.forEach(c => {
+        next[c] = next[c].filter(article => article !== target);
+      });
+      if (next.main === target) next.main = null;
+
+      const updated = { ...target, category: nextCategory };
+      if (nextCategory === 'main') {
+        if (next.main) next.auto.unshift({ ...next.main, category: next.main.category === 'main' ? 'auto' : next.main.category || 'auto' });
+        next.main = updated;
+      } else {
+        next[nextCategory] = [...(next[nextCategory] || []), updated];
+      }
+      return next;
     });
-    setDraftArticles(prev => ({ ...prev, main: { ...target, category: 'main' } }));
+    showToast('기사 카테고리를 변경했습니다.', 'success');
   };
+
+  const setMainArticle = (index) => changeDraftCategory(index, 'main');
 
   const updateDraftArticle = (index, patch) => {
     const target = allDrafts[index];
@@ -251,7 +288,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
 
   const showPreview = aiInput.title || aiInput.brand || aiInput.desc;
 
-  const catLabel = { main:'🔥 1면', macro:'🌐 경제', platform:'🛒 비즈', auto:'🚗 산업', ai:'🤖 AI', security:'🛡️ 보안' };
+  const catLabel = Object.fromEntries(CATEGORY_OPTIONS.map(option => [option.value, option.label]));
   const catColor = { main:'#ef4444', macro:'#6366f1', platform:'#f59e0b', auto:'#3b82f6', ai:'#8b5cf6', security:'#10b981' };
 
   return (
@@ -272,10 +309,14 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       <div className="page-header"><div><h2>🤖 뉴스 수집 및 AI 분석기</h2></div></div>
 
       {/* YouTube */}
-      <div className="card" style={{ border:'2px solid #f59e0b', background:'#fffbeb', marginBottom:25 }}>
-        <div className="card-title" style={{ color:'#b45309', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div><i className="fab fa-youtube"></i> 매거진 메인 유튜브 자동 세팅</div>
-        </div>
+      <CollapsibleCard
+        title="매거진 메인 유튜브 자동 세팅"
+        icon="fab fa-youtube"
+        open={isSectionOpen('youtube')}
+        onToggle={() => toggleSection('youtube')}
+        style={{ border:'2px solid #f59e0b', background:'#fffbeb', marginBottom:25 }}
+        titleStyle={{ color:'#b45309' }}
+      >
         <div style={{ display:'flex', gap:10, marginBottom:10 }}>
           <input value={video.url} onChange={e => setVideo({...video, url:e.target.value})} placeholder="유튜브 영상 URL (YouTube Link)" style={{ flex:1, padding:10, borderRadius:8, border:'1px solid #e2e8f0' }} />
           <button className="btn" onClick={fetchYoutubeMeta} disabled={fetchingYt} style={{ background:'#f59e0b', color:'white', fontWeight:'bold', width:120 }}>{fetchingYt ? '...' : '정보 불러오기'}</button>
@@ -285,13 +326,16 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
           <input value={video.source} onChange={e => setVideo({...video, source:e.target.value})} placeholder="채널명 (자동 입력)" style={{ padding:10, borderRadius:8, border:'1px solid #e2e8f0' }} />
           <input value={video.desc} onChange={e => setVideo({...video, desc:e.target.value})} placeholder="간략 코멘트" style={{ padding:10, borderRadius:8, border:'1px solid #e2e8f0' }} />
         </div>
-      </div>
+      </CollapsibleCard>
 
       {/* Policies */}
-      <div className="card" style={{ marginBottom:25 }}>
-        <div className="card-title">
-          <div><i className="fas fa-crosshairs"></i> 추적 정책 및 기사 수집 제어</div>
-        </div>
+      <CollapsibleCard
+        title="추적 정책 및 기사 수집 제어"
+        icon="fas fa-crosshairs"
+        open={isSectionOpen('policies')}
+        onToggle={() => toggleSection('policies')}
+        style={{ marginBottom:25 }}
+      >
         <div style={{ display:'flex', gap:10, marginBottom:15 }}>
           <input value={policyForm.url} onChange={e => setPolicyForm({...policyForm, url:e.target.value})} placeholder="대상 언론사 URL" style={{ flex:1 }} />
           <input value={policyForm.keyword} onChange={e => setPolicyForm({...policyForm, keyword:e.target.value})} placeholder="추적 키워드" style={{ flex:1 }} />
@@ -303,11 +347,17 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
             <button className="btn btn-outline" style={{ padding:'4px 12px', fontSize:11, color:'#ef4444', borderColor:'#ef4444' }} onClick={() => deletePolicy(p.id)}>삭제</button>
           </div>
         ))}
-      </div>
+      </CollapsibleCard>
 
       {/* AI Analysis */}
-      <div className="card" style={{ border:'2px solid #3b82f6', background:'#f8fafc', marginBottom:25 }}>
-        <div className="card-title" style={{ color:'#3b82f6' }}><div><i className="fas fa-brain"></i> 무료 로컬 기사 분석</div></div>
+      <CollapsibleCard
+        title="무료 로컬 기사 분석"
+        icon="fas fa-brain"
+        open={isSectionOpen('analysis')}
+        onToggle={() => toggleSection('analysis')}
+        style={{ border:'2px solid #3b82f6', background:'#f8fafc', marginBottom:25 }}
+        titleStyle={{ color:'#3b82f6' }}
+      >
         <div style={{ display:'flex', gap:8, marginBottom:12 }}>
           {[
             { id:'auto', label:'자동', hint:'Chrome 내장 AI 우선' },
@@ -428,10 +478,16 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
             )}
           </div>
         </div>
-      </div>
+      </CollapsibleCard>
 
-      <div className="card" style={{ border:'2px solid #10b981', background:'#f0fdf4', marginBottom:25 }}>
-        <div className="card-title" style={{ color:'#047857' }}><div><i className="fas fa-file-import"></i> Gemini JSON 대량 가져오기</div></div>
+      <CollapsibleCard
+        title="Gemini JSON 대량 가져오기"
+        icon="fas fa-file-import"
+        open={isSectionOpen('json')}
+        onToggle={() => toggleSection('json')}
+        style={{ border:'2px solid #10b981', background:'#f0fdf4', marginBottom:25 }}
+        titleStyle={{ color:'#047857' }}
+      >
         <textarea
           value={jsonInput}
           onChange={e => setJsonInput(e.target.value)}
@@ -447,16 +503,20 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
             <i className="fas fa-plus-circle"></i> JSON 기사 가져오기
           </button>
         </div>
-      </div>
+      </CollapsibleCard>
 
       {/* Draft List - 썸네일 이미지 + 메인 기사 설정 버튼 포함 */}
-      <div className="card">
-        <div className="card-title" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div><i className="fas fa-list"></i> 발행 대기 목록 ({allDrafts.length}건)</div>
+      <CollapsibleCard
+        title={`발행 대기 목록 (${allDrafts.length}건)`}
+        icon="fas fa-list"
+        open={isSectionOpen('drafts')}
+        onToggle={() => toggleSection('drafts')}
+        actions={(
           <button className="btn" onClick={() => setShowWebPreview(true)} style={{ background:'#3b82f6', color:'white', fontSize:12, padding:'5px 15px' }}>
             <i className="fas fa-eye"></i> 최종 웹 미리보기
           </button>
-        </div>
+        )}
+      >
         <div style={{ display:'flex', flexDirection:'column', gap:10, padding:20, background:'#f8fafc' }}>
           {allDrafts.length === 0 ? (
             <div style={{ textAlign:'center', padding:50, color:'#cbd5e1', border:'2px dashed #e2e8f0', borderRadius:20 }}>수집된 기사가 없습니다.</div>
@@ -478,6 +538,15 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
                   </div>
                   <div style={{ fontWeight:900, fontSize:15, color:'#1e293b', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.title || '(제목 없음 - 내용을 확인하세요)'}</div>
                   <div style={{ display:'flex', gap:6, marginTop:8 }}>
+                    <select
+                      value={a.category || 'auto'}
+                      onChange={e => changeDraftCategory(i, e.target.value)}
+                      style={{ width:120, padding:'7px 8px', borderRadius:8, border:'1px solid #cbd5e1', fontSize:11, fontWeight:900, background:'white', flexShrink:0 }}
+                    >
+                      {CATEGORY_OPTIONS.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
                     <input
                       value={imageUrlDrafts[i] ?? a.img ?? ''}
                       onChange={e => setImageUrlDrafts(prev => ({ ...prev, [i]: e.target.value }))}
@@ -504,7 +573,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
             );
           })}
         </div>
-      </div>
+      </CollapsibleCard>
 
       <MagazineWebPreview
         open={showWebPreview}

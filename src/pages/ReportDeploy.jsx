@@ -6,11 +6,28 @@ import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
 import { getPremiumNewsletterHTML } from '../utils/newsletterTemplate';
 import MagazineWebPreview from '../components/MagazineWebPreview';
+import CollapsibleCard from '../components/CollapsibleCard';
+
+const CATEGORY_OPTIONS = [
+  { value: 'main', label: '🔥 1면' },
+  { value: 'macro', label: '🌐 경제' },
+  { value: 'platform', label: '🛒 비즈' },
+  { value: 'auto', label: '🚗 산업' },
+  { value: 'ai', label: '🤖 AI' },
+  { value: 'security', label: '🛡️ 보안' },
+];
+
+const applyArticleCategory = (articles = [], targetIndex, nextCategory) => articles.map((article, index) => {
+  if (index === targetIndex) return { ...article, category: nextCategory };
+  if (nextCategory === 'main' && article.category === 'main') return { ...article, category: 'auto' };
+  return article;
+});
 
 export default function ReportDeploy({ draftArticles, setDraftArticles, issueName, setIssueName, selCampaign, setSelCampaign, selSecurity, setSelSecurity, video, setVideo, campaigns, secBanners }) {
   const [history, setHistory] = useState([]);
   const [deploying, setDeploying] = useState(false);
   const [expandedRows, setExpandedRows] = useState({}); // historyRow 확장 상태
+  const [openSections, setOpenSections] = useState({ deploy:true, history:true });
   const [pastPreviewReport, setPastPreviewReport] = useState(null); // 과거 리포트 웹 미리보기용
 
   // Edit Modal State
@@ -35,6 +52,9 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
   // Web Preview Modal State
   const [showWebPreview, setShowWebPreview] = useState(false);
   const [emailPreview, setEmailPreview] = useState(null);
+
+  const isSectionOpen = (key) => openSections[key] !== false;
+  const toggleSection = (key) => setOpenSections(prev => ({ ...prev, [key]: !isSectionOpen(key) }));
 
   const fetchData = async () => {
     const mags = await getAllMagazines();
@@ -163,9 +183,19 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
   };
 
   const exportPdf = () => {
+    const savePdf = (element) => {
+      html2pdf().set({ margin: 1, filename: `OASIS_History.pdf`, jsPDF: { format: 'letter', orientation: 'portrait' } }).from(element).save();
+    };
     const element = document.getElementById('history-container');
-    if(!element) return;
-    html2pdf().set({ margin: 1, filename: `OASIS_History.pdf`, jsPDF: { format: 'letter', orientation: 'portrait' } }).from(element).save();
+    if(!element) {
+      setOpenSections(prev => ({ ...prev, history: true }));
+      window.setTimeout(() => {
+        const openedElement = document.getElementById('history-container');
+        if (openedElement) savePdf(openedElement);
+      }, 50);
+      return;
+    }
+    savePdf(element);
   };
 
   const openEditModal = (mag) => {
@@ -195,9 +225,20 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
   };
 
   const changeEditCategory = (idx, newCat) => {
-    const updated = [...editArticles];
-    updated[idx].category = newCat;
-    setEditArticles(updated);
+    setEditArticles(prev => applyArticleCategory(prev, idx, newCat));
+  };
+
+  const updateHistoryArticleCategory = async (mag, idx, newCat) => {
+    const updatedArticles = applyArticleCategory(mag.articles || [], idx, newCat);
+    const updatedReport = { ...mag, articles: updatedArticles };
+    setHistory(prev => prev.map(item => item.id === mag.id ? updatedReport : item));
+    if (editingReport?.id === mag.id) setEditArticles(updatedArticles);
+    try {
+      await saveMagazine(mag.id, updatedReport);
+    } catch (e) {
+      alert('카테고리 저장 실패: ' + e.message);
+      fetchData();
+    }
   };
 
   const changeEditArticle = (idx, key, value) => {
@@ -280,8 +321,14 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
       </div>
 
       {/* Deploy Section */}
-      <div className="card" style={{ border:'2px solid #10b981', background:'#f0fdf4', marginBottom:25 }}>
-        <div className="card-title" style={{ color:'#75b5ee' }}><i className="fas fa-cloud-upload-alt"></i> 클라우드 DB 최종 발행</div>
+      <CollapsibleCard
+        title="클라우드 DB 최종 발행"
+        icon="fas fa-cloud-upload-alt"
+        open={isSectionOpen('deploy')}
+        onToggle={() => toggleSection('deploy')}
+        style={{ border:'2px solid #10b981', background:'#f0fdf4', marginBottom:25 }}
+        titleStyle={{ color:'#75b5ee' }}
+      >
         <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:15 }}>
           <input value={issueName} onChange={e => setIssueName(e.target.value)} placeholder="발행 호수 입력 (예: NO.38)" style={{ flex:1, padding:15, fontWeight:'bold' }} />
           <select value={selCampaign} onChange={e => setSelCampaign(e.target.value)} style={{ flex:1, padding:15, fontWeight:'bold', borderColor:'#ec4899' }}>
@@ -305,16 +352,23 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
             {deploying ? '배포 중...' : '🚀 3. 라이브 서버 최종 배포'}
           </button>
         </div>
-      </div>
+      </CollapsibleCard>
 
       {/* History */}
-      <div className="card-title" style={{ marginTop:30 }}>📚 지난 리포트 DB</div>
-      <div className="card" id="history-container" style={{ padding:0, overflow:'hidden' }}>
+      <CollapsibleCard
+        title="지난 리포트 DB"
+        icon="fas fa-book-open"
+        open={isSectionOpen('history')}
+        onToggle={() => toggleSection('history')}
+        style={{ padding:0, overflow:'hidden', marginTop:30 }}
+        titleStyle={{ padding:'25px 25px 0' }}
+      >
+      <div id="history-container">
         <table>
           <thead><tr><th style={{ width:40 }}></th><th>발행일</th><th>리포트 호수</th><th>수록 기사수</th><th>상태</th><th style={{ width:200 }}>관리</th></tr></thead>
           <tbody>
             {history.length === 0 ? (
-              <tr><td colSpan="5" style={{ textAlign:'center', padding:30, color:'#94a3b8' }}>발행된 리포트가 없습니다.</td></tr>
+              <tr><td colSpan="6" style={{ textAlign:'center', padding:30, color:'#94a3b8' }}>발행된 리포트가 없습니다.</td></tr>
             ) : history.map(m => (
               <React.Fragment key={m.id}>
                 <tr style={{ cursor:'pointer' }} onClick={() => setExpandedRows({...expandedRows, [m.id]: !expandedRows[m.id]})}>
@@ -338,8 +392,18 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                           <div style={{ fontSize:12, fontWeight:900, color:'#64748b', marginBottom:10 }}>📑 수록 기사 리스트</div>
                           <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                             {m.articles?.map((a, idx) => (
-                              <div key={idx} style={{ fontSize:11, color:'#1e293b', background:'white', padding:'6px 10px', borderRadius:4, border:'1px solid #e2e8f0' }}>
-                                <span style={{ fontWeight:900, marginRight:5 }}>[{a.category}]</span> {a.title}
+                              <div key={idx} style={{ display:'flex', alignItems:'center', gap:8, fontSize:11, color:'#1e293b', background:'white', padding:'6px 10px', borderRadius:4, border:'1px solid #e2e8f0' }}>
+                                <select
+                                  value={a.category || 'auto'}
+                                  onClick={e => e.stopPropagation()}
+                                  onChange={e => updateHistoryArticleCategory(m, idx, e.target.value)}
+                                  style={{ width:108, padding:'5px 6px', borderRadius:6, border:'1px solid #cbd5e1', background:'white', fontSize:11, fontWeight:900, flexShrink:0 }}
+                                >
+                                  {CATEGORY_OPTIONS.map(option => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                  ))}
+                                </select>
+                                <span style={{ flex:1, minWidth:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.title}</span>
                               </div>
                             ))}
                           </div>
@@ -360,6 +424,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
           </tbody>
         </table>
       </div>
+      </CollapsibleCard>
 
       {/* Edit Modal */}
       {editingReport && (
@@ -417,12 +482,9 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                 ) : editArticles.map((art, idx) => (
                   <div key={idx} style={{ padding:'15px', borderBottom:'1px solid #e2e8f0', display:'flex', gap:15, alignItems:'center', background: idx % 2 === 0 ? '#f8fafc' : 'white' }}>
                     <select value={art.category || 'auto'} onChange={e => changeEditCategory(idx, e.target.value)} style={{ width:100, padding:'6px', fontSize:11, fontWeight:'bold', borderRadius:6, border:'1px solid #cbd5e1', background:'white', cursor:'pointer', flexShrink:0 }}>
-                      <option value="main">🔥 1면</option>
-                      <option value="macro">🌐 경제</option>
-                      <option value="platform">🛒 비즈</option>
-                      <option value="auto">🚗 산업</option>
-                      <option value="ai">🤖 AI</option>
-                      <option value="security">🛡️ 보안</option>
+                      {CATEGORY_OPTIONS.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
                     </select>
                     <div style={{ flex:1, display:'flex', gap:8, minWidth:0 }}>
                       <input value={art.brand || ''} onChange={e => { const updated = [...editArticles]; updated[idx].brand = e.target.value; setEditArticles(updated); }} placeholder="기업" style={{ width:80, padding:'6px 10px', fontSize:12, borderRadius:6, border:'1px solid #e2e8f0', flexShrink:0 }} />
@@ -448,12 +510,9 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                 <div style={{ fontSize:13, fontWeight:'bold', color:'#1d4ed8', marginBottom:15 }}><i className="fas fa-plus-circle"></i> 누락된 기사 수동 추가</div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
                   <select value={newArtCat} onChange={e => setNewArtCat(e.target.value)} style={{ fontWeight:'bold', padding:10, borderRadius:8, border:'1px solid #cbd5e1' }}>
-                    <option value="main">🔥 FIRST DIVE (1면)</option>
-                    <option value="macro">🌐 MACRO VIEW (경제)</option>
-                    <option value="platform">🛒 BIZ & PLATFORM (비즈)</option>
-                    <option value="auto">🚗 AUTO TRACK (산업)</option>
-                    <option value="ai">🤖 AI STRATEGY (인공지능)</option>
-                    <option value="security">🛡️ INFO-SECURE (보안)</option>
+                    {CATEGORY_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
                   <input type="text" value={newArtBrand} onChange={e => setNewArtBrand(e.target.value)} placeholder="관련 기업명 (예: 엔카)" style={{ padding:10, borderRadius:8, border:'1px solid #cbd5e1' }} />
                 </div>
