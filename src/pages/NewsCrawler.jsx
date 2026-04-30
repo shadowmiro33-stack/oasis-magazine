@@ -151,7 +151,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       const unique = [];
       let duplicateCount = 0;
       valid.forEach(item => {
-        if (isDuplicateArticle(item, [...allKnownArticles, ...unique])) duplicateCount += 1;
+        if (isDuplicateArticle(item, [...allDrafts, ...unique])) duplicateCount += 1;
         else unique.push(item);
       });
       if (unique.length === 0) throw new Error('새로 가져올 기사가 없습니다. 모두 중복입니다.');
