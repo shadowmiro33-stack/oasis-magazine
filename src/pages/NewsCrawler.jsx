@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { getAllMagazines, getPolicies, savePolicies } from '../services/dataService';
 import MagazineWebPreview from '../components/MagazineWebPreview';
 import { analyzeTextLocally, getChromeSummarizerStatus, htmlToArticle } from '../utils/localAnalyzer';
+import { dedupeArticles, isDuplicateArticle } from '../utils/articleDeduper';
 
 const DEFAULT_THUMB = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300';
 
@@ -149,18 +150,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       if (!Array.isArray(items) || items.length === 0) throw new Error('기사 배열을 찾지 못했습니다.');
       const valid = items.map(normalizeImportedArticle).filter(item => item.title && item.link);
       if (valid.length === 0) throw new Error('title/link가 있는 기사가 없습니다.');
-      const unique = [];
-      let duplicateCount = 0;
-      const importedTitles = new Set(allDrafts.map(item => normalizeDuplicateKey(item.title)).filter(Boolean));
-      valid.forEach(item => {
-        const titleKey = normalizeDuplicateKey(item.title);
-        if (titleKey && importedTitles.has(titleKey)) {
-          duplicateCount += 1;
-          return;
-        }
-        if (titleKey) importedTitles.add(titleKey);
-        unique.push(item);
-      });
+      const { unique, duplicateCount } = dedupeArticles(valid, allKnownArticles);
       if (unique.length === 0) throw new Error('새로 가져올 기사가 없습니다. 모두 중복입니다.');
       setDraftArticles(prev => {
         const next = {
@@ -208,7 +198,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       if (all.filter(a => a.isImportant).length >= 3) { showToast('중요 기사는 최대 3개까지만 가능합니다.', 'error'); return; }
     }
     const article = { ...aiInput, link: aiInput.url };
-    if (isDuplicateArticle(article)) {
+    if (isDuplicateArticle(article, allKnownArticles)) {
       showToast('이미 발행 대기열에 있는 기사입니다.', 'error');
       return;
     }
@@ -223,25 +213,6 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
 
   const allDrafts = [...(draftArticles.main ? [draftArticles.main] : []), ...draftArticles.macro, ...draftArticles.platform, ...draftArticles.auto, ...draftArticles.ai, ...draftArticles.security];
   const allKnownArticles = [...allDrafts, ...publishedArticles];
-
-  const normalizeDuplicateKey = (value = '') => value
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\/(www\.)?/, '')
-    .replace(/[?#].*$/, '')
-    .replace(/\/$/, '');
-
-  const isDuplicateArticle = (article, list = allKnownArticles) => {
-    const linkKey = normalizeDuplicateKey(article.link);
-    const titleKey = normalizeDuplicateKey(article.title);
-    return list.some(item => {
-      const itemLink = normalizeDuplicateKey(item.link);
-      const itemTitle = normalizeDuplicateKey(item.title);
-      if (linkKey && itemLink) return linkKey === itemLink;
-      return !linkKey && !itemLink && titleKey && itemTitle && titleKey === itemTitle;
-    });
-  };
 
   const deleteArticle = (index) => {
     const target = allDrafts[index];
