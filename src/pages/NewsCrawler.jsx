@@ -151,14 +151,14 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       if (valid.length === 0) throw new Error('title/link가 있는 기사가 없습니다.');
       const unique = [];
       let duplicateCount = 0;
-      const importedLinks = new Set(allDrafts.map(item => normalizeDuplicateKey(item.link)).filter(Boolean));
+      const importedTitles = new Set(allDrafts.map(item => normalizeDuplicateKey(item.title)).filter(Boolean));
       valid.forEach(item => {
-        const linkKey = normalizeDuplicateKey(item.link);
-        if (linkKey && importedLinks.has(linkKey)) {
+        const titleKey = normalizeDuplicateKey(item.title);
+        if (titleKey && importedTitles.has(titleKey)) {
           duplicateCount += 1;
           return;
         }
-        if (linkKey) importedLinks.add(linkKey);
+        if (titleKey) importedTitles.add(titleKey);
         unique.push(item);
       });
       if (unique.length === 0) throw new Error('새로 가져올 기사가 없습니다. 모두 중복입니다.');
