@@ -124,7 +124,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     if (raw.includes('macro') || raw.includes('경제')) return 'macro';
     if (raw.includes('platform') || raw.includes('biz') || raw.includes('비즈')) return 'platform';
     if (raw.includes('ai') || raw.includes('인공지능')) return 'ai';
-    if (raw.includes('security') || raw.includes('secure') || raw.includes('보안')) return 'security';
+    if (raw.includes('security') || raw.includes('secure') || raw.includes('info') || raw.includes('보안')) return 'security';
     if (raw.includes('main') || raw.includes('first') || raw.includes('메인')) return 'main';
     return 'auto';
   };
@@ -150,9 +150,15 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       if (valid.length === 0) throw new Error('title/link가 있는 기사가 없습니다.');
       const unique = [];
       let duplicateCount = 0;
+      const importedLinks = new Set();
       valid.forEach(item => {
-        if (isDuplicateArticle(item, [...allDrafts, ...unique])) duplicateCount += 1;
-        else unique.push(item);
+        const linkKey = normalizeDuplicateKey(item.link);
+        if (linkKey && importedLinks.has(linkKey)) {
+          duplicateCount += 1;
+          return;
+        }
+        if (linkKey) importedLinks.add(linkKey);
+        unique.push(item);
       });
       if (unique.length === 0) throw new Error('새로 가져올 기사가 없습니다. 모두 중복입니다.');
       setDraftArticles(prev => {
