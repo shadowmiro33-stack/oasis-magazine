@@ -18,6 +18,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   const [chromeStatus, setChromeStatus] = useState('checking');
   const [manualText, setManualText] = useState('');
   const [jsonInput, setJsonInput] = useState('');
+  const [imageUrlDrafts, setImageUrlDrafts] = useState({});
   const [toast, setToast] = useState(null);
 
   const [fetchingYt, setFetchingYt] = useState(false);
@@ -150,7 +151,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       if (valid.length === 0) throw new Error('title/link가 있는 기사가 없습니다.');
       const unique = [];
       let duplicateCount = 0;
-      const importedLinks = new Set();
+      const importedLinks = new Set(allDrafts.map(item => normalizeDuplicateKey(item.link)).filter(Boolean));
       valid.forEach(item => {
         const linkKey = normalizeDuplicateKey(item.link);
         if (linkKey && importedLinks.has(linkKey)) {
@@ -505,12 +506,24 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
                     <span style={{ fontSize:10, color:'#94a3b8', fontWeight:'bold' }}>{a.source || 'N/A'}</span>
                   </div>
                   <div style={{ fontWeight:900, fontSize:15, color:'#1e293b', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.title || '(제목 없음 - 내용을 확인하세요)'}</div>
-                  <input
-                    value={a.img || ''}
-                    onChange={e => updateDraftArticle(i, { img: e.target.value })}
-                    placeholder="이미지 URL 직접 입력"
-                    style={{ marginTop:8, width:'100%', padding:'7px 9px', borderRadius:8, border:'1px solid #cbd5e1', fontSize:11 }}
-                  />
+                  <div style={{ display:'flex', gap:6, marginTop:8 }}>
+                    <input
+                      value={imageUrlDrafts[i] ?? a.img ?? ''}
+                      onChange={e => setImageUrlDrafts(prev => ({ ...prev, [i]: e.target.value }))}
+                      placeholder="이미지 URL 직접 입력"
+                      style={{ flex:1, padding:'7px 9px', borderRadius:8, border:'1px solid #cbd5e1', fontSize:11 }}
+                    />
+                    <button
+                      className="btn btn-outline"
+                      onClick={() => {
+                        updateDraftArticle(i, { img: (imageUrlDrafts[i] ?? a.img ?? '').trim() });
+                        showToast('이미지 URL을 적용했습니다.', 'success');
+                      }}
+                      style={{ padding:'6px 10px', fontSize:11, whiteSpace:'nowrap' }}
+                    >
+                      적용
+                    </button>
+                  </div>
                 </div>
                 <div style={{ display:'flex', gap:6 }}>
                   <button className="btn" style={{ padding:'6px 12px', fontSize:11, background:'#f59e0b', color:'white' }} onClick={() => setMainArticle(i)}>메인</button>
