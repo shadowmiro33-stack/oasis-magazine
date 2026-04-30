@@ -23,13 +23,15 @@ export default function Settings() {
 
   // API Keys
   const [geminiKey, setGeminiKey] = useState(localStorage.getItem('GEMINI_API_KEY') || '');
-  const [gmailUser, setGmailUser] = useState(localStorage.getItem('GMAIL_USER') || '');
-  const [gmailPass, setGmailPass] = useState(localStorage.getItem('GMAIL_PASS') || '');
+  const [appsScriptUrl, setAppsScriptUrl] = useState(localStorage.getItem('OASIS_APPS_SCRIPT_URL') || '');
+  const [mailToken, setMailToken] = useState(localStorage.getItem('OASIS_MAIL_TOKEN') || '');
 
   const saveApiKeys = () => {
     localStorage.setItem('GEMINI_API_KEY', geminiKey);
-    localStorage.setItem('GMAIL_USER', gmailUser);
-    localStorage.setItem('GMAIL_PASS', gmailPass.replace(/\s+/g, ''));
+    localStorage.setItem('OASIS_APPS_SCRIPT_URL', appsScriptUrl.trim());
+    localStorage.setItem('OASIS_MAIL_TOKEN', mailToken.trim());
+    localStorage.removeItem('GMAIL_USER');
+    localStorage.removeItem('GMAIL_PASS');
     alert('✅ API 키 및 인증 정보가 로컬 스토리지에 안전하게 저장되었습니다.');
   };
 
@@ -150,16 +152,16 @@ export default function Settings() {
             </div>
             <div>
               <label style={{ fontSize:13, fontWeight:'bold', color:'#334155', display:'block', marginBottom:8 }}>
-                Gmail 계정 (뉴스레터 대량 발송용)
+                Apps Script 웹앱 URL (뉴스레터 발송)
               </label>
-              <input type="email" value={gmailUser} onChange={e => setGmailUser(e.target.value)} placeholder="example@gmail.com" style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #cbd5e1' }} />
+              <input type="url" value={appsScriptUrl} onChange={e => setAppsScriptUrl(e.target.value)} placeholder="https://script.google.com/macros/s/.../exec" style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #cbd5e1' }} />
+              <p style={{ fontSize:11, color:'#64748b', marginTop:5, fontWeight:'bold' }}>Netlify Function 대신 Google Apps Script가 Gmail 발송을 처리합니다.</p>
             </div>
             <div>
               <label style={{ fontSize:13, fontWeight:'bold', color:'#334155', display:'block', marginBottom:8 }}>
-                Gmail 앱 비밀번호 (16자리)
+                메일 토큰 (선택)
               </label>
-              <input type="password" value={gmailPass} onChange={e => setGmailPass(e.target.value)} placeholder="abcd efgh ijkl mnop" style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #cbd5e1' }} />
-              <p style={{ fontSize:11, color:'#ef4444', marginTop:5, fontWeight:'bold' }}>* 구글 계정 설정에서 생성한 '앱 비밀번호'를 입력해야 합니다. (일반 비밀번호 아님)</p>
+              <input type="password" value={mailToken} onChange={e => setMailToken(e.target.value)} placeholder="Apps Script 속성 OASIS_MAIL_TOKEN과 동일하게 입력" style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #cbd5e1' }} />
             </div>
             <button className="btn btn-primary" onClick={saveApiKeys} style={{ width:200, marginTop:10, padding:'14px 0' }}>
               <i className="fas fa-save"></i> API 정보 로컬 저장

@@ -112,9 +112,9 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
   };
 
   const sendEmail = async (mag) => {
-    const gmailUser = localStorage.getItem('GMAIL_USER');
-    const gmailPass = localStorage.getItem('GMAIL_PASS');
-    if (!gmailUser || !gmailPass) return alert('Gmail 계정이 설정되지 않았습니다. API 관리 탭에서 설정해주세요.');
+    const appsScriptUrl = localStorage.getItem('OASIS_APPS_SCRIPT_URL');
+    const mailToken = localStorage.getItem('OASIS_MAIL_TOKEN') || '';
+    if (!appsScriptUrl) return alert('Apps Script 웹앱 URL이 설정되지 않았습니다. API 관리 탭에서 설정해주세요.');
     if (!window.confirm('모든 구독자에게 발송하시겠습니까?')) return;
     try {
       const subs = await getAllSubscribers();
@@ -122,16 +122,18 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
       if (emails.length === 0) return alert('구독자가 없습니다.');
       const emailCampaign = await buildEmailCampaign(mag.campaign);
       const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), emailCampaign, mag.articles);
-      const response = await fetch('/.netlify/functions/send-email', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: emails.join(','), subject: `[OASIS R&D] 오늘의 모빌리티 딥다이브 - ISSUE ${mag.issueName}`, html: htmlContent, gmailUser, gmailPass })
+      await fetch(appsScriptUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          to: emails,
+          subject: `[OASIS R&D] 오늘의 모빌리티 딥다이브 - ISSUE ${mag.issueName}`,
+          html: htmlContent,
+          token: mailToken,
+        })
       });
-      if (!response.ok) {
-        let errorData = {};
-        try { errorData = await response.json(); } catch (_) {}
-        throw new Error(errorData.error || `메일 발송 서버 오류 (${response.status})`);
-      }
-      alert(`🎉 ${emails.length}명에게 발송 완료!`);
+      alert(`메일 발송 요청을 Apps Script로 전달했습니다. Gmail 발송 결과는 Apps Script 실행 기록에서 확인해주세요. 대상: ${emails.length}명`);
     } catch (e) { alert('발송 실패: ' + e.message); }
   };
 
