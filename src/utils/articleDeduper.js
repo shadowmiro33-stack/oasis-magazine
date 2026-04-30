@@ -1,4 +1,19 @@
 const ARTICLE_URL_FIELDS = ['link', 'url', 'originallink', 'originalLink'];
+const TRACKING_PARAM_NAMES = new Set([
+  'utm',
+  'fbclid',
+  'gclid',
+  'dclid',
+  'msclkid',
+  'igshid',
+  'mc_cid',
+  'mc_eid',
+]);
+
+const isTrackingParam = (name = '') => {
+  const key = name.toLowerCase();
+  return key.startsWith('utm_') || key.startsWith('hsa_') || TRACKING_PARAM_NAMES.has(key);
+};
 
 const getArticleUrl = (article = {}) => {
   for (const field of ARTICLE_URL_FIELDS) {
@@ -11,7 +26,11 @@ export const normalizeArticleUrl = (url = '') => {
   const raw = String(url || '').trim().replace(/&amp;/g, '&');
   if (!raw) return '';
 
-  const withProtocol = raw.startsWith('//') ? `https:${raw}` : raw;
+  const withProtocol = raw.startsWith('//')
+    ? `https:${raw}`
+    : /^https?:\/\//i.test(raw)
+      ? raw
+      : `https://${raw}`;
 
   try {
     const parsed = new URL(withProtocol);
@@ -19,12 +38,17 @@ export const normalizeArticleUrl = (url = '') => {
     const pathname = decodeURIComponent(parsed.pathname || '/')
       .replace(/\/+/g, '/')
       .replace(/\/$/, '');
-    return `${hostname}${pathname}`.toLowerCase();
+    [...parsed.searchParams.keys()].forEach(key => {
+      if (isTrackingParam(key)) parsed.searchParams.delete(key);
+    });
+    parsed.searchParams.sort();
+    const query = parsed.searchParams.toString();
+    return `${hostname}${pathname}${query ? `?${query}` : ''}`.toLowerCase();
   } catch (_) {
     return withProtocol
       .toLowerCase()
       .replace(/^https?:\/\/(www\.)?/, '')
-      .replace(/[?#].*$/, '')
+      .replace(/#.*$/, '')
       .replace(/\/+$/, '');
   }
 };
