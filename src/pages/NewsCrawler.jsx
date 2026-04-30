@@ -260,6 +260,23 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     setDraftArticles(prev => ({ ...prev, main: { ...target, category: 'main' } }));
   };
 
+  const updateDraftArticle = (index, patch) => {
+    const target = allDrafts[index];
+    if (!target) return;
+    if (draftArticles.main === target) {
+      setDraftArticles(prev => ({ ...prev, main: { ...prev.main, ...patch } }));
+      return;
+    }
+    ['macro','platform','auto','ai','security'].forEach(c => {
+      if (draftArticles[c]?.includes(target)) {
+        setDraftArticles(prev => ({
+          ...prev,
+          [c]: prev[c].map(article => article === target ? { ...article, ...patch } : article)
+        }));
+      }
+    });
+  };
+
   const showPreview = aiInput.title || aiInput.brand || aiInput.desc;
 
   const catLabel = { main:'🔥 1면', macro:'🌐 경제', platform:'🛒 비즈', auto:'🚗 산업', ai:'🤖 AI', security:'🛡️ 보안' };
@@ -488,6 +505,12 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
                     <span style={{ fontSize:10, color:'#94a3b8', fontWeight:'bold' }}>{a.source || 'N/A'}</span>
                   </div>
                   <div style={{ fontWeight:900, fontSize:15, color:'#1e293b', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.title || '(제목 없음 - 내용을 확인하세요)'}</div>
+                  <input
+                    value={a.img || ''}
+                    onChange={e => updateDraftArticle(i, { img: e.target.value })}
+                    placeholder="이미지 URL 직접 입력"
+                    style={{ marginTop:8, width:'100%', padding:'7px 9px', borderRadius:8, border:'1px solid #cbd5e1', fontSize:11 }}
+                  />
                 </div>
                 <div style={{ display:'flex', gap:6 }}>
                   <button className="btn" style={{ padding:'6px 12px', fontSize:11, background:'#f59e0b', color:'white' }} onClick={() => setMainArticle(i)}>메인</button>
