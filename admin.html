@@ -1137,6 +1137,7 @@
         window.getPremiumNewsletterHTML = function(optIssueName, optCampaignData, optArticles, optDate) {
             const issueName = optIssueName || document.getElementById('issue-name').value || "임시 호수";
             const today = optDate || new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace(/\.$/, '');
+            const webMagazineUrl = localStorage.getItem('OASIS_WEB_MAGAZINE_URL') || 'https://ohmagazine.netlify.app/';
             
             let campaignData = optCampaignData;
             if(optCampaignData === undefined) {
@@ -1262,7 +1263,7 @@
             html += `
                         <div style="font-size: 20px; font-weight: 900; color: #0f172a; margin-bottom: 12px;">오늘의 뉴스레터, 어떠셨나요? 🐻</div>
                         <div style="font-size: 15px; color: #64748b; margin-bottom: 30px;">동료들에게 오아시스를 추천해 주시면 큰 힘이 됩니다!</div>
-                        <a href="https://ohmagazine.netlify.app/" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 16px 36px; border-radius: 12px; font-weight: 900; font-size: 16px; box-shadow: 0 4px 10px rgba(37,99,235,0.3);" target="_blank">웹 매거진에서 전체 읽기</a>
+                        <a href="${webMagazineUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 16px 36px; border-radius: 12px; font-weight: 900; font-size: 16px; box-shadow: 0 4px 10px rgba(37,99,235,0.3);" target="_blank" rel="noopener noreferrer">웹 매거진에서 전체 읽기</a>
                     </div>
                 </div>
                 <div style="text-align: center; margin-top: 40px; color: #94a3b8; font-size: 13px; font-weight: bold; line-height: 1.6;">
