@@ -537,6 +537,19 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
                     <span style={{ fontSize:10, color:'#94a3b8', fontWeight:'bold' }}>{a.source || 'N/A'}</span>
                   </div>
                   <div style={{ fontWeight:900, fontSize:15, color:'#1e293b', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.title || '(제목 없음 - 내용을 확인하세요)'}</div>
+                  {a.link && (
+                    <div style={{ marginTop:6, display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
+                      <span style={{ fontSize:10, fontWeight:900, color:'#64748b', flexShrink:0 }}>기사 링크</span>
+                      <a
+                        href={a.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color:'#2563eb', fontSize:11, fontWeight:800, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textDecoration:'underline' }}
+                      >
+                        {a.link}
+                      </a>
+                    </div>
+                  )}
                   <div style={{ display:'flex', gap:6, marginTop:8 }}>
                     <select
                       value={a.category || 'auto'}

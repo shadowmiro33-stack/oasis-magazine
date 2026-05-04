@@ -241,6 +241,21 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     }
   };
 
+  const deleteHistoryArticle = async (mag, idx) => {
+    if (!window.confirm('이 기사를 지난 리포트에서 삭제하시겠습니까?')) return;
+    const updatedArticles = (mag.articles || []).filter((_, articleIndex) => articleIndex !== idx);
+    const updatedReport = { ...mag, articles: updatedArticles };
+    setHistory(prev => prev.map(item => item.id === mag.id ? updatedReport : item));
+    if (editingReport?.id === mag.id) setEditArticles(updatedArticles);
+    try {
+      await saveMagazine(mag.id, updatedReport);
+      alert('기사를 삭제했습니다.');
+    } catch (e) {
+      alert('기사 삭제 실패: ' + e.message);
+      fetchData();
+    }
+  };
+
   const changeEditArticle = (idx, key, value) => {
     const updated = [...editArticles];
     updated[idx] = { ...updated[idx], [key]: value };
@@ -404,6 +419,13 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                                   ))}
                                 </select>
                                 <span style={{ flex:1, minWidth:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.title}</span>
+                                <button
+                                  type="button"
+                                  onClick={e => { e.stopPropagation(); deleteHistoryArticle(m, idx); }}
+                                  style={{ border:'none', background:'#fef2f2', color:'#ef4444', borderRadius:6, padding:'5px 8px', fontSize:10, fontWeight:900, cursor:'pointer', flexShrink:0 }}
+                                >
+                                  삭제
+                                </button>
                               </div>
                             ))}
                           </div>
