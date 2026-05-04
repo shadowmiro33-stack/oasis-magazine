@@ -26,7 +26,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   const [aiLoading, setAiLoading] = useState(false);
   const [analysisStatus, setAnalysisStatus] = useState('');
   const [analysisResult, setAnalysisResult] = useState('');
-  const [analysisMode, setAnalysisMode] = useState('auto');
+  const [analysisMode, setAnalysisMode] = useState('server');
   const [chromeStatus, setChromeStatus] = useState('checking');
   const [manualText, setManualText] = useState('');
   const [jsonInput, setJsonInput] = useState('');
@@ -97,28 +97,22 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
         body: JSON.stringify({
           url: aiInput.url,
           apiKey,
-          extractOnly: analysisMode !== 'fallback'
+          extractOnly: false
         })
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || `기사 분석 실패 (${response.status})`);
 
-      let data = payload;
-      if (analysisMode !== 'fallback') {
-        if (!payload.text || payload.text.length < 80) throw new Error('본문을 충분히 읽지 못했습니다.');
-        setAnalysisStatus(analysisMode === 'chrome' ? 'Chrome 내장 AI만 사용해 분석합니다.' : 'Chrome 내장 AI를 우선 사용하고, 불가하면 자동정리로 전환합니다.');
-        data = await analyzeTextLocally({ ...payload, mode: analysisMode });
-      } else {
-        setAnalysisStatus('서버 자동정리 방식으로 분석합니다.');
-      }
+      const data = payload;
+      setAnalysisStatus('서버에서 한국어 분석 결과를 만드는 중입니다.');
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
       const label = data.analyzer || '자동정리 fallback';
       setAnalysisResult(label);
       setAnalysisStatus(`${label}로 분석 완료`);
       showToast(`${label}로 기사 분석을 완료했습니다.`, 'success');
     } catch (e) {
-      setAnalysisStatus(e.message.includes('Chrome Summarizer') ? 'Chrome Summarizer API를 사용할 수 없습니다. 자동정리 모드로 바꾸거나 본문을 붙여넣어 주세요.' : '서버 분석 함수가 URL 본문을 읽지 못했습니다. 본문을 복사해 수동 분석을 사용해주세요.');
-      showToast(e.message.includes('Chrome Summarizer') ? 'Chrome 내장 AI를 사용할 수 없습니다.' : 'URL 분석 실패: 본문 복사 후 수동 분석을 사용해주세요.', 'error');
+      setAnalysisStatus('서버 분석 함수가 URL 본문을 읽지 못했습니다. 본문을 복사해 수동 분석을 사용해주세요.');
+      showToast('URL 분석 실패: 본문 복사 후 수동 분석을 사용해주세요.', 'error');
     }
     finally { setAiLoading(false); }
   };
@@ -127,17 +121,17 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     if (!manualText.trim()) return showToast('분석할 기사 내용을 붙여넣어 주세요.', 'error');
     setAiLoading(true);
     setAnalysisResult('');
-    setAnalysisStatus(analysisMode === 'chrome' ? 'Chrome 내장 AI만 사용해 분석합니다.' : analysisMode === 'fallback' ? '자동정리 방식으로 분석합니다.' : 'Chrome 내장 AI를 우선 사용하고, 불가하면 자동정리로 전환합니다.');
+    setAnalysisStatus('한국어 자동정리 방식으로 분석합니다.');
     try {
-      const data = await analyzeTextLocally({ text: manualText, mode: analysisMode });
+      const data = await analyzeTextLocally({ text: manualText });
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
       setManualText('');
-      const label = data.analyzer || '자동정리 fallback';
+      const label = data.analyzer || '한국어 자동정리 fallback';
       setAnalysisResult(label);
       setAnalysisStatus(`${label}로 분석 완료`);
       showToast(`${label}로 기사 분석을 완료했습니다.`, 'success');
     } catch (e) {
-      setAnalysisStatus('Chrome Summarizer API를 사용할 수 없습니다. 자동정리 모드로 바꿔 다시 실행해 주세요.');
+      setAnalysisStatus('수동 분석에 실패했습니다. 본문 내용을 확인해 주세요.');
       showToast('분석 실패: ' + e.message, 'error');
     }
     finally { setAiLoading(false); }
@@ -374,9 +368,8 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       >
         <div style={{ display:'flex', gap:8, marginBottom:12 }}>
           {[
-            { id:'auto', label:'자동', hint:'Chrome 내장 AI 우선' },
-            { id:'chrome', label:'Chrome 내장 AI', hint:'미지원 시 실패 표시' },
-            { id:'fallback', label:'자동정리만', hint:'서버/API 사용 없음' }
+            { id:'server', label:'한국어 AI 분석', hint:'서버 Gemini 우선' },
+            { id:'fallback', label:'수동 본문 정리', hint:'한국어 자동정리' }
           ].map(mode => (
             <button
               key={mode.id}
@@ -394,12 +387,11 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
             </button>
           ))}
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, fontSize:12, fontWeight:900, color: chromeStatus === 'unavailable' ? '#b91c1c' : '#047857', background: chromeStatus === 'unavailable' ? '#fef2f2' : '#ecfdf5', border:'1px solid ' + (chromeStatus === 'unavailable' ? '#fecaca' : '#a7f3d0'), borderRadius:10, padding:'9px 12px' }}>
-          <i className={`fas ${chromeStatus === 'checking' ? 'fa-spinner fa-spin' : chromeStatus === 'unavailable' ? 'fa-circle-exclamation' : 'fa-circle-check'}`}></i>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, fontSize:12, fontWeight:900, color:'#1d4ed8', background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:10, padding:'9px 12px' }}>
+          <i className={`fas ${chromeStatus === 'checking' ? 'fa-spinner fa-spin' : 'fa-language'}`}></i>
           <span>
-            Chrome Summarizer API 상태: {chromeStatus === 'checking' ? '확인 중' : chromeStatus === 'unavailable' ? '현재 브라우저에서 사용 불가' : chromeStatus}
+            분석 언어: 한국어 고정. Chrome Summarizer는 한국어 출력을 지원하지 않아 사용하지 않습니다.
           </span>
-          <button type="button" onClick={refreshChromeStatus} style={{ marginLeft:'auto', border:'none', background:'transparent', color:'inherit', fontWeight:900, cursor:'pointer' }}>다시 확인</button>
         </div>
         <div style={{ display:'flex', gap:10, marginBottom:10, background:'#eff6ff', padding:20, borderRadius:12 }}>
           <input value={aiInput.url} onChange={e => setAiInput({...aiInput, url:e.target.value})} placeholder="분석할 기사 원문 URL" style={{ flex:1, border:'2px solid #93c5fd', fontWeight:'bold' }} />
@@ -410,12 +402,12 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
         {(aiLoading || analysisStatus || analysisResult) && (
           <div style={{
             display:'flex', alignItems:'center', gap:10, marginBottom:16,
-            background: aiLoading ? '#fff7ed' : analysisResult === 'Chrome 내장 AI' ? '#eef2ff' : '#f8fafc',
-            border: `1px solid ${aiLoading ? '#fed7aa' : analysisResult === 'Chrome 내장 AI' ? '#c7d2fe' : '#e2e8f0'}`,
-            color: aiLoading ? '#c2410c' : analysisResult === 'Chrome 내장 AI' ? '#4338ca' : '#475569',
+            background: aiLoading ? '#fff7ed' : '#f8fafc',
+            border: `1px solid ${aiLoading ? '#fed7aa' : '#e2e8f0'}`,
+            color: aiLoading ? '#c2410c' : '#475569',
             padding:'10px 14px', borderRadius:10, fontSize:12, fontWeight:900
           }}>
-            <i className={`fas ${aiLoading ? 'fa-spinner fa-spin' : analysisResult === 'Chrome 내장 AI' ? 'fa-magic' : 'fa-gears'}`}></i>
+            <i className={`fas ${aiLoading ? 'fa-spinner fa-spin' : 'fa-gears'}`}></i>
             <span>{analysisStatus}</span>
             {analysisResult && (
               <span style={{ marginLeft:'auto', background:'white', border:'1px solid currentColor', borderRadius:999, padding:'4px 10px' }}>

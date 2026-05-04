@@ -119,14 +119,17 @@ const fallbackAnalyze = ({ text, title, source }) => {
   const sentences = splitSentences(text);
   const firstSentence = sentences[0] || text;
   const computedTitle = title || firstSentence;
+  const desc = /[가-힣]/.test(firstSentence)
+    ? truncate(firstSentence, 80)
+    : '원문에서 산업·기술 관련 주요 변화와 대응 필요성이 다뤄졌습니다.';
 
   return {
     title: truncate(computedTitle.replace(/\s*[-|]\s*[^-|]+$/, ''), 45),
     brand: truncate(guessBrand(text, ''), 20),
     source: truncate(source || '수동입력', 24),
-    desc: truncate(firstSentence, 80),
+    desc,
     insight: truncate(guessInsight(text), 100),
-    analyzer: 'fallback'
+    analyzer: '한국어 자동정리 fallback'
   };
 };
 

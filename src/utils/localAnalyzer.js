@@ -94,76 +94,26 @@ const fallbackSummary = (text = '', max = 80) => {
     .sort((a, b) => a.index - b.index)
     .map(item => item.sentence)
     .join(' ');
-  return truncate(picked || sentences[0], max);
+  const summary = picked || sentences[0];
+  if (!/[가-힣]/.test(summary)) {
+    return '원문에서 산업·기술 관련 주요 변화와 대응 필요성이 다뤄졌습니다.';
+  }
+  return truncate(summary, max);
 };
-
-const getSummarizer = () => window.Summarizer || window.ai?.summarizer;
-
-const getSummarizerOptions = () => ({
-  type: 'tldr',
-  format: 'plain-text',
-  length: 'short',
-  expectedInputLanguages: ['en', 'ja', 'es'],
-  outputLanguage: 'en',
-  expectedContextLanguages: ['en'],
-  expected_input_languages: ['en', 'ja', 'es'],
-  output_language: 'en',
-  expected_context_languages: ['en'],
-  sharedContext: 'Summarize business, mobility, technology, economy, and security news for an internal R&D newsletter.'
-});
 
 export const getChromeSummarizerStatus = async () => {
-  const Summarizer = getSummarizer();
-  if (!Summarizer?.availability || !Summarizer?.create) return 'unavailable';
-  try {
-    return await Summarizer.availability(getSummarizerOptions());
-  } catch (_) {
-    return 'unavailable';
-  }
+  return 'korean-output-unsupported';
 };
 
-export const summarizeWithChrome = async (text) => {
-  const Summarizer = getSummarizer();
-  if (!Summarizer?.create) throw new Error('Chrome Summarizer API unavailable');
-  const summarizer = await Summarizer.create(getSummarizerOptions());
-  const result = await summarizer.summarize(text);
-  summarizer.destroy?.();
-  return cleanText(result);
-};
-
-export const analyzeTextLocally = async ({ text, title = '', source = '', mode = 'auto' }) => {
+export const analyzeTextLocally = async ({ text, title = '', source = '' }) => {
   const normalized = cleanText(text).slice(0, 12000);
-  let desc = '';
-  let analyzer = '자동정리 fallback';
-
-  if (mode !== 'fallback') {
-    try {
-      const availability = await getChromeSummarizerStatus();
-      if (availability === 'unavailable' && mode === 'chrome') {
-        throw new Error('Chrome Summarizer API unavailable');
-      }
-      if (availability !== 'unavailable') {
-        desc = truncate(await summarizeWithChrome(normalized), 80);
-        analyzer = 'Chrome 내장 AI';
-      }
-    } catch (error) {
-      if (mode === 'chrome') throw error;
-      desc = '';
-    }
-  }
-
-  if (!desc) {
-    desc = fallbackSummary(normalized, 80);
-    analyzer = '자동정리 fallback';
-  }
-
   const firstSentence = splitSentences(normalized)[0] || normalized;
   return {
     title: truncate(title || firstSentence, 45),
     brand: truncate(guessBrand(normalized, ''), 20),
     source: truncate(source || '수동입력', 24),
-    desc,
+    desc: fallbackSummary(normalized, 80),
     insight: truncate(guessInsight(normalized), 100),
-    analyzer
+    analyzer: '한국어 자동정리 fallback'
   };
 };
