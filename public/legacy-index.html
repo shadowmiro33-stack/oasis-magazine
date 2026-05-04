@@ -393,21 +393,38 @@
             if (interests.length === 0) return alert('최소 하나 이상의 관심 분야를 선택해주세요!');
 
             try {
-                const subscriberRef = doc(db, "subscribers", email);
-                const existing = await getDoc(subscriberRef);
-                if (existing.exists()) {
+                let subscriberRef = doc(db, "subscribers", email);
+                let existingData = null;
+                const directSnap = await getDoc(subscriberRef);
+
+                if (directSnap.exists()) {
+                    existingData = directSnap.data();
+                } else {
+                    const allSubs = await getDocs(collection(db, "subscribers"));
+                    const matchedDoc = allSubs.docs.find(subDoc => {
+                        const data = subDoc.data() || {};
+                        return subDoc.id.toLowerCase() === email || String(data.email || '').trim().toLowerCase() === email;
+                    });
+                    if (matchedDoc) {
+                        subscriberRef = doc(db, "subscribers", matchedDoc.id);
+                        existingData = matchedDoc.data();
+                    }
+                }
+
+                if (existingData) {
                     const ok = confirm('이미 구독 중인 이메일입니다.\n현재 선택한 관심 분야로 구독 설정을 변경할까요?');
                     if (!ok) return;
                 }
 
                 await setDoc(subscriberRef, {
                     email: email,
-                    subscribeDate: existing.exists() ? (existing.data().subscribeDate || new Date().toISOString()) : new Date().toISOString(),
+                    normalizedEmail: email,
+                    subscribeDate: existingData ? (existingData.subscribeDate || new Date().toISOString()) : new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
                     interests: interests,
                     status: "active"
                 });
-                alert(existing.exists()
+                alert(existingData
                     ? `구독 설정이 변경되었습니다.\n관심 분야: ${interests.join(', ')}`
                     : `🎉 구독이 완료되었습니다!\n관심 분야: ${interests.join(', ')}`);
                 document.getElementById('sub-email').value = '';

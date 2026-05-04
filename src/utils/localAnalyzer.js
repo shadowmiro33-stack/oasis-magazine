@@ -99,11 +99,24 @@ const fallbackSummary = (text = '', max = 80) => {
 
 const getSummarizer = () => window.Summarizer || window.ai?.summarizer;
 
+const getSummarizerOptions = () => ({
+  type: 'tldr',
+  format: 'plain-text',
+  length: 'short',
+  expectedInputLanguages: ['en', 'ja', 'es'],
+  outputLanguage: 'en',
+  expectedContextLanguages: ['en'],
+  expected_input_languages: ['en', 'ja', 'es'],
+  output_language: 'en',
+  expected_context_languages: ['en'],
+  sharedContext: 'Summarize business, mobility, technology, economy, and security news for an internal R&D newsletter.'
+});
+
 export const getChromeSummarizerStatus = async () => {
   const Summarizer = getSummarizer();
   if (!Summarizer?.availability || !Summarizer?.create) return 'unavailable';
   try {
-    return await Summarizer.availability();
+    return await Summarizer.availability(getSummarizerOptions());
   } catch (_) {
     return 'unavailable';
   }
@@ -112,15 +125,7 @@ export const getChromeSummarizerStatus = async () => {
 export const summarizeWithChrome = async (text) => {
   const Summarizer = getSummarizer();
   if (!Summarizer?.create) throw new Error('Chrome Summarizer API unavailable');
-  const summarizer = await Summarizer.create({
-    type: 'tldr',
-    format: 'plain-text',
-    length: 'short',
-    expectedInputLanguages: ['en', 'ja', 'es'],
-    outputLanguage: 'en',
-    expectedContextLanguages: ['en'],
-    sharedContext: 'Summarize business, mobility, technology, economy, and security news for an internal R&D newsletter.'
-  });
+  const summarizer = await Summarizer.create(getSummarizerOptions());
   const result = await summarizer.summarize(text);
   summarizer.destroy?.();
   return cleanText(result);
