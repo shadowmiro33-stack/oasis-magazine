@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { getAllMagazines, getPolicies, savePolicies } from '../services/dataService';
 import MagazineWebPreview from '../components/MagazineWebPreview';
 import CollapsibleCard from '../components/CollapsibleCard';
-import { analyzeTextLocally, getChromeSummarizerStatus, htmlToArticle } from '../utils/localAnalyzer';
+import { analyzeTextLocally, getChromeSummarizerStatus } from '../utils/localAnalyzer';
 import { dedupeArticles, isDuplicateArticle } from '../utils/articleDeduper';
 
 const DEFAULT_THUMB = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300';
@@ -88,23 +88,37 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     if (!aiInput.url) return showToast('분석할 기사 URL을 입력하세요.', 'error');
     setAiLoading(true);
     setAnalysisResult('');
-    setAnalysisStatus('브라우저에서 기사 본문을 읽고 Chrome 내장 AI를 확인 중입니다.');
+    setAnalysisStatus('서버 분석 함수가 기사 본문을 가져오는 중입니다. CORS 차단을 피하기 위해 브라우저 직접 요청은 사용하지 않습니다.');
     try {
-      const response = await fetch(aiInput.url, { mode: 'cors' });
-      if (!response.ok) throw new Error(`기사 페이지 접근 실패 (${response.status})`);
-      const html = await response.text();
-      const article = htmlToArticle(html, aiInput.url);
-      if (!article.text || article.text.length < 80) throw new Error('본문을 충분히 읽지 못했습니다.');
-      setAnalysisStatus(analysisMode === 'chrome' ? 'Chrome 내장 AI만 사용해 분석합니다.' : analysisMode === 'fallback' ? '자동정리 방식으로 분석합니다.' : 'Chrome 내장 AI를 우선 사용하고, 불가하면 자동정리로 전환합니다.');
-      const data = await analyzeTextLocally({ ...article, mode: analysisMode });
+      const apiKey = localStorage.getItem('GEMINI_API_KEY') || '';
+      const response = await fetch('/.netlify/functions/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: aiInput.url,
+          apiKey,
+          extractOnly: analysisMode !== 'fallback'
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || `기사 분석 실패 (${response.status})`);
+
+      let data = payload;
+      if (analysisMode !== 'fallback') {
+        if (!payload.text || payload.text.length < 80) throw new Error('본문을 충분히 읽지 못했습니다.');
+        setAnalysisStatus(analysisMode === 'chrome' ? 'Chrome 내장 AI만 사용해 분석합니다.' : 'Chrome 내장 AI를 우선 사용하고, 불가하면 자동정리로 전환합니다.');
+        data = await analyzeTextLocally({ ...payload, mode: analysisMode });
+      } else {
+        setAnalysisStatus('서버 자동정리 방식으로 분석합니다.');
+      }
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
       const label = data.analyzer || '자동정리 fallback';
       setAnalysisResult(label);
       setAnalysisStatus(`${label}로 분석 완료`);
       showToast(`${label}로 기사 분석을 완료했습니다.`, 'success');
     } catch (e) {
-      setAnalysisStatus(e.message.includes('Chrome Summarizer') ? 'Chrome Summarizer API를 사용할 수 없습니다. 자동정리 모드로 바꾸거나 본문을 붙여넣어 주세요.' : '브라우저에서 URL 본문을 읽지 못했습니다. 본문을 복사해 수동 분석을 사용해주세요.');
-      showToast(e.message.includes('Chrome Summarizer') ? 'Chrome 내장 AI를 사용할 수 없습니다.' : 'URL 직접 분석 실패: 본문 복사 후 수동 분석을 사용해주세요.', 'error');
+      setAnalysisStatus(e.message.includes('Chrome Summarizer') ? 'Chrome Summarizer API를 사용할 수 없습니다. 자동정리 모드로 바꾸거나 본문을 붙여넣어 주세요.' : '서버 분석 함수가 URL 본문을 읽지 못했습니다. 본문을 복사해 수동 분석을 사용해주세요.');
+      showToast(e.message.includes('Chrome Summarizer') ? 'Chrome 내장 AI를 사용할 수 없습니다.' : 'URL 분석 실패: 본문 복사 후 수동 분석을 사용해주세요.', 'error');
     }
     finally { setAiLoading(false); }
   };
@@ -548,6 +562,13 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
                       >
                         {a.link}
                       </a>
+                      <button
+                        type="button"
+                        onClick={() => window.open(a.link, '_blank', 'noopener,noreferrer')}
+                        style={{ border:'1px solid #bfdbfe', background:'#eff6ff', color:'#2563eb', borderRadius:6, padding:'3px 7px', fontSize:10, fontWeight:900, cursor:'pointer', flexShrink:0 }}
+                      >
+                        원문 열기
+                      </button>
                     </div>
                   )}
                   <div style={{ display:'flex', gap:6, marginTop:8 }}>

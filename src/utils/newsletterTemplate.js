@@ -1,4 +1,25 @@
-export function getPremiumNewsletterHTML(issueName, today, campaignData, articlesSource) {
+const DEFAULT_WEB_MAGAZINE_URL = 'https://ohmagazine.netlify.app/';
+const WEB_MAGAZINE_URL_KEY = 'OASIS_WEB_MAGAZINE_URL';
+
+const getStoredWebMagazineUrl = () => {
+  if (typeof window === 'undefined' || !window.localStorage) return DEFAULT_WEB_MAGAZINE_URL;
+  return window.localStorage.getItem(WEB_MAGAZINE_URL_KEY) || DEFAULT_WEB_MAGAZINE_URL;
+};
+
+const normalizeWebMagazineUrl = (url) => {
+  const trimmed = String(url || '').trim();
+  if (!trimmed) return DEFAULT_WEB_MAGAZINE_URL;
+  try {
+    const parsed = new URL(trimmed);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return DEFAULT_WEB_MAGAZINE_URL;
+    return parsed.toString().replace(/"/g, '%22');
+  } catch (_) {
+    return DEFAULT_WEB_MAGAZINE_URL;
+  }
+};
+
+export function getPremiumNewsletterHTML(issueName, today, campaignData, articlesSource, webMagazineUrl) {
+  const managedWebMagazineUrl = normalizeWebMagazineUrl(webMagazineUrl || getStoredWebMagazineUrl());
   const main = articlesSource?.main || (Array.isArray(articlesSource) ? articlesSource.find(a => a.category === 'main') : null);
 
   let macro = [], platform = [], auto = [], ai = [], security = [];
@@ -129,7 +150,7 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
   html += `
         <div style="font-size:20px; font-weight:900; color:#0f172a; margin-bottom:12px;">오늘의 뉴스레터, 어떠셨나요?</div>
         <div style="font-size:15px; color:#64748b; margin-bottom:30px;">동료들에게 오아시스를 추천해 주시면 큰 힘이 됩니다.</div>
-        <a href="https://ohmagazine.netlify.app/" style="display:inline-block; background-color:#2563eb; color:#ffffff; text-decoration:none; padding:16px 36px; border-radius:12px; font-weight:900; font-size:16px; box-shadow:0 4px 10px rgba(37,99,235,0.3);" target="_blank" rel="noopener noreferrer">웹 매거진에서 전체 읽기</a>
+        <a href="${managedWebMagazineUrl}" style="display:inline-block; background-color:#2563eb; color:#ffffff; text-decoration:none; padding:16px 36px; border-radius:12px; font-weight:900; font-size:16px; box-shadow:0 4px 10px rgba(37,99,235,0.3);" target="_blank" rel="noopener noreferrer">웹 매거진에서 전체 읽기</a>
       </div>
     </div>
     <div style="text-align:center; margin-top:40px; color:#94a3b8; font-size:13px; font-weight:bold; line-height:1.6;">

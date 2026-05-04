@@ -115,7 +115,11 @@ export const summarizeWithChrome = async (text) => {
   const summarizer = await Summarizer.create({
     type: 'tldr',
     format: 'plain-text',
-    length: 'short'
+    length: 'short',
+    expectedInputLanguages: ['en', 'ja', 'es'],
+    outputLanguage: 'en',
+    expectedContextLanguages: ['en'],
+    sharedContext: 'Summarize business, mobility, technology, economy, and security news for an internal R&D newsletter.'
   });
   const result = await summarizer.summarize(text);
   summarizer.destroy?.();

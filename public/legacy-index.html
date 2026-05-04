@@ -383,7 +383,7 @@
 
         // 구독 신청
         window.submitSubscribe = async function () {
-            const email = document.getElementById('sub-email').value;
+            const email = document.getElementById('sub-email').value.trim().toLowerCase();
             const checkboxes = document.querySelectorAll('#subscribe-modal input[type="checkbox"]');
             const interests = [];
             const labels = ["거시경제", "비즈니스", "모빌리티", "인공지능", "정보보안"];
@@ -393,13 +393,23 @@
             if (interests.length === 0) return alert('최소 하나 이상의 관심 분야를 선택해주세요!');
 
             try {
-                await setDoc(doc(db, "subscribers", email), {
+                const subscriberRef = doc(db, "subscribers", email);
+                const existing = await getDoc(subscriberRef);
+                if (existing.exists()) {
+                    const ok = confirm('이미 구독 중인 이메일입니다.\n현재 선택한 관심 분야로 구독 설정을 변경할까요?');
+                    if (!ok) return;
+                }
+
+                await setDoc(subscriberRef, {
                     email: email,
-                    subscribeDate: new Date().toISOString(),
+                    subscribeDate: existing.exists() ? (existing.data().subscribeDate || new Date().toISOString()) : new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
                     interests: interests,
                     status: "active"
                 });
-                alert(`🎉 구독이 완료되었습니다!\n관심 분야: ${interests.join(', ')}`);
+                alert(existing.exists()
+                    ? `구독 설정이 변경되었습니다.\n관심 분야: ${interests.join(', ')}`
+                    : `🎉 구독이 완료되었습니다!\n관심 분야: ${interests.join(', ')}`);
                 document.getElementById('sub-email').value = '';
                 window.closeSubModal();
             } catch (error) { alert("구독 에러: " + error.message); }

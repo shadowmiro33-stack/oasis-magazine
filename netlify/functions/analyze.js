@@ -209,12 +209,21 @@ exports.handler = async function(event) {
     const targetUrl = cleanText(body.url || '');
     const rawText = cleanText(body.text || '');
     const apiKey = cleanText(body.apiKey || process.env.GEMINI_API_KEY || '');
+    const extractOnly = body.extractOnly === true;
 
     if (!targetUrl && !rawText) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: '분석할 기사 URL 또는 텍스트가 필요합니다.' }) };
     }
 
     const article = await extractArticle(targetUrl, rawText);
+
+    if (extractOnly) {
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(article)
+      };
+    }
 
     try {
       const geminiResult = await runGemini({ apiKey, ...article });

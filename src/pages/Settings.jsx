@@ -25,14 +25,16 @@ export default function Settings() {
   const [geminiKey, setGeminiKey] = useState(localStorage.getItem('GEMINI_API_KEY') || '');
   const [appsScriptUrl, setAppsScriptUrl] = useState(localStorage.getItem('OASIS_APPS_SCRIPT_URL') || '');
   const [mailToken, setMailToken] = useState(localStorage.getItem('OASIS_MAIL_TOKEN') || '');
+  const [webMagazineUrl, setWebMagazineUrl] = useState(localStorage.getItem('OASIS_WEB_MAGAZINE_URL') || 'https://ohmagazine.netlify.app/');
 
   const saveApiKeys = () => {
     localStorage.setItem('GEMINI_API_KEY', geminiKey);
     localStorage.setItem('OASIS_APPS_SCRIPT_URL', appsScriptUrl.trim());
     localStorage.setItem('OASIS_MAIL_TOKEN', mailToken.trim());
+    localStorage.setItem('OASIS_WEB_MAGAZINE_URL', webMagazineUrl.trim() || 'https://ohmagazine.netlify.app/');
     localStorage.removeItem('GMAIL_USER');
     localStorage.removeItem('GMAIL_PASS');
-    alert('✅ API 키 및 인증 정보가 로컬 스토리지에 안전하게 저장되었습니다.');
+    alert('✅ API 키, 인증 정보, 웹 매거진 링크가 로컬 스토리지에 안전하게 저장되었습니다.');
   };
 
   const handleDrop = useCallback((e) => {
@@ -162,6 +164,13 @@ export default function Settings() {
                 메일 토큰 (선택)
               </label>
               <input type="password" value={mailToken} onChange={e => setMailToken(e.target.value)} placeholder="Apps Script 속성 OASIS_MAIL_TOKEN과 동일하게 입력" style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #cbd5e1' }} />
+            </div>
+            <div>
+              <label style={{ fontSize:13, fontWeight:'bold', color:'#334155', display:'block', marginBottom:8 }}>
+                웹 매거진 전체 읽기 URL
+              </label>
+              <input type="url" value={webMagazineUrl} onChange={e => setWebMagazineUrl(e.target.value)} placeholder="https://ohmagazine.netlify.app/" style={{ width:'100%', padding:12, borderRadius:8, border:'1px solid #cbd5e1' }} />
+              <p style={{ fontSize:11, color:'#64748b', marginTop:5, fontWeight:'bold' }}>이메일 하단의 “웹 매거진에서 전체 읽기” 버튼이 이 주소로 이동합니다.</p>
             </div>
             <button className="btn btn-primary" onClick={saveApiKeys} style={{ width:200, marginTop:10, padding:'14px 0' }}>
               <i className="fas fa-save"></i> API 정보 로컬 저장

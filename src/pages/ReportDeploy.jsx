@@ -404,9 +404,11 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                     <td colSpan="6" style={{ background:'#f8fafc', padding:20 }}>
                       <div style={{ display:'flex', gap:20 }}>
                         <div style={{ flex:1 }}>
-                          <div style={{ fontSize:12, fontWeight:900, color:'#64748b', marginBottom:10 }}>📑 수록 기사 리스트</div>
+                          <div style={{ fontSize:12, fontWeight:900, color:'#64748b', marginBottom:10 }}>📑 수록 기사 리스트 / 기사별 삭제</div>
                           <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                            {m.articles?.map((a, idx) => (
+                            {(m.articles || []).length === 0 ? (
+                              <div style={{ fontSize:12, color:'#94a3b8', background:'white', padding:'10px 12px', borderRadius:6, border:'1px dashed #cbd5e1' }}>수록된 기사가 없습니다.</div>
+                            ) : m.articles.map((a, idx) => (
                               <div key={idx} style={{ display:'flex', alignItems:'center', gap:8, fontSize:11, color:'#1e293b', background:'white', padding:'6px 10px', borderRadius:4, border:'1px solid #e2e8f0' }}>
                                 <select
                                   value={a.category || 'auto'}
@@ -424,7 +426,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                                   onClick={e => { e.stopPropagation(); deleteHistoryArticle(m, idx); }}
                                   style={{ border:'none', background:'#fef2f2', color:'#ef4444', borderRadius:6, padding:'5px 8px', fontSize:10, fontWeight:900, cursor:'pointer', flexShrink:0 }}
                                 >
-                                  삭제
+                                  기사 삭제
                                 </button>
                               </div>
                             ))}
@@ -522,7 +524,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                       <label style={{ fontSize:12, fontWeight:'bold', cursor:'pointer', color: art.isImportant ? '#ef4444' : '#64748b', display:'flex', alignItems:'center', gap:4 }}>
                         <input type="checkbox" checked={art.isImportant} onChange={() => toggleEditImportant(idx)} style={{ width:15, height:15 }} />⭐중요
                       </label>
-                      <button onClick={() => removeEditArticle(idx)} style={{ background:'none', border:'none', color:'#ef4444', fontSize:12, fontWeight:'bold', cursor:'pointer', padding:'5px 10px' }}>삭제</button>
+                      <button onClick={() => removeEditArticle(idx)} style={{ background:'none', border:'none', color:'#ef4444', fontSize:12, fontWeight:'bold', cursor:'pointer', padding:'5px 10px' }}>기사 삭제</button>
                     </div>
                   </div>
                 ))}
