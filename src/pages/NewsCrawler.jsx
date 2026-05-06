@@ -107,8 +107,9 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       setAnalysisStatus('서버에서 한국어 분석 결과를 만드는 중입니다.');
       setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
       const label = data.analyzer || '자동정리 fallback';
+      const trace = data.via && data.requestId ? ` (${data.via} / ${data.requestId})` : '';
       setAnalysisResult(label);
-      setAnalysisStatus(`${label}로 분석 완료`);
+      setAnalysisStatus(`${label}로 분석 완료${trace}`);
       showToast(`${label}로 기사 분석을 완료했습니다.`, 'success');
     } catch (e) {
       setAnalysisStatus('서버 분석 함수가 URL 본문을 읽지 못했습니다. 본문을 복사해 수동 분석을 사용해주세요.');
