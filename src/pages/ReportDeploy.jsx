@@ -307,22 +307,24 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
   const saveEditingReport = async () => {
     if(!editIssueName) return alert("호수명은 필수입니다.");
     if(!editPublishDate) return alert("발행일은 필수입니다.");
+    const currentDocId = editingReport.id;
     const nextDocId = editPublishDate;
-    const isDateChanged = nextDocId !== editingReport.id;
-    const existsOnDate = history.some(m => m.id === nextDocId && m.id !== editingReport.id);
+    const isDateChanged = nextDocId !== currentDocId;
+    const existsOnDate = history.some(m => m.id === nextDocId && m.id !== currentDocId);
     if (existsOnDate && !window.confirm(`${nextDocId} 리포트가 이미 있습니다. 덮어쓸까요?`)) return;
     const campaignData = editSelCampaign ? campaigns.find(v => v.id === editSelCampaign) || { securityImg: editSelCampaign } : null;
     try {
-      await saveMagazine(nextDocId, {
-        ...editingReport, 
-        issueName: editIssueName, 
+      const nextReport = {
+        issueName: editIssueName,
+        publishDate: editingReport.publishDate || new Date().toISOString(),
         publishDateId: nextDocId,
-        articles: editArticles, 
-        campaign: campaignData, 
+        articles: editArticles,
+        campaign: campaignData,
         webCampaign: editSelSecurity,
         video: editVideo
-      });
-      if (isDateChanged) await deleteMagazine(editingReport.id);
+      };
+      await saveMagazine(nextDocId, nextReport);
+      if (isDateChanged) await deleteMagazine(currentDocId);
       alert("성공적으로 수정되었습니다!");
       closeEditModal();
       fetchData();

@@ -277,6 +277,20 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
 
   const setMainArticle = (index) => changeDraftCategory(index, 'main');
 
+  const toggleDraftImportant = (index) => {
+    const target = allDrafts[index];
+    if (!target) return;
+    if (!target.isImportant) {
+      const importantCount = allDrafts.filter(article => article.isImportant).length;
+      if (importantCount >= 3) {
+        showToast('중요 기사는 최대 3개까지만 가능합니다.', 'error');
+        return;
+      }
+    }
+    updateDraftArticle(index, { isImportant: !target.isImportant });
+    showToast(target.isImportant ? '중요 표시를 해제했습니다.' : '중요 표시를 적용했습니다.', 'success');
+  };
+
   const updateDraftArticle = (index, patch) => {
     const target = allDrafts[index];
     if (!target) return;
@@ -592,6 +606,13 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
                   </div>
                 </div>
                 <div style={{ display:'flex', gap:6 }}>
+                  <button
+                    className="btn"
+                    style={{ padding:'6px 10px', fontSize:11, background:a.isImportant ? '#ef4444' : '#e2e8f0', color:a.isImportant ? 'white' : '#334155' }}
+                    onClick={() => toggleDraftImportant(i)}
+                  >
+                    {a.isImportant ? '중요 해제' : '중요'}
+                  </button>
                   <button className="btn" style={{ padding:'6px 12px', fontSize:11, background:'#f59e0b', color:'white' }} onClick={() => setMainArticle(i)}>메인</button>
                   <button className="btn btn-danger" style={{ padding:'6px 12px', fontSize:11 }} onClick={() => deleteArticle(i)}>삭제</button>
                 </div>

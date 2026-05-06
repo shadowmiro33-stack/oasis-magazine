@@ -5,12 +5,15 @@ import { db } from '../api/firebase';
 export async function getAllMagazines() {
   const q = await getDocs(collection(db, "magazines"));
   return q.docs
-    .map(d => ({ id: d.id, ...d.data() }))
+    // Keep Firestore document id authoritative even when legacy data contains an `id` field.
+    .map(d => ({ ...d.data(), id: d.id }))
     .sort((a, b) => b.id.localeCompare(a.id));
 }
 
 export async function saveMagazine(docId, data) {
-  return setDoc(doc(db, "magazines", docId), data);
+  // Prevent persisting stale document ids inside document payload.
+  const { id: _ignoredId, ...safeData } = data || {};
+  return setDoc(doc(db, "magazines", docId), safeData);
 }
 
 export async function deleteMagazine(docId) {
