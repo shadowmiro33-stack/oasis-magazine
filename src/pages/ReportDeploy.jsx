@@ -23,9 +23,24 @@ const applyArticleCategory = (articles = [], targetIndex, nextCategory) => artic
   return article;
 });
 
+const formatLocalDate = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getReportDateId = (reportId = '') => reportId.match(/^\d{4}-\d{2}-\d{2}/)?.[0] || formatLocalDate();
+
+const formatKoreanDateId = (dateId = formatLocalDate()) => {
+  const [year, month, day] = dateId.split('-');
+  return `${year}.${Number(month)}.${Number(day)}`;
+};
+
 export default function ReportDeploy({ draftArticles, setDraftArticles, issueName, setIssueName, selCampaign, setSelCampaign, selSecurity, setSelSecurity, video, setVideo, campaigns, secBanners }) {
   const [history, setHistory] = useState([]);
   const [deploying, setDeploying] = useState(false);
+  const [publishDate, setPublishDate] = useState(formatLocalDate());
   const [expandedRows, setExpandedRows] = useState({}); // historyRow 확장 상태
   const [openSections, setOpenSections] = useState({ deploy:true, history:true });
   const [pastPreviewReport, setPastPreviewReport] = useState(null); // 과거 리포트 웹 미리보기용
@@ -34,6 +49,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
   const [editingReport, setEditingReport] = useState(null);
   const [editArticles, setEditArticles] = useState([]);
   const [editIssueName, setEditIssueName] = useState('');
+  const [editPublishDate, setEditPublishDate] = useState('');
   const [editSelCampaign, setEditSelCampaign] = useState('');
   const [editSelSecurity, setEditSelSecurity] = useState('');
   const [newArtCat, setNewArtCat] = useState('main');
@@ -114,14 +130,15 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
   const deploy = async () => {
     if (!issueName) return alert('호수를 입력하세요.');
     if (allDrafts.length === 0) return alert('배포할 기사가 없습니다.');
+    const docId = publishDate || formatLocalDate();
+    if (history.some(m => m.id === docId) && !window.confirm(`${docId} 리포트가 이미 있습니다. 덮어쓸까요?`)) return;
     setDeploying(true);
     try {
-      const docId = new Date().toISOString().split('T')[0];
       const campaignData = selCampaign ? campaigns.find(v => v.id === selCampaign) || null : null;
-      await saveMagazine(docId, { issueName, publishDate: new Date().toISOString(), articles: allDrafts, video, campaign: campaignData, webCampaign: selSecurity });
+      await saveMagazine(docId, { issueName, publishDate: new Date().toISOString(), publishDateId: docId, articles: allDrafts, video, campaign: campaignData, webCampaign: selSecurity });
       alert('서버에 배포되었습니다.');
       setDraftArticles({ main: null, macro: [], platform: [], auto: [], ai: [], security: [] });
-      setIssueName(''); setVideo({ url:'', title:'', source:'', desc:'' }); fetchData();
+      setIssueName(''); setPublishDate(formatLocalDate()); setVideo({ url:'', title:'', source:'', desc:'' }); fetchData();
     } catch (e) { alert('배포 실패: ' + e.message); }
     finally { setDeploying(false); }
   };
@@ -141,7 +158,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
       const emails = subs.map(s => s.email);
       if (emails.length === 0) return alert('구독자가 없습니다.');
       const emailCampaign = await buildEmailCampaign(mag.campaign);
-      const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), emailCampaign, mag.articles);
+      const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', formatKoreanDateId(mag.publishDateId || getReportDateId(mag.id) || publishDate), emailCampaign, mag.articles);
       await fetch(appsScriptUrl, {
         method: 'POST',
         mode: 'no-cors',
@@ -161,13 +178,13 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     if (allDrafts.length === 0) return alert('배포할 기사가 없습니다.');
     const campaignData = selCampaign ? campaigns.find(v => v.id === selCampaign) || null : null;
     const emailCampaign = await buildEmailCampaign(campaignData);
-    const htmlContent = getPremiumNewsletterHTML(issueName || '임시 호수', new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), emailCampaign, draftArticles);
+    const htmlContent = getPremiumNewsletterHTML(issueName || '임시 호수', formatKoreanDateId(publishDate), emailCampaign, draftArticles);
     setEmailPreview({ title: '뉴스레터 미리보기', html: htmlContent });
   };
 
   const previewPastEmail = async (mag) => {
     const emailCampaign = await buildEmailCampaign(mag.campaign);
-    const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', new Date(mag.publishDate || mag.id).toLocaleDateString('ko-KR').replace(/\. /g, '.').replace(/\.$/, ''), emailCampaign, mag.articles);
+    const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', formatKoreanDateId(getReportDateId(mag.id)), emailCampaign, mag.articles);
     setEmailPreview({ title: `과거 리포트 메일 미리보기 - ${mag.issueName}`, html: htmlContent });
   };
 
@@ -178,7 +195,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
 
   const sendCurrentDrafts = async () => {
     if (allDrafts.length === 0) return alert('배포할 기사가 없습니다. 최종 발행 후 메일을 발송하는 것을 권장합니다.');
-    const mag = { issueName: issueName || '임시 호수', articles: draftArticles, campaign: selCampaign ? campaigns.find(v => v.id === selCampaign) : null, webCampaign: selSecurity, video };
+    const mag = { id: publishDate, publishDateId: publishDate, issueName: issueName || '임시 호수', articles: draftArticles, campaign: selCampaign ? campaigns.find(v => v.id === selCampaign) : null, webCampaign: selSecurity, video };
     await sendEmail(mag);
   };
 
@@ -202,6 +219,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     setEditingReport(mag);
     setEditArticles([...(mag.articles || [])]);
     setEditIssueName(mag.issueName || '');
+    setEditPublishDate(getReportDateId(mag.id));
     setEditSelCampaign(mag.campaign?.id || '');
     setEditSelSecurity(mag.webCampaign || '');
     setEditVideo(mag.video || { url: '', title: '', source: '', desc: '' });
@@ -288,16 +306,23 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
 
   const saveEditingReport = async () => {
     if(!editIssueName) return alert("호수명은 필수입니다.");
+    if(!editPublishDate) return alert("발행일은 필수입니다.");
+    const nextDocId = editPublishDate;
+    const isDateChanged = nextDocId !== editingReport.id;
+    const existsOnDate = history.some(m => m.id === nextDocId && m.id !== editingReport.id);
+    if (existsOnDate && !window.confirm(`${nextDocId} 리포트가 이미 있습니다. 덮어쓸까요?`)) return;
     const campaignData = editSelCampaign ? campaigns.find(v => v.id === editSelCampaign) || { securityImg: editSelCampaign } : null;
     try {
-      await saveMagazine(editingReport.id, { 
+      await saveMagazine(nextDocId, {
         ...editingReport, 
         issueName: editIssueName, 
+        publishDateId: nextDocId,
         articles: editArticles, 
         campaign: campaignData, 
         webCampaign: editSelSecurity,
         video: editVideo
       });
+      if (isDateChanged) await deleteMagazine(editingReport.id);
       alert("성공적으로 수정되었습니다!");
       closeEditModal();
       fetchData();
@@ -321,7 +346,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Report');
-    XLSX.writeFile(wb, `OASIS_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `OASIS_Report_${formatLocalDate()}.xlsx`);
   };
 
   return (
@@ -345,6 +370,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
         titleStyle={{ color:'#75b5ee' }}
       >
         <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:15 }}>
+          <input type="date" value={publishDate} onChange={e => setPublishDate(e.target.value)} style={{ width:170, padding:15, fontWeight:'bold', borderRadius:8, border:'1px solid #cbd5e1' }} />
           <input value={issueName} onChange={e => setIssueName(e.target.value)} placeholder="발행 호수 입력 (예: NO.38)" style={{ flex:1, padding:15, fontWeight:'bold' }} />
           <select value={selCampaign} onChange={e => setSelCampaign(e.target.value)} style={{ flex:1, padding:15, fontWeight:'bold', borderColor:'#ec4899' }}>
             <option value="">숏츠/릴스 선택 (없음)</option>
@@ -460,8 +486,16 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
             </div>
             
             <div style={{ padding:30, overflowY:'auto', flex:1 }}>
-              <label style={{ fontSize:12, fontWeight:'bold', color:'#64748b' }}>리포트 호수명</label>
-              <input type="text" value={editIssueName} onChange={e => setEditIssueName(e.target.value)} style={{ marginBottom:25, fontWeight:'bold', fontSize:16, color:'#3b82f6', width:'100%', padding:10, borderRadius:8, border:'1px solid #cbd5e1' }} />
+              <div style={{ display:'grid', gridTemplateColumns:'180px 1fr', gap:10, marginBottom:25 }}>
+                <div>
+                  <label style={{ fontSize:12, fontWeight:'bold', color:'#64748b', display:'block', marginBottom:5 }}>발행일</label>
+                  <input type="date" value={editPublishDate} onChange={e => setEditPublishDate(e.target.value)} style={{ fontWeight:'bold', fontSize:16, color:'#3b82f6', width:'100%', padding:10, borderRadius:8, border:'1px solid #cbd5e1' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize:12, fontWeight:'bold', color:'#64748b', display:'block', marginBottom:5 }}>리포트 호수명</label>
+                  <input type="text" value={editIssueName} onChange={e => setEditIssueName(e.target.value)} style={{ fontWeight:'bold', fontSize:16, color:'#3b82f6', width:'100%', padding:10, borderRadius:8, border:'1px solid #cbd5e1' }} />
+                </div>
+              </div>
               
               <div style={{ background:'#f8fafc', padding:20, borderRadius:12, border:'1px solid #e2e8f0', marginBottom:25 }}>
                 <div style={{ display:'flex', gap:10 }}>

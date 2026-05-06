@@ -2,6 +2,13 @@ import initialData from '../core/config/data.json';
 
 const STORAGE_KEY = 'oasis_magazine_data';
 
+const formatLocalDate = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 /**
  * 로컬 스토리지에서 전체 리포트 데이터를 가져옵니다.
  * 데이터가 없으면 data.json의 초기 데이터를 사용합니다.
@@ -27,7 +34,7 @@ export const getReports = () => {
  */
 export const addArticle = (magazineId, article) => {
   const reports = getReports();
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatLocalDate();
   
   // 오늘 날짜의 리포트가 있는지 확인
   let todayReport = reports.find(r => r.date === today);
