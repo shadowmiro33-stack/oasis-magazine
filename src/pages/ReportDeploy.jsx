@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { getAllMagazines, saveMagazine, deleteMagazine, getAllSubscribers } from '../services/dataService';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../api/firebase';
-import * as XLSX from 'xlsx';
-import html2pdf from 'html2pdf.js';
 import { getPremiumNewsletterHTML } from '../utils/newsletterTemplate';
 import MagazineWebPreview from '../components/MagazineWebPreview';
 import CollapsibleCard from '../components/CollapsibleCard';
@@ -199,8 +197,9 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     await sendEmail(mag);
   };
 
-  const exportPdf = () => {
-    const savePdf = (element) => {
+  const exportPdf = async () => {
+    const savePdf = async (element) => {
+      const { default: html2pdf } = await import('html2pdf.js');
       html2pdf().set({ margin: 1, filename: `OASIS_History.pdf`, jsPDF: { format: 'letter', orientation: 'portrait' } }).from(element).save();
     };
     const element = document.getElementById('history-container');
@@ -343,6 +342,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
 
   const exportExcel = async () => {
     if (history.length === 0) return alert('데이터가 없습니다.');
+    const XLSX = await import('xlsx');
     let rows = [];
     history.forEach(m => { if (m.articles) m.articles.forEach(a => rows.push({ '발행 호수': m.issueName, '카테고리': a.category, '관련 기업': a.brand, '기사 제목': a.title, '인사이트': a.insight, '원문 링크': a.link })); });
     const ws = XLSX.utils.json_to_sheet(rows);

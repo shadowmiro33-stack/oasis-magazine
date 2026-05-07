@@ -293,8 +293,8 @@
                     <div
                         class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl text-gray-400">
                         <i class="fas fa-lock"></i></div>
-                    <h3 class="text-xl font-black text-gray-800 mb-3">해당 언론사는 외부 뷰어를 차단합니다</h3>
-                    <p class="text-gray-500 text-sm mb-8 line-relaxed">보안 정책(X-Frame-Options)으로 인해 새 창에서만 읽을 수 있습니다.</p>
+                    <h3 class="text-xl font-black text-gray-800 mb-3">새 창에서 원문을 열어주세요</h3>
+                    <p class="text-gray-500 text-sm mb-8 line-relaxed">HTTPS 또는 언론사 보안 정책으로 인해 앱 안에서는 바로 열 수 없습니다.</p>
                     <button id="fallback-btn"
                         class="w-full bg-gray-900 text-white py-4 rounded-xl font-bold hover:bg-brand transition shadow-lg">새
                         창에서 안전하게 읽기 <i class="fas fa-arrow-right ml-2"></i></button>
@@ -336,10 +336,28 @@
         window.smartOpen = async function (url) {
             if (!url || url === '#') return alert("해당 컨텐츠는 원문이 존재하지 않습니다.");
             
+            const getSafeArticleUrl = (rawUrl) => {
+                try {
+                    const parsedUrl = new URL(rawUrl, window.location.href);
+                    if (parsedUrl.protocol === 'http:') parsedUrl.protocol = 'https:';
+                    return parsedUrl.href;
+                } catch (error) {
+                    return rawUrl;
+                }
+            };
+
             const modal = document.getElementById('article-modal');
             const frame = document.getElementById('article-frame');
             const fallback = document.getElementById('fallback-ui');
             const loader = document.getElementById('frame-loader');
+            const safeUrl = getSafeArticleUrl(url);
+            const showFallback = () => {
+                if (loader) loader.style.display = 'none';
+                frame.style.display = 'none';
+                frame.src = "about:blank";
+                fallback.style.display = 'flex';
+                document.getElementById('fallback-btn').onclick = () => { window.open(safeUrl, '_blank'); window.closeArticle(); };
+            };
             
             modal.classList.add('active'); 
             document.body.style.overflow = 'hidden';
@@ -350,24 +368,26 @@
             frame.src = "about:blank";
             if (loader) loader.style.display = 'flex';
             
+            if (window.location.protocol === 'https:' && !safeUrl.startsWith('https://')) {
+                showFallback();
+                return;
+            }
+
             try {
-                const res = await fetch(`/.netlify/functions/check-frame?url=${encodeURIComponent(url)}`);
+                const res = await fetch(`/.netlify/functions/check-frame?url=${encodeURIComponent(safeUrl)}`);
                 const data = await res.json();
                 
                 if (loader) loader.style.display = 'none';
                 
                 if (data.blocked) {
-                    fallback.style.display = 'flex';
-                    document.getElementById('fallback-btn').onclick = () => { window.open(url, '_blank'); window.closeArticle(); };
+                    showFallback();
                 } else {
                     frame.style.display = 'block';
-                    frame.src = url;
+                    frame.src = safeUrl;
                 }
             } catch (error) {
                 console.error("Frame check failed", error);
-                if (loader) loader.style.display = 'none';
-                frame.style.display = 'block';
-                frame.src = url;
+                showFallback();
             }
         };
         window.closeArticle = function () { document.getElementById('article-modal').classList.remove('active'); document.getElementById('article-frame').src = "about:blank"; document.body.style.overflow = 'auto'; };

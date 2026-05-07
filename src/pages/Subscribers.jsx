@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { getAllSubscribers, deleteSubscriber } from '../services/dataService';
-import * as XLSX from 'xlsx';
 
 export default function Subscribers() {
   const [subscribers, setSubscribers] = useState([]);
@@ -20,8 +19,9 @@ export default function Subscribers() {
     load();
   };
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
     if (subscribers.length === 0) return alert('추출할 데이터가 없습니다.');
+    const XLSX = await import('xlsx');
     const rows = subscribers.map(s => ({
       '가입 일시': s.subscribeDate ? s.subscribeDate.replace('T',' ').substring(0,16) : '---',
       '이메일 주소': s.email,
