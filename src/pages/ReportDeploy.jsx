@@ -3,8 +3,10 @@ import { getAllMagazines, saveMagazine, deleteMagazine, getAllSubscribers } from
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../api/firebase';
 import { getPremiumNewsletterHTML } from '../utils/newsletterTemplate';
+import { readJsonResponse } from '../utils/apiEndpoints';
 import MagazineWebPreview from '../components/MagazineWebPreview';
 import CollapsibleCard from '../components/CollapsibleCard';
+import { normalizeExternalUrl, normalizeImageUrl, sanitizeArticleUrls } from '../utils/urlSanitizer';
 
 const CATEGORY_OPTIONS = [
   { value: 'main', label: '🔥 1면' },
@@ -33,6 +35,136 @@ const getReportDateId = (reportId = '') => reportId.match(/^\d{4}-\d{2}-\d{2}/)?
 const formatKoreanDateId = (dateId = formatLocalDate()) => {
   const [year, month, day] = dateId.split('-');
   return `${year}.${Number(month)}.${Number(day)}`;
+};
+
+const NEWSLETTER_CATEGORY_KEYS = ['macro', 'platform', 'auto', 'ai', 'security'];
+const NEWSLETTER_CATEGORY_LABELS = {
+  macro: '경제·비즈니스',
+  platform: '산업·플랫폼',
+  auto: '자동차·모빌리티',
+  ai: 'AI·테크',
+  security: '보안·리스크',
+};
+const INTEREST_ALIASES = {
+  macro: ['macro', 'economy', '\uacbd\uc81c'],
+  platform: ['platform', 'biz', 'business', '\ube44\uc988'],
+  auto: ['auto', 'mobility', 'industry', '\uc0b0\uc5c5'],
+  ai: ['ai', 'artificial intelligence'],
+  security: ['security', 'secure', 'info-secure', '\ubcf4\uc548'],
+};
+
+const getSubscriberCategoryKeys = (subscriber) => {
+  const interests = Array.isArray(subscriber?.interests) ? subscriber.interests : [];
+  if (interests.length === 0) return NEWSLETTER_CATEGORY_KEYS;
+
+  const normalized = interests.map(interest => String(interest || '').trim().toLowerCase()).filter(Boolean);
+  const keys = NEWSLETTER_CATEGORY_KEYS.filter(key => (
+    normalized.some(interest => interest === key || INTEREST_ALIASES[key].some(alias => interest.includes(alias)))
+  ));
+
+  return keys.length > 0 ? keys : NEWSLETTER_CATEGORY_KEYS;
+};
+
+const makeCategoryGroupKey = (keys) => NEWSLETTER_CATEGORY_KEYS.filter(key => keys.includes(key)).join('|');
+const hasAllNewsletterCategories = (keys) => keys.length === NEWSLETTER_CATEGORY_KEYS.length;
+const formatCategoryGroup = (keys) => hasAllNewsletterCategories(keys)
+  ? '전체 카테고리'
+  : keys.map(key => NEWSLETTER_CATEGORY_LABELS[key] || key).join(', ');
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const normalizeEmail = (email = '') => String(email || '').trim().toLowerCase();
+const isActiveSubscriber = (subscriber) => {
+  const status = String(subscriber?.status || 'active').trim().toLowerCase();
+  return !['inactive', 'blocked', 'deleted', 'unsubscribed', 'paused'].includes(status);
+};
+
+const filterNewsletterArticles = (articlesSource, keys) => {
+  const includeAll = hasAllNewsletterCategories(keys);
+
+  if (Array.isArray(articlesSource)) {
+    return articlesSource
+      .map(sanitizeArticleUrls)
+      .filter(article => article.category === 'main' ? includeAll : keys.includes(article.category));
+  }
+
+  return {
+    main: includeAll && articlesSource?.main ? sanitizeArticleUrls(articlesSource.main) : null,
+    macro: keys.includes('macro') ? (articlesSource?.macro || []).map(sanitizeArticleUrls) : [],
+    platform: keys.includes('platform') ? (articlesSource?.platform || []).map(sanitizeArticleUrls) : [],
+    auto: keys.includes('auto') ? (articlesSource?.auto || []).map(sanitizeArticleUrls) : [],
+    ai: keys.includes('ai') ? (articlesSource?.ai || []).map(sanitizeArticleUrls) : [],
+    security: keys.includes('security') ? (articlesSource?.security || []).map(sanitizeArticleUrls) : [],
+  };
+};
+
+const hasNewsletterArticles = (articlesSource) => {
+  if (Array.isArray(articlesSource)) return articlesSource.length > 0;
+  return !!articlesSource?.main || NEWSLETTER_CATEGORY_KEYS.some(key => (articlesSource?.[key] || []).length > 0);
+};
+
+const countNewsletterArticles = (articlesSource) => {
+  if (Array.isArray(articlesSource)) return articlesSource.length;
+  return (articlesSource?.main ? 1 : 0)
+    + NEWSLETTER_CATEGORY_KEYS.reduce((sum, key) => sum + (articlesSource?.[key] || []).length, 0);
+};
+
+const buildNewsletterSendPlan = (subscribers = [], articlesSource) => {
+  const groups = {};
+  const seenEmails = new Set();
+  const stats = {
+    totalSubscribers: subscribers.length,
+    inactiveCount: 0,
+    invalidEmailCount: 0,
+    duplicateCount: 0,
+    skippedNoContentCount: 0,
+    deliverableCount: 0,
+  };
+
+  subscribers.forEach(subscriber => {
+    if (!isActiveSubscriber(subscriber)) {
+      stats.inactiveCount += 1;
+      return;
+    }
+
+    const email = normalizeEmail(subscriber.email || subscriber.id);
+    if (!EMAIL_RE.test(email)) {
+      stats.invalidEmailCount += 1;
+      return;
+    }
+    if (seenEmails.has(email)) {
+      stats.duplicateCount += 1;
+      return;
+    }
+    seenEmails.add(email);
+
+    const keys = getSubscriberCategoryKeys(subscriber);
+    const filteredArticles = filterNewsletterArticles(articlesSource, keys);
+    const articleCount = countNewsletterArticles(filteredArticles);
+
+    if (!hasNewsletterArticles(filteredArticles)) {
+      stats.skippedNoContentCount += 1;
+      return;
+    }
+
+    const groupKey = makeCategoryGroupKey(keys);
+    if (!groups[groupKey]) {
+      groups[groupKey] = {
+        key: groupKey,
+        keys,
+        label: formatCategoryGroup(keys),
+        emails: [],
+        articleCount,
+        includesSecurity: keys.includes('security'),
+      };
+    }
+    groups[groupKey].emails.push(email);
+    stats.deliverableCount += 1;
+  });
+
+  return {
+    ...stats,
+    groups: Object.values(groups).sort((a, b) => b.emails.length - a.emails.length),
+  };
 };
 
 export default function ReportDeploy({ draftArticles, setDraftArticles, issueName, setIssueName, selCampaign, setSelCampaign, selSecurity, setSelSecurity, video, setVideo, campaigns, secBanners }) {
@@ -66,6 +198,9 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
   // Web Preview Modal State
   const [showWebPreview, setShowWebPreview] = useState(false);
   const [emailPreview, setEmailPreview] = useState(null);
+  const [emailSendPlan, setEmailSendPlan] = useState(null);
+  const [selectedEmailMap, setSelectedEmailMap] = useState({});
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const isSectionOpen = (key) => openSections[key] !== false;
   const toggleSection = (key) => setOpenSections(prev => ({ ...prev, [key]: !isSectionOpen(key) }));
@@ -78,9 +213,36 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
   useEffect(() => { fetchData(); }, []);
 
   const allDrafts = [...(draftArticles.main ? [draftArticles.main] : []), ...draftArticles.macro, ...draftArticles.platform, ...draftArticles.auto, ...draftArticles.ai, ...draftArticles.security];
+  const selectedEmailCount = Object.values(selectedEmailMap).filter(Boolean).length;
+
+  const setRecipientSelection = (emails = [], selected) => {
+    setSelectedEmailMap(prev => {
+      const next = { ...prev };
+      emails.forEach(email => {
+        if (selected) next[email] = true;
+        else delete next[email];
+      });
+      return next;
+    });
+  };
+
+  const toggleRecipientEmail = (email) => {
+    setSelectedEmailMap(prev => {
+      const next = { ...prev };
+      if (next[email]) delete next[email];
+      else next[email] = true;
+      return next;
+    });
+  };
+
+  const clearEmailSendPlan = () => {
+    setEmailSendPlan(null);
+    setSelectedEmailMap({});
+  };
 
   const resizeImageUrlForEmail = (url, maxWidth = 560, maxHeight = 420) => new Promise((resolve) => {
-    if (!url) return resolve(url);
+    const safeUrl = normalizeImageUrl(url, { fallback: '' });
+    if (!safeUrl) return resolve(url);
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = async () => {
@@ -94,21 +256,21 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         canvas.toBlob(async blob => {
-          if (!blob) return resolve(url);
+          if (!blob) return resolve(safeUrl);
           try {
             const imageRef = ref(storage, `security/email/generated_${Date.now()}.jpg`);
             await uploadBytes(imageRef, blob, { contentType: 'image/jpeg' });
             resolve(await getDownloadURL(imageRef));
           } catch (_) {
-            resolve(url);
+            resolve(safeUrl);
           }
         }, 'image/jpeg', 0.86);
       } catch (_) {
-        resolve(url);
+        resolve(safeUrl);
       }
     };
-    img.onerror = () => resolve(url);
-    img.src = url;
+    img.onerror = () => resolve(safeUrl);
+    img.src = safeUrl;
   });
 
   const resolveSecurityBanner = (value) => {
@@ -133,7 +295,15 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     setDeploying(true);
     try {
       const campaignData = selCampaign ? campaigns.find(v => v.id === selCampaign) || null : null;
-      await saveMagazine(docId, { issueName, publishDate: new Date().toISOString(), publishDateId: docId, articles: allDrafts, video, campaign: campaignData, webCampaign: selSecurity });
+      await saveMagazine(docId, {
+        issueName,
+        publishDate: new Date().toISOString(),
+        publishDateId: docId,
+        articles: allDrafts.map(sanitizeArticleUrls),
+        video: { ...video, url: normalizeExternalUrl(video.url, { fallback: video.url }) },
+        campaign: campaignData,
+        webCampaign: normalizeImageUrl(selSecurity, { fallback: selSecurity })
+      });
       alert('서버에 배포되었습니다.');
       setDraftArticles({ main: null, macro: [], platform: [], auto: [], ai: [], security: [] });
       setIssueName(''); setPublishDate(formatLocalDate()); setVideo({ url:'', title:'', source:'', desc:'' }); fetchData();
@@ -146,30 +316,75 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     await deleteMagazine(docId); alert('삭제되었습니다.'); fetchData();
   };
 
-  const sendEmail = async (mag) => {
+  const openEmailSendPlan = async (mag) => {
     const appsScriptUrl = localStorage.getItem('OASIS_APPS_SCRIPT_URL');
     const mailToken = localStorage.getItem('OASIS_MAIL_TOKEN') || '';
     if (!appsScriptUrl) return alert('Apps Script 웹앱 URL이 설정되지 않았습니다. API 관리 탭에서 설정해주세요.');
-    if (!window.confirm('모든 구독자에게 발송하시겠습니까?')) return;
+    const safeAppsScriptUrl = normalizeExternalUrl(appsScriptUrl, { fallback: '', forceHttps: false });
+    if (!safeAppsScriptUrl) return alert('Apps Script 웹앱 URL 형식이 올바르지 않습니다. API 관리 탭에서 확인해주세요.');
+
     try {
       const subs = await getAllSubscribers();
-      const emails = subs.map(s => s.email);
-      if (emails.length === 0) return alert('구독자가 없습니다.');
-      const emailCampaign = await buildEmailCampaign(mag.campaign);
-      const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', formatKoreanDateId(mag.publishDateId || getReportDateId(mag.id) || publishDate), emailCampaign, mag.articles);
-      await fetch(appsScriptUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          to: emails,
-          subject: `[OASIS R&D] 오늘의 모빌리티 딥다이브 - ISSUE ${mag.issueName}`,
-          html: htmlContent,
-          token: mailToken,
-        })
+      if (subs.length === 0) return alert('구독자가 없습니다.');
+      const plan = buildNewsletterSendPlan(subs, mag.articles);
+      if (plan.deliverableCount === 0) {
+        return alert('발송 가능한 구독자가 없습니다. 구독자 상태, 이메일 주소, 관심 카테고리와 리포트 기사 구성을 확인해주세요.');
+      }
+      setEmailSendPlan({
+        ...plan,
+        mag,
+        appsScriptUrl: safeAppsScriptUrl,
+        mailToken,
       });
-      alert(`메일 발송 요청을 Apps Script로 전달했습니다. Gmail 발송 결과는 Apps Script 실행 기록에서 확인해주세요. 대상: ${emails.length}명`);
-    } catch (e) { alert('발송 실패: ' + e.message); }
+      setSelectedEmailMap({});
+    } catch (e) {
+      alert('발송 계획 생성 실패: ' + e.message);
+    }
+  };
+
+  const confirmSendEmail = async () => {
+    if (!emailSendPlan || sendingEmail) return;
+    const selectedEmailSet = new Set(Object.entries(selectedEmailMap).filter(([, selected]) => selected).map(([email]) => email));
+    if (selectedEmailSet.size === 0) return alert('발송할 수신자를 선택해주세요. 테스트 발송은 본인 이메일만 체크하면 됩니다.');
+    setSendingEmail(true);
+    try {
+      const { mag, appsScriptUrl, mailToken, groups } = emailSendPlan;
+      const emailCampaign = await buildEmailCampaign(mag.campaign);
+      let requestedCount = 0;
+      let skippedCount = 0;
+
+      for (const group of groups) {
+        const selectedGroupEmails = group.emails.filter(email => selectedEmailSet.has(email));
+        if (selectedGroupEmails.length === 0) continue;
+        const filteredArticles = filterNewsletterArticles(mag.articles, group.keys);
+        if (!hasNewsletterArticles(filteredArticles)) {
+          skippedCount += selectedGroupEmails.length;
+          continue;
+        }
+
+        const groupCampaign = group.keys.includes('security') ? emailCampaign : null;
+        const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', formatKoreanDateId(mag.publishDateId || getReportDateId(mag.id) || publishDate), groupCampaign, filteredArticles);
+        await fetch(appsScriptUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            to: selectedGroupEmails,
+            subject: `[OASIS] 핸지가 보는 세상 - ISSUE ${mag.issueName || '임시 호수'}`,
+            html: htmlContent,
+            token: mailToken,
+          })
+        });
+        requestedCount += selectedGroupEmails.length;
+      }
+
+      alert(`메일 발송 요청을 Apps Script로 전달했습니다. 관심 카테고리별로 필터링된 본문을 전송했습니다. 대상: ${requestedCount}명${skippedCount ? ` / 내용 없어 제외: ${skippedCount}명` : ''}`);
+      clearEmailSendPlan();
+    } catch (e) {
+      alert('발송 실패: ' + e.message);
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const previewCurrentDrafts = async () => {
@@ -177,13 +392,13 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     const campaignData = selCampaign ? campaigns.find(v => v.id === selCampaign) || null : null;
     const emailCampaign = await buildEmailCampaign(campaignData);
     const htmlContent = getPremiumNewsletterHTML(issueName || '임시 호수', formatKoreanDateId(publishDate), emailCampaign, draftArticles);
-    setEmailPreview({ title: '뉴스레터 미리보기', html: htmlContent });
+    setEmailPreview({ title: '핸지가 보는 세상 미리보기', html: htmlContent });
   };
 
   const previewPastEmail = async (mag) => {
     const emailCampaign = await buildEmailCampaign(mag.campaign);
     const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', formatKoreanDateId(getReportDateId(mag.id)), emailCampaign, mag.articles);
-    setEmailPreview({ title: `과거 리포트 메일 미리보기 - ${mag.issueName}`, html: htmlContent });
+    setEmailPreview({ title: `핸지가 보는 세상 과거호 미리보기 - ${mag.issueName}`, html: htmlContent });
   };
 
   const previewPastWeb = (mag) => {
@@ -194,7 +409,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
   const sendCurrentDrafts = async () => {
     if (allDrafts.length === 0) return alert('배포할 기사가 없습니다. 최종 발행 후 메일을 발송하는 것을 권장합니다.');
     const mag = { id: publishDate, publishDateId: publishDate, issueName: issueName || '임시 호수', articles: draftArticles, campaign: selCampaign ? campaigns.find(v => v.id === selCampaign) : null, webCampaign: selSecurity, video };
-    await sendEmail(mag);
+    await openEmailSendPlan(mag);
   };
 
   const exportPdf = async () => {
@@ -283,7 +498,8 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     if(!editVideo.url.trim()) return alert("유튜브 링크 URL을 먼저 입력해주세요!");
     try {
       const response = await fetch(`https://noembed.com/embed?url=${editVideo.url}`);
-      const data = await response.json();
+      const data = await readJsonResponse(response);
+      if (!response.ok) throw new Error(data.error || `YouTube metadata failed (${response.status})`);
       setEditVideo({
         ...editVideo,
         title: data.title || '',
@@ -297,9 +513,9 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     if(newArtImportant && editArticles.filter(a => a.isImportant).length >= 3) return alert("⚠️ 중요 기사는 최대 3개까지만 가능합니다.");
     if(!newArtTitle || !newArtLink) return alert("제목과 링크는 필수 입력입니다.");
     
-    setEditArticles([...editArticles, { 
+    setEditArticles([...editArticles, sanitizeArticleUrls({ 
       category: newArtCat, brand: newArtBrand || '오아시스', title: newArtTitle, link: newArtLink, desc: newArtDesc, insight: newArtInsight, source: newArtSource || '자체 보도', img: newArtImg, isImportant: newArtImportant 
-    }]);
+    })]);
     setNewArtTitle(''); setNewArtLink(''); setNewArtSource(''); setNewArtImg(''); setNewArtDesc(''); setNewArtInsight(''); setNewArtImportant(false);
   };
 
@@ -317,10 +533,10 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
         issueName: editIssueName,
         publishDate: editingReport.publishDate || new Date().toISOString(),
         publishDateId: nextDocId,
-        articles: editArticles,
+        articles: editArticles.map(sanitizeArticleUrls),
         campaign: campaignData,
-        webCampaign: editSelSecurity,
-        video: editVideo
+        webCampaign: normalizeImageUrl(editSelSecurity, { fallback: editSelSecurity }),
+        video: { ...editVideo, url: normalizeExternalUrl(editVideo.url, { fallback: editVideo.url }) }
       };
       await saveMagazine(nextDocId, nextReport);
       if (isDateChanged) await deleteMagazine(currentDocId);
@@ -356,9 +572,50 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
       <div className="page-header">
         <div><h2>🚀 리포트 배포 및 데이터 추출</h2></div>
         <div style={{ display:'flex', gap:10 }}>
-          <button className="btn" style={{ background:'#75b5ee', color:'white', fontWeight:'bold' }} onClick={sendCurrentDrafts}><i className="fas fa-paper-plane"></i> 뉴스레터 자동 복사 및 발송</button>
           <button className="btn" style={{ background:'#107c41', color:'white' }} onClick={exportExcel}><i className="fas fa-file-excel"></i> Excel</button>
           <button className="btn btn-danger" onClick={exportPdf}><i className="fas fa-file-pdf"></i> PDF</button>
+        </div>
+      </div>
+
+      <div style={{ background:'linear-gradient(135deg,#0f172a 0%,#1e40af 100%)', color:'white', borderRadius:18, padding:24, marginBottom:25, boxShadow:'0 18px 45px rgba(15,23,42,0.22)' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1.2fr 1fr', gap:20, alignItems:'center' }}>
+          <div>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(255,255,255,0.14)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:999, padding:'7px 12px', fontSize:12, fontWeight:900, marginBottom:14 }}>
+              <i className="fas fa-envelope-open-text" /> 핸지가 보는 세상 발송 센터
+            </div>
+            <h3 style={{ margin:'0 0 10px', fontSize:24, fontWeight:900 }}>메일 발송은 여기서 확인하세요</h3>
+            <p style={{ margin:0, color:'#bfdbfe', fontSize:13, fontWeight:800, lineHeight:1.7 }}>
+              미리보기로 내용을 확인한 뒤, 관심 항목별 수신자와 기사 구성을 검토하고 최종 발송 요청을 보냅니다.
+            </p>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, minmax(0, 1fr))', gap:10 }}>
+            <div style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:14, padding:14 }}>
+              <div style={{ color:'#bfdbfe', fontSize:11, fontWeight:900, marginBottom:6 }}>발송 기준일</div>
+              <div style={{ fontSize:18, fontWeight:900 }}>{publishDate}</div>
+            </div>
+            <div style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:14, padding:14 }}>
+              <div style={{ color:'#bfdbfe', fontSize:11, fontWeight:900, marginBottom:6 }}>호수</div>
+              <div style={{ fontSize:18, fontWeight:900 }}>{issueName || '미지정'}</div>
+            </div>
+            <div style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:14, padding:14 }}>
+              <div style={{ color:'#bfdbfe', fontSize:11, fontWeight:900, marginBottom:6 }}>초안 기사</div>
+              <div style={{ fontSize:18, fontWeight:900 }}>{allDrafts.length}건</div>
+            </div>
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginTop:20 }}>
+          <button className="btn" onClick={previewCurrentDrafts} disabled={allDrafts.length === 0} style={{ background:'#ffffff', color:'#1e40af', fontWeight:900, padding:'13px 20px', minWidth:180 }}>
+            <i className="fas fa-eye" /> 메일 미리보기
+          </button>
+          <button className="btn" onClick={sendCurrentDrafts} disabled={allDrafts.length === 0} style={{ background:'#38bdf8', color:'#082f49', fontWeight:900, padding:'13px 22px', minWidth:220, boxShadow:'0 8px 18px rgba(56,189,248,0.28)' }}>
+            <i className="fas fa-paper-plane" /> 발송 대상/계획 확인
+          </button>
+          <button className="btn" onClick={() => setShowWebPreview(true)} disabled={allDrafts.length === 0} style={{ background:'rgba(255,255,255,0.12)', color:'white', border:'1px solid rgba(255,255,255,0.25)', fontWeight:900, padding:'13px 20px', minWidth:180 }}>
+            <i className="fas fa-desktop" /> 웹 미리보기
+          </button>
+          <span style={{ display:'inline-flex', alignItems:'center', color:'#dbeafe', fontSize:12, fontWeight:800 }}>
+            최종 발송은 계획 모달에서 한 번 더 확인합니다.
+          </span>
         </div>
       </div>
 
@@ -465,7 +722,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                           <button className="btn btn-primary" style={{ background:'#6366f1', fontSize:11, padding:'10px' }} onClick={() => previewPastEmail(m)}><i className="fas fa-envelope"></i> 메일 미리보기</button>
                           <button className="btn btn-primary" style={{ background:'#3b82f6', fontSize:11, padding:'10px' }} onClick={() => previewPastWeb(m)}><i className="fas fa-desktop"></i> 웹 미리보기</button>
                           <div style={{ margin:'5px 0' }}></div>
-                          <button className="btn btn-success" style={{ fontSize:11, padding:'10px' }} onClick={() => sendEmail(m)}><i className="fas fa-paper-plane"></i> 즉시 재발송</button>
+                          <button className="btn btn-success" style={{ fontSize:11, padding:'10px' }} onClick={() => openEmailSendPlan(m)}><i className="fas fa-paper-plane"></i> 재발송 계획</button>
                         </div>
                       </div>
                     </td>
@@ -552,7 +809,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                     </div>
                     <div style={{ width:180, display:'flex', gap:6, alignItems:'center', flexShrink:0 }}>
                       <div style={{ width:44, height:32, border:'1px solid #cbd5e1', borderRadius:6, overflow:'hidden', background:'#e2e8f0' }}>
-                        <img src={art.img || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300'} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300'; }} />
+                        <img src={normalizeImageUrl(art.img, { fallback: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300' })} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300'; }} />
                       </div>
                       <input value={art.img || ''} onChange={e => changeEditArticle(idx, 'img', e.target.value)} placeholder="이미지 URL" style={{ width:120, padding:'6px 8px', fontSize:11, borderRadius:6, border:'1px solid #cbd5e1' }} />
                     </div>
@@ -609,8 +866,144 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
         title={pastPreviewReport ? `[과거 리포트] ${pastPreviewReport.issueName}` : `[배포 예정] ${issueName || '미지정 호수'}`}
         articlesSource={pastPreviewReport ? pastPreviewReport.articles : allDrafts}
         video={pastPreviewReport ? pastPreviewReport.video : video}
-        securityBanner={pastPreviewReport ? (pastPreviewReport.webCampaign || pastPreviewReport.campaign?.securityImg) : selSecurity}
       />
+
+      {emailSendPlan && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.78)', zIndex:10000, display:'flex', justifyContent:'center', alignItems:'center', padding:18 }}>
+          <div style={{ width:'min(1040px, 96vw)', maxHeight:'90vh', background:'#f8fafc', borderRadius:18, overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 24px 70px rgba(0,0,0,0.32)' }}>
+            <div style={{ padding:'18px 22px', background:'white', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center', gap:16 }}>
+              <div>
+                <h3 style={{ margin:0, fontSize:18, color:'#0f172a' }}><i className="fas fa-paper-plane" style={{ color:'#2563eb', marginRight:8 }} />뉴스레터 발송 계획</h3>
+                <p style={{ margin:'6px 0 0', color:'#64748b', fontSize:12, fontWeight:800 }}>{emailSendPlan.mag.issueName || '미지정 호수'} · 관심 카테고리별로 다른 본문을 전송합니다.</p>
+              </div>
+              <button onClick={() => !sendingEmail && clearEmailSendPlan()} disabled={sendingEmail} style={{ border:'none', background:'#e2e8f0', color:'#475569', borderRadius:8, padding:'8px 14px', fontWeight:900, cursor:'pointer' }}>닫기</button>
+            </div>
+
+            <div style={{ padding:22, overflow:'auto' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(145px, 1fr))', gap:12, marginBottom:16 }}>
+                <div style={{ background:'white', border:'1px solid #e2e8f0', borderRadius:12, padding:16 }}>
+                  <div style={{ color:'#94a3b8', fontSize:11, fontWeight:900, marginBottom:6 }}>전체 구독자</div>
+                  <div style={{ color:'#0f172a', fontSize:28, fontWeight:900 }}>{emailSendPlan.totalSubscribers}</div>
+                </div>
+                <div style={{ background:'white', border:'1px solid #bfdbfe', borderRadius:12, padding:16 }}>
+                  <div style={{ color:'#2563eb', fontSize:11, fontWeight:900, marginBottom:6 }}>선택 가능</div>
+                  <div style={{ color:'#1d4ed8', fontSize:28, fontWeight:900 }}>{emailSendPlan.deliverableCount}</div>
+                </div>
+                <div style={{ background:'white', border:'1px solid #ddd6fe', borderRadius:12, padding:16 }}>
+                  <div style={{ color:'#7c3aed', fontSize:11, fontWeight:900, marginBottom:6 }}>선택 대상</div>
+                  <div style={{ color:'#6d28d9', fontSize:28, fontWeight:900 }}>{selectedEmailCount}</div>
+                </div>
+                <div style={{ background:'white', border:'1px solid #ddd6fe', borderRadius:12, padding:16 }}>
+                  <div style={{ color:'#7c3aed', fontSize:11, fontWeight:900, marginBottom:6 }}>발송 그룹</div>
+                  <div style={{ color:'#6d28d9', fontSize:28, fontWeight:900 }}>{emailSendPlan.groups.length}</div>
+                </div>
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))', gap:12, marginBottom:16 }}>
+                <div style={{ background:'white', border:'1px solid #e2e8f0', borderRadius:12, padding:16, color:'#64748b', fontSize:12, fontWeight:800, lineHeight:1.7 }}>
+                  <strong style={{ color:'#0f172a' }}>제외 내역</strong><br />
+                  비활성 {emailSendPlan.inactiveCount}명 · 이메일 오류 {emailSendPlan.invalidEmailCount}명 · 중복 {emailSendPlan.duplicateCount}명 · 받을 기사 없음 {emailSendPlan.skippedNoContentCount}명
+                </div>
+                <div style={{ background:'white', border:'1px solid #e2e8f0', borderRadius:12, padding:16, color:'#64748b', fontSize:12, fontWeight:800, lineHeight:1.7 }}>
+                  <strong style={{ color:'#0f172a' }}>발송 방식</strong><br />
+                  Apps Script에 그룹별 요청을 보냅니다. 보안 캠페인은 보안 관심 그룹에만 포함됩니다.
+                </div>
+              </div>
+
+              <div style={{ background:'#fff7ed', border:'1px solid #fed7aa', borderRadius:12, padding:16, marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center', gap:14, flexWrap:'wrap' }}>
+                <div style={{ color:'#9a3412', fontSize:12, fontWeight:900, lineHeight:1.6 }}>
+                  기본 선택은 0명입니다. 테스트 발송은 본인 이메일만 체크한 뒤 요청하세요.
+                </div>
+                <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+                  <button
+                    type="button"
+                    onClick={() => setRecipientSelection(emailSendPlan.groups.flatMap(group => group.emails), true)}
+                    disabled={sendingEmail}
+                    style={{ border:'none', background:'#0f172a', color:'white', borderRadius:8, padding:'9px 12px', fontSize:12, fontWeight:900, cursor:'pointer' }}
+                  >
+                    전체 선택
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEmailMap({})}
+                    disabled={sendingEmail}
+                    style={{ border:'none', background:'#e2e8f0', color:'#334155', borderRadius:8, padding:'9px 12px', fontSize:12, fontWeight:900, cursor:'pointer' }}
+                  >
+                    전체 해제
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))', gap:12 }}>
+                {emailSendPlan.groups.map(group => {
+                  const selectedInGroup = group.emails.filter(email => selectedEmailMap[email]).length;
+                  const isAllSelected = selectedInGroup === group.emails.length && group.emails.length > 0;
+
+                  return (
+                    <section key={group.key} style={{ background:'white', border:`1px solid ${selectedInGroup ? '#bfdbfe' : '#e2e8f0'}`, borderRadius:14, overflow:'hidden', boxShadow:selectedInGroup ? '0 12px 30px rgba(37,99,235,0.10)' : 'none' }}>
+                      <div style={{ padding:'14px 16px', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12 }}>
+                        <div style={{ minWidth:0 }}>
+                          <h4 style={{ margin:0, color:'#0f172a', fontSize:15, fontWeight:900, lineHeight:1.35 }}>{group.label}</h4>
+                          <p style={{ margin:'6px 0 0', color:'#64748b', fontSize:12, fontWeight:800 }}>
+                            기사 {group.articleCount}건 · {group.includesSecurity ? '보안 캠페인 포함' : '캠페인 없음'}
+                          </p>
+                        </div>
+                        <span style={{ flexShrink:0, background:selectedInGroup ? '#2563eb' : '#e2e8f0', color:selectedInGroup ? 'white' : '#475569', borderRadius:999, padding:'5px 9px', fontSize:12, fontWeight:900 }}>
+                          {selectedInGroup}/{group.emails.length}명
+                        </span>
+                      </div>
+
+                      <div style={{ padding:'10px 16px', background:'#f8fafc', borderBottom:'1px solid #e2e8f0', display:'flex', gap:8 }}>
+                        <button
+                          type="button"
+                          onClick={() => setRecipientSelection(group.emails, true)}
+                          disabled={sendingEmail || isAllSelected}
+                          style={{ flex:1, border:'none', background:isAllSelected ? '#dbeafe' : '#eff6ff', color:'#2563eb', borderRadius:8, padding:'8px 10px', fontSize:12, fontWeight:900, cursor:isAllSelected ? 'default' : 'pointer', opacity:isAllSelected ? 0.7 : 1 }}
+                        >
+                          그룹 선택
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRecipientSelection(group.emails, false)}
+                          disabled={sendingEmail || selectedInGroup === 0}
+                          style={{ flex:1, border:'none', background:'#f1f5f9', color:'#475569', borderRadius:8, padding:'8px 10px', fontSize:12, fontWeight:900, cursor:selectedInGroup === 0 ? 'default' : 'pointer', opacity:selectedInGroup === 0 ? 0.55 : 1 }}
+                        >
+                          해제
+                        </button>
+                      </div>
+
+                      <div style={{ padding:12, maxHeight:210, overflowY:'auto', display:'grid', gap:7 }}>
+                        {group.emails.map(email => {
+                          const selected = !!selectedEmailMap[email];
+                          return (
+                            <label key={email} style={{ display:'flex', alignItems:'center', gap:9, background:selected ? '#eff6ff' : '#f8fafc', border:`1px solid ${selected ? '#bfdbfe' : '#e2e8f0'}`, borderRadius:9, padding:'9px 10px', color:'#334155', fontSize:12, fontWeight:800, cursor:sendingEmail ? 'not-allowed' : 'pointer', minWidth:0 }}>
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => toggleRecipientEmail(email)}
+                                disabled={sendingEmail}
+                                style={{ width:16, height:16, flexShrink:0, accentColor:'#2563eb' }}
+                              />
+                              <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}>{email}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+
+              <div style={{ marginTop:18, display:'flex', justifyContent:'flex-end', gap:10 }}>
+                <button type="button" className="btn" onClick={clearEmailSendPlan} disabled={sendingEmail} style={{ background:'#e2e8f0', color:'#334155', fontWeight:900 }}>취소</button>
+                <button type="button" className="btn btn-success" onClick={confirmSendEmail} disabled={sendingEmail || selectedEmailCount === 0} style={{ minWidth:220, fontWeight:900, opacity:selectedEmailCount === 0 ? 0.55 : 1 }}>
+                  {sendingEmail ? <><i className="fas fa-circle-notch fa-spin" /> 발송 요청 중...</> : <><i className="fas fa-paper-plane" /> 선택한 {selectedEmailCount}명에게 발송 요청</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {emailPreview && (
         <div style={{ position:'fixed', inset:0, background:'rgba(15,23,42,0.86)', zIndex:10000, display:'flex', justifyContent:'center', alignItems:'center' }}>
@@ -679,7 +1072,7 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                         </div>
                         <div style={{ display:'flex', background:'white', borderRadius:24, overflow:'hidden', border:'1px solid #e2e8f0', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                           <div style={{ width:'50%', height:400, position:'relative' }}>
-                            <img src={sourceMain.img || 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800'} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                            <img src={normalizeImageUrl(sourceMain.img, { fallback: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800' })} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                             <div style={{ position:'absolute', bottom:0, left:0, padding:30, background:'linear-gradient(transparent, rgba(0,0,0,0.8))', width:'100%' }}>
                               <span style={{ background:'#2563eb', color:'white', padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:900, marginBottom:10, display:'inline-block' }}>FOCUS</span>
                               <h3 style={{ color:'white', fontSize:26, fontWeight:900 }}>{sourceMain.title}</h3>
@@ -721,14 +1114,14 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
                           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:25 }}>
                             {sec.key === 'security' && currentSecurityBanner && (
                               <div style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', position:'relative', minHeight:300 }}>
-                                <img src={currentSecurityBanner} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                                <img src={normalizeImageUrl(currentSecurityBanner, { fallback: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400' })} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                                 <div style={{ position:'absolute', bottom:20, left:20, background:'rgba(0,0,0,0.8)', color:'white', padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:900 }}>🚨 보안 캠페인</div>
                               </div>
                             )}
                             {articles.map((a, i) => (
                               <div key={i} style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
                                 <div style={{ width:'100%', aspectRatio:'16/10' }}>
-                                  <img src={a.img || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400'} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                                  <img src={normalizeImageUrl(a.img, { fallback: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400' })} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                                 </div>
                                 <div style={{ padding:20, flex:1, display:'flex', flexDirection:'column' }}>
                                   <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>

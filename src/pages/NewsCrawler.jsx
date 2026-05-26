@@ -4,6 +4,8 @@ import MagazineWebPreview from '../components/MagazineWebPreview';
 import CollapsibleCard from '../components/CollapsibleCard';
 import { analyzeTextLocally, getChromeSummarizerStatus } from '../utils/localAnalyzer';
 import { dedupeArticles, isDuplicateArticle } from '../utils/articleDeduper';
+import { apiEndpoints, fetchWithFallback, readJsonResponse } from '../utils/apiEndpoints';
+import { normalizeExternalUrl, normalizeImageUrl, sanitizeArticleUrls } from '../utils/urlSanitizer';
 
 const DEFAULT_THUMB = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300';
 const CATEGORY_OPTIONS = [
@@ -72,7 +74,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
 
   const savePolicy = async () => {
     if (!policyForm.url || !policyForm.keyword) return showToast('필수 입력값을 확인해주세요.', 'error');
-    const updated = [...policies, { id: Date.now(), company: policyForm.company || companies?.[0]?.name || '', url: policyForm.url, keyword: policyForm.keyword }];
+    const updated = [...policies, { id: Date.now(), company: policyForm.company || companies?.[0]?.name || '', url: normalizeExternalUrl(policyForm.url, { fallback: policyForm.url }), keyword: policyForm.keyword }];
     await savePolicies(updated);
     setPolicyForm({ company:'', url:'', keyword:'' });
     loadPolicies();
@@ -91,7 +93,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     setAnalysisStatus('서버 분석 함수가 기사 본문을 가져오는 중입니다. CORS 차단을 피하기 위해 브라우저 직접 요청은 사용하지 않습니다.');
     try {
       const apiKey = localStorage.getItem('GEMINI_API_KEY') || '';
-      const response = await fetch('/.netlify/functions/analyze', {
+      const response = await fetchWithFallback(apiEndpoints.analyze, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,12 +102,12 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
           extractOnly: false
         })
       });
-      const payload = await response.json().catch(() => ({}));
+      const payload = await readJsonResponse(response);
       if (!response.ok) throw new Error(payload.error || `기사 분석 실패 (${response.status})`);
 
       const data = payload;
       setAnalysisStatus('서버에서 한국어 분석 결과를 만드는 중입니다.');
-      setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
+      setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: normalizeImageUrl(data.img, { fallback: '' }) }));
       const label = data.analyzer || '자동정리 fallback';
       setAnalysisResult(label);
       setAnalysisStatus(`${label}로 분석 완료`);
@@ -124,7 +126,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     setAnalysisStatus('한국어 자동정리 방식으로 분석합니다.');
     try {
       const data = await analyzeTextLocally({ text: manualText });
-      setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: data.img||'' }));
+      setAiInput(prev => ({ ...prev, title: data.title||'', brand: data.brand||'', source: data.source||'', desc: data.desc||'', insight: data.insight||'', img: normalizeImageUrl(data.img, { fallback: '' }) }));
       setManualText('');
       const label = data.analyzer || '한국어 자동정리 fallback';
       setAnalysisResult(label);
@@ -138,9 +140,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   };
 
   const normalizeUrl = (url = '') => {
-    const trimmed = String(url || '').trim().replace(/&amp;/g, '&');
-    if (trimmed.startsWith('//')) return `https:${trimmed}`;
-    return trimmed;
+    return normalizeExternalUrl(url, { fallback: '' });
   };
 
   const normalizeCategory = (value = '') => {
@@ -159,7 +159,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     source: item.source || '',
     title: item.title || '',
     link: normalizeUrl(item.link || item.url || item.originallink || ''),
-    img: normalizeUrl(item.img || item.thumbnail_url || item.thumbnailUrl || item.image || item.image_url || ''),
+    img: normalizeImageUrl(item.img || item.thumbnail_url || item.thumbnailUrl || item.image || item.image_url || '', { fallback: '' }),
     desc: item.desc || item.summary || item.description || '',
     insight: item.insight || '',
     isImportant: !!item.isImportant
@@ -202,7 +202,8 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
     try {
       setFetchingYt(true);
       const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(video.url)}`);
-      const data = await res.json();
+      const data = await readJsonResponse(res);
+      if (!res.ok) throw new Error(data.error || `YouTube metadata failed (${res.status})`);
       if(data.error) {
         showToast("정보를 불러오지 못했습니다. 유튜브 링크를 확인해주세요.", 'error');
       } else {
@@ -219,7 +220,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
       const all = [...(draftArticles.main ? [draftArticles.main] : []), ...draftArticles.macro, ...draftArticles.platform, ...draftArticles.auto, ...draftArticles.ai, ...draftArticles.security];
       if (all.filter(a => a.isImportant).length >= 3) { showToast('중요 기사는 최대 3개까지만 가능합니다.', 'error'); return; }
     }
-    const article = { ...aiInput, link: aiInput.url };
+    const article = sanitizeArticleUrls({ ...aiInput, link: aiInput.url });
     if (isDuplicateArticle(article, allKnownArticles)) {
       showToast('이미 발행 대기열에 있는 기사입니다.', 'error');
       return;
@@ -294,15 +295,20 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
   const updateDraftArticle = (index, patch) => {
     const target = allDrafts[index];
     if (!target) return;
+    const safePatch = {
+      ...patch,
+      ...(Object.prototype.hasOwnProperty.call(patch, 'link') ? { link: normalizeExternalUrl(patch.link, { fallback: '' }) } : {}),
+      ...(Object.prototype.hasOwnProperty.call(patch, 'img') ? { img: normalizeImageUrl(patch.img, { fallback: '' }) } : {}),
+    };
     if (draftArticles.main === target) {
-      setDraftArticles(prev => ({ ...prev, main: { ...prev.main, ...patch } }));
+      setDraftArticles(prev => ({ ...prev, main: { ...prev.main, ...safePatch } }));
       return;
     }
     ['macro','platform','auto','ai','security'].forEach(c => {
       if (draftArticles[c]?.includes(target)) {
         setDraftArticles(prev => ({
           ...prev,
-          [c]: prev[c].map(article => article === target ? { ...article, ...patch } : article)
+          [c]: prev[c].map(article => article === target ? { ...article, ...safePatch } : article)
         }));
       }
     });
@@ -350,26 +356,28 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
         </div>
       </CollapsibleCard>
 
-      {/* Policies */}
-      <CollapsibleCard
-        title="추적 정책 및 기사 수집 제어"
-        icon="fas fa-crosshairs"
-        open={isSectionOpen('policies')}
-        onToggle={() => toggleSection('policies')}
-        style={{ marginBottom:25 }}
-      >
-        <div style={{ display:'flex', gap:10, marginBottom:15 }}>
-          <input value={policyForm.url} onChange={e => setPolicyForm({...policyForm, url:e.target.value})} placeholder="대상 언론사 URL" style={{ flex:1 }} />
-          <input value={policyForm.keyword} onChange={e => setPolicyForm({...policyForm, keyword:e.target.value})} placeholder="추적 키워드" style={{ flex:1 }} />
-          <button className="btn btn-dark" onClick={savePolicy}>정책 추가</button>
-        </div>
-        {policies.map(p => (
-          <div key={p.id} style={{ background:'#f8fafc', border:'1px solid #e2e8f0', padding:'12px 20px', borderRadius:8, marginBottom:8, display:'flex', justifyContent:'space-between', fontSize:14 }}>
-            <span><b>[{p.company}]</b> {p.url} / <b>{p.keyword}</b></span>
-            <button className="btn btn-outline" style={{ padding:'4px 12px', fontSize:11, color:'#ef4444', borderColor:'#ef4444' }} onClick={() => deletePolicy(p.id)}>삭제</button>
+      {/* 자동 수집 기능으로 오해될 수 있어 정책 UI는 숨김 처리합니다. */}
+      {false && (
+        <CollapsibleCard
+          title="추적 정책 및 기사 수집 제어"
+          icon="fas fa-crosshairs"
+          open={isSectionOpen('policies')}
+          onToggle={() => toggleSection('policies')}
+          style={{ marginBottom:25 }}
+        >
+          <div style={{ display:'flex', gap:10, marginBottom:15 }}>
+            <input value={policyForm.url} onChange={e => setPolicyForm({...policyForm, url:e.target.value})} placeholder="대상 언론사 URL" style={{ flex:1 }} />
+            <input value={policyForm.keyword} onChange={e => setPolicyForm({...policyForm, keyword:e.target.value})} placeholder="추적 키워드" style={{ flex:1 }} />
+            <button className="btn btn-dark" onClick={savePolicy}>정책 추가</button>
           </div>
-        ))}
-      </CollapsibleCard>
+          {policies.map(p => (
+            <div key={p.id} style={{ background:'#f8fafc', border:'1px solid #e2e8f0', padding:'12px 20px', borderRadius:8, marginBottom:8, display:'flex', justifyContent:'space-between', fontSize:14 }}>
+              <span><b>[{p.company}]</b> {p.url} / <b>{p.keyword}</b></span>
+              <button className="btn btn-outline" style={{ padding:'4px 12px', fontSize:11, color:'#ef4444', borderColor:'#ef4444' }} onClick={() => deletePolicy(p.id)}>삭제</button>
+            </div>
+          ))}
+        </CollapsibleCard>
+      )}
 
       {/* AI Analysis */}
       <CollapsibleCard
@@ -450,12 +458,12 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
             <input value={aiInput.title} onChange={e => setAiInput({...aiInput, title:e.target.value})} placeholder="기사 제목" style={{ marginBottom:15, fontWeight:'bold' }} />
             <input value={aiInput.img} onChange={e => setAiInput({...aiInput, img:e.target.value})} placeholder="썸네일 URL (선택)" style={{ marginBottom:15 }} />
             <textarea value={aiInput.desc} onChange={e => setAiInput({...aiInput, desc:e.target.value})} rows="3" placeholder="기사 핵심 요약" style={{ marginBottom:15, background:'#f1f5f9' }} />
-            <textarea value={aiInput.insight} onChange={e => setAiInput({...aiInput, insight:e.target.value})} rows="3" placeholder="R&D 전략 인사이트" style={{ marginBottom:15, borderColor:'#bfdbfe', background:'#eff6ff' }} />
+            <textarea value={aiInput.insight} onChange={e => setAiInput({...aiInput, insight:e.target.value})} rows="3" placeholder="핸지의 시선" style={{ marginBottom:15, borderColor:'#bfdbfe', background:'#eff6ff' }} />
             <div style={{ display:'flex', gap:10, alignItems:'center' }}>
               <select value={aiInput.category} onChange={e => setAiInput({...aiInput, category:e.target.value})} style={{ flex:1, fontWeight:'bold' }}>
-                <option value="main">🔥 FIRST DIVE</option><option value="macro">🌐 MACRO VIEW</option>
-                <option value="platform">🛒 BIZ & PLATFORM</option><option value="auto">🚗 AUTO TRACK</option>
-                <option value="ai">🤖 AI STRATEGY</option><option value="security">🛡️ INFO-SECURE</option>
+                <option value="main">🔥 1면</option><option value="macro">🌐 경제·비즈니스</option>
+                <option value="platform">🛒 산업·플랫폼</option><option value="auto">🚗 자동차·모빌리티</option>
+                <option value="ai">🤖 AI·테크</option><option value="security">🛡️ 보안·리스크</option>
               </select>
               <label style={{ display:'flex', alignItems:'center', gap:8, background:'#fefce8', border:'1px solid #fef08a', padding:10, borderRadius:8, fontWeight:900, fontSize:13, color:'#a16207', cursor:'pointer', whiteSpace:'nowrap' }}>
                 <input type="checkbox" checked={aiInput.isImportant} onChange={e => setAiInput({...aiInput, isImportant:e.target.checked})} style={{ width:16, height:16 }} /> ⭐ 중요 (최대 3개)
@@ -471,7 +479,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
               <div style={{ border:'1px solid #e2e8f0', borderRadius:12, overflow:'hidden', background:'white', boxShadow:'0 10px 15px -3px rgba(0,0,0,0.1)', display:'flex', flexDirection:'column' }}>
                 <div style={{ width:'100%', height:200, background: aiInput.img ? '#f1f5f9' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', position:'relative', display:'flex', justifyContent:'center', alignItems:'center' }}>
                   {aiInput.img ? (
-                  <img src={aiInput.img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_THUMB; }} />
+                  <img src={normalizeImageUrl(aiInput.img, { fallback: DEFAULT_THUMB })} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_THUMB; }} />
                   ) : (
                     <i className="fas fa-newspaper" style={{ fontSize:40, color:'rgba(255,255,255,0.5)' }}></i>
                   )}
@@ -541,7 +549,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
           {allDrafts.length === 0 ? (
             <div style={{ textAlign:'center', padding:50, color:'#cbd5e1', border:'2px dashed #e2e8f0', borderRadius:20 }}>수집된 기사가 없습니다.</div>
           ) : allDrafts.map((a, i) => {
-            const thumbImg = a.img && a.img.includes('http') ? a.img : DEFAULT_THUMB;
+            const thumbImg = normalizeImageUrl(a.img, { fallback: DEFAULT_THUMB });
             return (
               <div key={i} className="card" style={{ display:'flex', gap:15, padding:15, alignItems:'center', border:'1px solid #e2e8f0', borderRadius:15, background:'white' }}>
                 <div style={{ width:100, height:70, borderRadius:10, overflow:'hidden', background:'#f1f5f9', flexShrink:0 }}>
@@ -630,7 +638,6 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
         articlesSource={allDrafts}
         mainArticle={draftArticles.main}
         video={video}
-        securityBanner={selSecurity}
       />
 
       {/* Legacy inline preview kept disabled while the shared component is active. */}
@@ -681,7 +688,7 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
                         </div>
                         <div style={{ display:'flex', background:'white', borderRadius:24, overflow:'hidden', border:'1px solid #e2e8f0', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                           <div style={{ width:'50%', height:400, position:'relative' }}>
-                            <img src={sourceMain.img || 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800'} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                            <img src={normalizeImageUrl(sourceMain.img, { fallback: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=800' })} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                             <div style={{ position:'absolute', bottom:0, left:0, padding:30, background:'linear-gradient(transparent, rgba(0,0,0,0.8))', width:'100%' }}>
                               <span style={{ background:'#2563eb', color:'white', padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:900, marginBottom:10, display:'inline-block' }}>FOCUS</span>
                               <h3 style={{ color:'white', fontSize:26, fontWeight:900 }}>{sourceMain.title}</h3>
@@ -723,14 +730,14 @@ export default function NewsCrawler({ draftArticles, setDraftArticles, companies
                           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:25 }}>
                             {sec.key === 'security' && currentSecurityBanner && (
                               <div style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', position:'relative', minHeight:300 }}>
-                                <img src={currentSecurityBanner} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                                <img src={normalizeImageUrl(currentSecurityBanner, { fallback: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400' })} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                                 <div style={{ position:'absolute', bottom:20, left:20, background:'rgba(0,0,0,0.8)', color:'white', padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:900 }}>🚨 보안 캠페인</div>
                               </div>
                             )}
                             {articles.map((a, i) => (
                               <div key={i} style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
                                 <div style={{ width:'100%', aspectRatio:'16/10' }}>
-                                  <img src={a.img || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400'} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                                  <img src={normalizeImageUrl(a.img, { fallback: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400' })} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                                 </div>
                                 <div style={{ padding:20, flex:1, display:'flex', flexDirection:'column' }}>
                                   <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>

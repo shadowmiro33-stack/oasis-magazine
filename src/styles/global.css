@@ -29,10 +29,16 @@ body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
   color: var(--text-primary);
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
-#root { display: flex; height: 100vh; }
+#root { min-height: 100vh; }
+
+.admin-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }

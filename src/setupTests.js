@@ -3,3 +3,7 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
+import { TextDecoder, TextEncoder } from 'util';
+
+if (!globalThis.TextDecoder) globalThis.TextDecoder = TextDecoder;
+if (!globalThis.TextEncoder) globalThis.TextEncoder = TextEncoder;

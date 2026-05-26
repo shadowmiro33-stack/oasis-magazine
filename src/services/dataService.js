@@ -1,19 +1,20 @@
 import { doc, setDoc, getDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../api/firebase';
+import { sanitizeMagazineUrls } from '../utils/urlSanitizer';
 
 // --- Magazines ---
 export async function getAllMagazines() {
   const q = await getDocs(collection(db, "magazines"));
   return q.docs
     // Keep Firestore document id authoritative even when legacy data contains an `id` field.
-    .map(d => ({ ...d.data(), id: d.id }))
+    .map(d => sanitizeMagazineUrls({ ...d.data(), id: d.id }))
     .sort((a, b) => b.id.localeCompare(a.id));
 }
 
 export async function saveMagazine(docId, data) {
   // Prevent persisting stale document ids inside document payload.
   const { id: _ignoredId, ...safeData } = data || {};
-  return setDoc(doc(db, "magazines", docId), safeData);
+  return setDoc(doc(db, "magazines", docId), sanitizeMagazineUrls(safeData));
 }
 
 export async function deleteMagazine(docId) {
@@ -50,6 +51,16 @@ export async function getCampaigns() {
 
 export async function saveCampaigns(list) {
   return setDoc(doc(db, "settings", "campaigns"), { list });
+}
+
+// --- Analytics ---
+export async function getAnalyticsSettings() {
+  const snap = await getDoc(doc(db, "settings", "analytics"));
+  return snap.exists() ? snap.data() : {};
+}
+
+export async function saveAnalyticsSettings(settings) {
+  return setDoc(doc(db, "settings", "analytics"), settings || {}, { merge: true });
 }
 
 // --- Security Banners ---

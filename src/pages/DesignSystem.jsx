@@ -1,4 +1,6 @@
 import React, { useState, useCallback } from 'react';
+import { GEMINI_FREE_TIER_MODEL } from '../utils/designSystemExtractor';
+import { readJsonResponse } from '../utils/apiEndpoints';
 
 const SAMPLE_PRESETS = [
   { name: '오토핸즈 코퍼레이트 (블루/각진형)', primary: '#2563eb', secondary: '#1a3b6e', surface: '#ffffff', radius: 8, font: "'Pretendard', sans-serif" },
@@ -57,10 +59,11 @@ export default function DesignSystem() {
         body = { contents: [{ parts: [{ text: `다음 디자인 시스템 프리셋을 분석하고 확장해주세요: ${JSON.stringify(preset)}\n\n${prompt}` }] }], generationConfig: { response_mime_type: "application/json" } };
       }
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_FREE_TIER_MODEL}:generateContent?key=${apiKey}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
       });
-      const data = await res.json();
+      const data = await readJsonResponse(res);
+      if (!res.ok) throw new Error(data.error?.message || `Gemini API 오류 (${res.status})`);
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) throw new Error('AI 응답이 없습니다.');
       const parsed = JSON.parse(text);

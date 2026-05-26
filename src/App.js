@@ -1,18 +1,9 @@
 import React, { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import './styles/global.css';
+import PublicMagazine from './pages/PublicMagazine';
 
 const AdminApp = lazy(() => import('./AdminApp'));
-
-function LegacyMagazineFrame() {
-  return (
-    <iframe
-      title="OASIS R&D Magazine"
-      src="/legacy-index.html"
-      style={{ width:'100vw', height:'100vh', border:0, display:'block', background:'white' }}
-    />
-  );
-}
 
 function AppLoading() {
   return (
@@ -28,7 +19,7 @@ function AppLoading() {
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<LegacyMagazineFrame />} />
+      <Route path="/" element={<PublicMagazine />} />
       <Route
         path="/admin"
         element={(

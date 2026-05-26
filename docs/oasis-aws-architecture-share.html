@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OASIS Magazine AWS 목표 아키텍처</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #e2e8f0;
+      --paper: #ffffff;
+      --bg: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", "Noto Sans KR", Arial, sans-serif;
+    }
+    main {
+      width: min(1480px, calc(100vw - 48px));
+      margin: 28px auto;
+    }
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 18px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      line-height: 1.2;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      font-weight: 600;
+    }
+    .badge {
+      flex: 0 0 auto;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      border-radius: 8px;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .sheet {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(15, 23, 42, 0.08);
+    }
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .summary div {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .summary strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    @media print {
+      body { background: #ffffff; }
+      main {
+        width: 100%;
+        margin: 0;
+      }
+      header, .summary { display: none; }
+      .sheet {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      @page {
+        size: A4 landscape;
+        margin: 8mm;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>OASIS Magazine AWS 목표 아키텍처</h1>
+        <p>회사 도메인, CloudFront/S3, API Gateway/Lambda, Cognito, DynamoDB, S3 Media, SQS, Autohands SMTP Relay 기준 공유용 구조도입니다.</p>
+      </div>
+      <div class="badge">Infra Review</div>
+    </header>
+
+    <section class="sheet" aria-label="OASIS Magazine AWS architecture diagram">
+      <img src="./oasis-aws-architecture.svg" alt="OASIS Magazine AWS 목표 아키텍처">
+    </section>
+
+    <section class="summary">
+      <div>
+        <strong>도메인</strong>
+        <p>서비스 도메인은 `magazine.autohands.co.kr` 같은 회사 서브도메인을 사용하고 DNS는 Route 53 또는 기존 사내 DNS에서 CloudFront로 연결합니다.</p>
+      </div>
+      <div>
+        <strong>메일</strong>
+        <p>뉴스레터는 SES가 아니라 Lambda worker가 오토핸즈 SMTP Relay로 발송하는 구조입니다. SMTP 계정은 Secrets Manager에 저장합니다.</p>
+      </div>
+      <div>
+        <strong>이전 방식</strong>
+        <p>1차는 호스팅/API부터 옮기고, 2차에서 Firebase Auth/Firestore/Storage를 Cognito/DynamoDB/S3로 전환합니다.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

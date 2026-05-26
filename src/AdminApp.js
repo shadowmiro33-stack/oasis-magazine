@@ -75,13 +75,13 @@ export default function AdminApp() {
   };
 
   return (
-    <>
+    <div className="admin-shell">
       <Sidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} userName={userName} onLogout={logout} />
       <main className="main-content">
         <Suspense fallback={<PageLoading />}>
           {renderPage()}
         </Suspense>
       </main>
-    </>
+    </div>
   );
 }

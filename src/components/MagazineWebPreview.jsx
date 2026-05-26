@@ -1,11 +1,12 @@
 import React from 'react';
+import { normalizeImageUrl } from '../utils/urlSanitizer';
 
 const categorySections = [
-  { key: 'macro', label: '🌐 MACRO VIEW' },
-  { key: 'platform', label: '🛒 BIZ & PLATFORM' },
-  { key: 'auto', label: '🚗 AUTO TRACK' },
-  { key: 'ai', label: '🤖 AI STRATEGY' },
-  { key: 'security', label: '🛡️ INFO-SECURE' },
+  { key: 'macro', label: '🌐 경제·비즈니스' },
+  { key: 'platform', label: '🛒 산업·플랫폼' },
+  { key: 'auto', label: '🚗 자동차·모빌리티' },
+  { key: 'ai', label: '🤖 AI·테크' },
+  { key: 'security', label: '🛡️ 보안·리스크' },
 ];
 
 const fallbackImage = 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400';
@@ -19,7 +20,6 @@ export default function MagazineWebPreview({
   articlesSource,
   mainArticle,
   video,
-  securityBanner,
 }) {
   if (!open) return null;
 
@@ -63,21 +63,21 @@ export default function MagazineWebPreview({
                 </div>
                 <div style={{ display:'flex', background:'white', borderRadius:24, overflow:'hidden', border:'1px solid #e2e8f0', boxShadow:'0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                   <div style={{ width:'50%', height:400, position:'relative' }}>
-                    <img src={sourceMain.img || fallbackMainImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = fallbackMainImage; }} />
+                    <img src={normalizeImageUrl(sourceMain.img, { fallback: fallbackMainImage })} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = fallbackMainImage; }} />
                     <div style={{ position:'absolute', bottom:0, left:0, padding:30, background:'linear-gradient(transparent, rgba(0,0,0,0.8))', width:'100%' }}>
-                      <span style={{ background:'#2563eb', color:'white', padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:900, marginBottom:10, display:'inline-block' }}>FOCUS</span>
+                      <span style={{ background:'#2563eb', color:'white', padding:'4px 12px', borderRadius:20, fontSize:11, fontWeight:900, marginBottom:10, display:'inline-block' }}>핸지 돋보기</span>
                       <h3 style={{ color:'white', fontSize:26, fontWeight:900 }}>{sourceMain.title}</h3>
                     </div>
                   </div>
                   <div style={{ width:'50%', padding:40, display:'flex', flexDirection:'column', justifyContent:'center' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', borderBottom:'1px solid #f1f5f9', paddingBottom:15, marginBottom:15 }}>
                       <span style={{ color:'#2563eb', fontSize:14, fontWeight:900 }}>{sourceMain.brand}</span>
-                      <span style={{ color:'#94a3b8', fontSize:12, fontWeight:700 }}>{sourceMain.source}</span>
+                      <span style={{ color:'#94a3b8', fontSize:12, fontWeight:700 }}>출처: {sourceMain.source || 'OASIS'}</span>
                     </div>
                     <p style={{ fontSize:15, color:'#475569', lineHeight:1.7, marginBottom:20 }}>{sourceMain.desc}</p>
                     {sourceMain.insight && (
                       <div style={{ background:'#eff6ff', padding:20, borderRadius:16, border:'1px solid #dbeafe' }}>
-                        <div style={{ fontSize:11, fontWeight:900, color:'#2563eb', marginBottom:5 }}><i className="fas fa-lightbulb"></i> R&D INSIGHT</div>
+                        <div style={{ fontSize:11, fontWeight:900, color:'#2563eb', marginBottom:5 }}><i className="fas fa-lightbulb"></i> 오토핸즈의 시선</div>
                         <p style={{ fontSize:13, color:'#1e40af', fontWeight:700, lineHeight:1.5 }}>{sourceMain.insight}</p>
                       </div>
                     )}
@@ -88,7 +88,7 @@ export default function MagazineWebPreview({
 
             {categorySections.map(section => {
               const articles = getCat(section.key);
-              if (articles.length === 0 && (section.key !== 'security' || !securityBanner)) return null;
+              if (articles.length === 0) return null;
 
               return (
                 <div key={section.key} style={{ marginBottom:60 }}>
@@ -96,27 +96,21 @@ export default function MagazineWebPreview({
                     <h2 style={{ fontSize:18, fontWeight:900, color:'#1e293b' }}>{section.label}</h2>
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:25 }}>
-                    {section.key === 'security' && securityBanner && (
-                      <div style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', position:'relative', minHeight:300 }}>
-                        <img src={securityBanner} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = fallbackImage; }} />
-                        <div style={{ position:'absolute', bottom:20, left:20, background:'rgba(0,0,0,0.8)', color:'white', padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:900 }}>🚨 보안 캠페인</div>
-                      </div>
-                    )}
                     {articles.map((article, index) => (
                       <div key={index} style={{ background:'white', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
                         <div style={{ width:'100%', aspectRatio:'16/10' }}>
-                          <img src={article.img || fallbackImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = fallbackImage; }} />
+                          <img src={normalizeImageUrl(article.img, { fallback: fallbackImage })} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = fallbackImage; }} />
                         </div>
                         <div style={{ padding:20, flex:1, display:'flex', flexDirection:'column' }}>
                           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
                             <span style={{ color:'#2563eb', fontSize:11, fontWeight:800 }}>[{article.brand}]</span>
-                            <span style={{ color:'#94a3b8', fontSize:10, fontWeight:700 }}>{article.source}</span>
+                            <span style={{ color:'#94a3b8', fontSize:10, fontWeight:700 }}>출처: {article.source || 'OASIS'}</span>
                           </div>
                           <h4 style={{ fontSize:16, fontWeight:900, color:'#1e293b', marginBottom:10, lineHeight:1.4 }}>{article.title}</h4>
                           <p style={{ fontSize:13, color:'#64748b', lineHeight:1.5, marginBottom:15 }}>{article.desc}</p>
                           {article.insight && (
                             <div style={{ marginTop:'auto', paddingTop:15, borderTop:'1px solid #f1f5f9' }}>
-                              <div style={{ fontSize:10, fontWeight:900, color:'#1e293b', marginBottom:5 }}>R&D INSIGHT</div>
+                              <div style={{ fontSize:10, fontWeight:900, color:'#1e293b', marginBottom:5 }}>핸지의 시선</div>
                               <p style={{ fontSize:12, color:'#475569', fontWeight:700 }}>{article.insight}</p>
                             </div>
                           )}

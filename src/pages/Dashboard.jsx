@@ -1,217 +1,395 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getAllMagazines, getAllSubscribers, getPolicies } from '../services/dataService';
 
-export default function Dashboard({ draftArticles }) {
-  const [stats, setStats] = useState({ reports: 0, subscribers: 0, totalArticles: 0, policies: 0 });
-  const [brandRank, setBrandRank] = useState([]);
-  const [catData, setCatData] = useState([]);
-  const [titleRank, setTitleRank] = useState([]);
-  const [timeline, setTimeline] = useState([]);
-  const [, setLoading] = useState(true);
+const CATEGORY_META = {
+  main: { label: '1면', title: 'FIRST DIVE', color: '#ef4444' },
+  macro: { label: '경제', title: 'MACRO VIEW', color: '#3b82f6' },
+  platform: { label: '비즈', title: 'BIZ & PLATFORM', color: '#f59e0b' },
+  auto: { label: '산업', title: 'AUTO TRACK', color: '#10b981' },
+  ai: { label: 'AI', title: 'AI STRATEGY', color: '#8b5cf6' },
+  security: { label: '보안', title: 'INFO-SECURE', color: '#06b6d4' },
+};
 
-  const draftsCount = draftArticles
-    ? (draftArticles.main ? 1 : 0) + (draftArticles.macro||[]).length + (draftArticles.platform||[]).length
-      + (draftArticles.auto||[]).length + (draftArticles.ai||[]).length + (draftArticles.security||[]).length
-    : 0;
+const LIST_CATEGORIES = ['macro', 'platform', 'auto', 'ai', 'security'];
+
+const INTEREST_ALIASES = {
+  macro: ['macro', 'economy', '경제'],
+  platform: ['platform', 'biz', 'business', '비즈'],
+  auto: ['auto', 'mobility', 'industry', '산업'],
+  ai: ['ai', '인공지능'],
+  security: ['security', 'secure', '보안'],
+};
+
+const emptyStats = {
+  reports: 0,
+  subscribers: 0,
+  totalArticles: 0,
+  policies: 0,
+  missingImages: 0,
+  missingLinks: 0,
+  missingInsights: 0,
+};
+
+const countDrafts = (draftArticles = {}) => ({
+  main: draftArticles.main ? 1 : 0,
+  macro: (draftArticles.macro || []).length,
+  platform: (draftArticles.platform || []).length,
+  auto: (draftArticles.auto || []).length,
+  ai: (draftArticles.ai || []).length,
+  security: (draftArticles.security || []).length,
+});
+
+const sumValues = (values) => Object.values(values).reduce((sum, value) => sum + value, 0);
+
+const getReportDate = (report) => {
+  if (!report) return '';
+  return report.publishDateId
+    || String(report.id || '').match(/^\d{4}-\d{2}-\d{2}/)?.[0]
+    || '';
+};
+
+const getDaysSince = (dateId) => {
+  if (!dateId) return null;
+  const published = new Date(`${dateId}T00:00:00`);
+  if (Number.isNaN(published.getTime())) return null;
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.max(0, Math.floor((todayStart - published) / 86400000));
+};
+
+const normalizeInterestKeys = (interests = []) => {
+  if (!Array.isArray(interests) || interests.length === 0) return LIST_CATEGORIES;
+  const raw = interests.map(item => String(item || '').trim().toLowerCase()).filter(Boolean);
+  const keys = LIST_CATEGORIES.filter(key => raw.some(value => (
+    value === key || INTEREST_ALIASES[key].some(alias => value.includes(alias.toLowerCase()))
+  )));
+  return keys.length ? keys : LIST_CATEGORIES;
+};
+
+export default function Dashboard({ draftArticles }) {
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [lastLoadedAt, setLastLoadedAt] = useState('');
+  const [stats, setStats] = useState(emptyStats);
+  const [latestReport, setLatestReport] = useState(null);
+  const [categoryData, setCategoryData] = useState([]);
+  const [interestData, setInterestData] = useState([]);
+  const [brandRank, setBrandRank] = useState([]);
+  const [recentReports, setRecentReports] = useState([]);
+
+  const draftCounts = useMemo(() => countDrafts(draftArticles), [draftArticles]);
+  const draftsTotal = sumValues(draftCounts);
+  const draftReadyCategories = LIST_CATEGORIES.filter(key => draftCounts[key] > 0);
+  const draftMissingCategories = LIST_CATEGORIES.filter(key => draftCounts[key] === 0);
+
+  const mailConfigured = typeof window !== 'undefined' && !!window.localStorage?.getItem('OASIS_APPS_SCRIPT_URL');
+  const apiConfigured = typeof window !== 'undefined' && !!window.localStorage?.getItem('GEMINI_API_KEY');
+  const latestDate = getReportDate(latestReport);
+  const daysSinceLatest = getDaysSince(latestDate);
 
   const loadStats = async () => {
     setLoading(true);
+    setLoadError('');
     try {
-      const [mags, subs, policies] = await Promise.all([
-        getAllMagazines(), getAllSubscribers(), getPolicies()
+      const [magazines, subscribers, policies] = await Promise.all([
+        getAllMagazines(),
+        getAllSubscribers(),
+        getPolicies(),
       ]);
 
-      // Flatten all articles
-      const allArticles = [];
-      mags.forEach(m => { if (m.articles) m.articles.forEach(a => allArticles.push({ ...a, issue: m.issueName, pubDate: m.publishDate })); });
+      const allArticles = magazines.flatMap(report => (
+        (report.articles || []).map(article => ({
+          ...article,
+          reportId: report.id,
+          issueName: report.issueName || report.id,
+          reportDate: getReportDate(report),
+        }))
+      ));
 
-      setStats({ reports: mags.length, subscribers: subs.length, totalArticles: allArticles.length, policies: policies.length });
-
-      // Brand ranking (top 8)
+      const categoryMap = {};
       const brandMap = {};
-      allArticles.forEach(a => { const b = a.brand || '미분류'; brandMap[b] = (brandMap[b]||0) + 1; });
-      const sorted = Object.entries(brandMap).sort((a,b) => b[1]-a[1]).slice(0, 8);
-      setBrandRank(sorted);
-
-      // Category distribution
-      const catLabels = { main:'🔥 FIRST DIVE', macro:'🌐 MACRO VIEW', platform:'🛒 BIZ & PLATFORM', auto:'🚗 AUTO TRACK', ai:'🤖 AI STRATEGY', security:'🛡️ INFO-SECURE' };
-      const catColors = { main:'#ef4444', macro:'#3b82f6', platform:'#f59e0b', auto:'#10b981', ai:'#8b5cf6', security:'#06b6d4' };
-      const catMap = {};
-      allArticles.forEach(a => { const c = a.category || 'auto'; catMap[c] = (catMap[c]||0) + 1; });
-      const total = allArticles.length || 1;
-      setCatData(['main','macro','platform','auto','ai','security'].map(k => ({
-        key: k, label: catLabels[k], color: catColors[k], count: catMap[k]||0, pct: Math.round(((catMap[k]||0)/total)*100)
-      })));
-
-      // Title ranking (top 10)
-      const titleMap = {};
-      allArticles.forEach(a => {
-        const key = (a.title||'').trim();
-        if (!key) return;
-        if (!titleMap[key]) titleMap[key] = { brand: a.brand||'', count: 0 };
-        titleMap[key].count++;
+      allArticles.forEach(article => {
+        const category = article.category || 'auto';
+        const brand = article.brand || '미분류';
+        categoryMap[category] = (categoryMap[category] || 0) + 1;
+        brandMap[brand] = (brandMap[brand] || 0) + 1;
       });
-      setTitleRank(Object.entries(titleMap).sort((a,b) => b[1].count - a[1].count).slice(0, 10));
 
-      // Timeline (recent 8)
-      setTimeline(mags.slice(0, 8));
-    } catch (e) {
-      console.error("대시보드 로드 실패", e);
+      const interestMap = {};
+      subscribers.forEach(subscriber => {
+        normalizeInterestKeys(subscriber.interests).forEach(key => {
+          interestMap[key] = (interestMap[key] || 0) + 1;
+        });
+      });
+
+      const articleTotal = allArticles.length || 1;
+      const subscriberTotal = subscribers.length || 1;
+
+      setStats({
+        reports: magazines.length,
+        subscribers: subscribers.length,
+        totalArticles: allArticles.length,
+        policies: policies.length,
+        missingImages: allArticles.filter(article => !article.img).length,
+        missingLinks: allArticles.filter(article => !article.link).length,
+        missingInsights: allArticles.filter(article => !article.insight).length,
+      });
+      setLatestReport(magazines[0] || null);
+      setCategoryData(Object.keys(CATEGORY_META).map(key => ({
+        key,
+        ...CATEGORY_META[key],
+        count: categoryMap[key] || 0,
+        pct: Math.round(((categoryMap[key] || 0) / articleTotal) * 100),
+      })));
+      setInterestData(LIST_CATEGORIES.map(key => ({
+        key,
+        ...CATEGORY_META[key],
+        count: interestMap[key] || 0,
+        pct: Math.round(((interestMap[key] || 0) / subscriberTotal) * 100),
+      })));
+      setBrandRank(Object.entries(brandMap).sort((a, b) => b[1] - a[1]).slice(0, 7));
+      setRecentReports(magazines.slice(0, 6));
+      setLastLoadedAt(new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }));
+    } catch (error) {
+      console.error('Dashboard load failed', error);
+      setLoadError(error.message || '대시보드 데이터를 불러오지 못했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadStats(); }, []);
+  useEffect(() => {
+    loadStats();
+  }, []);
 
-  const brandColors = ['#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#64748b'];
-  const brandMax = brandRank.length > 0 ? brandRank[0][1] : 1;
+  const actionItems = [
+    draftsTotal === 0 && { tone: 'danger', title: '대기열이 비어 있습니다', desc: '뉴스 수집 탭에서 발행 후보 기사를 먼저 구성하세요.' },
+    draftsTotal > 0 && !draftCounts.main && { tone: 'warning', title: '1면 기사가 없습니다', desc: '메일과 웹 매거진의 첫 인상을 정할 대표 기사를 지정하세요.' },
+    draftMissingCategories.length > 0 && draftsTotal > 0 && { tone: 'warning', title: '비어 있는 카테고리가 있습니다', desc: draftMissingCategories.map(key => CATEGORY_META[key].label).join(', ') },
+    !mailConfigured && { tone: 'danger', title: '메일 발송 URL 미설정', desc: 'API 관리 탭에서 Apps Script 웹앱 URL을 등록해야 발송할 수 있습니다.' },
+    !apiConfigured && { tone: 'info', title: 'Gemini API 키 미설정', desc: '서버 분석 실패 시 분석 품질이 제한될 수 있습니다.' },
+    stats.missingImages > 0 && { tone: 'info', title: '이미지 없는 기사 존재', desc: `누적 기사 중 ${stats.missingImages}건은 썸네일이 없습니다.` },
+  ].filter(Boolean);
+
+  if (actionItems.length === 0) {
+    actionItems.push({ tone: 'success', title: '발행 준비 상태가 좋습니다', desc: '대기열, 메일 설정, 주요 데이터가 모두 정상 범위입니다.' });
+  }
 
   return (
     <div className="animate-fade">
-      {/* Header */}
       <div className="page-header">
         <div>
-          <h2>📊 종합 애널리틱스 대시보드</h2>
-          <p>배포 현황 · 구독자 · 기사 분석 · 실시간 통계</p>
+          <h2>운영 대시보드</h2>
+          <p>오늘 발행 준비, 구독자 관심사, 콘텐츠 품질 상태를 한 번에 확인합니다.</p>
         </div>
-        <button className="btn btn-dark" onClick={loadStats} style={{ fontSize: 12, padding: '10px 18px' }}>
-          <i className="fas fa-sync-alt"></i> 새로고침
+        <button className="btn btn-dark" onClick={loadStats} disabled={loading} style={{ fontSize: 12, padding: '10px 18px' }}>
+          <i className={`fas ${loading ? 'fa-circle-notch fa-spin' : 'fa-sync-alt'}`} /> 새로고침
         </button>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid-4" style={{ marginBottom: 25 }}>
-        <KpiCard icon="📰" label="누적 발행 리포트" value={stats.reports} unit="호" gradient="135deg, #eff6ff, #dbeafe" color="#3b82f6" valueColor="#1e3a8a" />
-        <KpiCard icon="👥" label="뉴스레터 구독자" value={stats.subscribers} unit="명" gradient="135deg, #f0fdf4, #dcfce7" color="#059669" valueColor="#065f46" />
-        <KpiCard icon="📄" label="총 배포된 기사" value={stats.totalArticles} unit="건" gradient="135deg, #fefce8, #fef9c3" color="#a16207" valueColor="#713f12" />
-        <div className="card" style={{ textAlign:'center', background:'linear-gradient(135deg, #fdf2f8, #fce7f3)', border:'none', position:'relative', overflow:'hidden' }}>
-          <div style={{ position:'absolute', top:-15, right:-15, width:70, height:70, background:'rgba(236,72,153,0.1)', borderRadius:'50%' }}></div>
-          <div style={{ fontSize:12, color:'#be185d', fontWeight:900, marginBottom:8, letterSpacing:1 }}>🎯 추적 정책 / 대기</div>
-          <div style={{ fontSize:42, fontWeight:900, color:'#831843' }}>
-            {stats.policies}<span style={{ fontSize:16, color:'#ec4899' }}> / </span><span style={{ fontSize:28, color:'#a21caf' }}>{draftsCount}</span>
-          </div>
+      {loadError && (
+        <div style={{ background:'#fef2f2', color:'#b91c1c', border:'1px solid #fecaca', borderRadius:8, padding:14, marginBottom:20, fontSize:13, fontWeight:800 }}>
+          {loadError}
         </div>
-      </div>
+      )}
 
-      {/* Row 2: Brand Rank + Category Chart */}
-      <div className="grid-2" style={{ marginBottom: 25 }}>
-        <div className="card" style={{ border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.06)' }}>
-          <div className="card-title" style={{ marginBottom: 15 }}>
-            <div><i className="fas fa-trophy" style={{ color:'#f59e0b' }}></i> 가장 많이 배포된 기업</div>
-            <span style={{ fontSize:11, color:'#94a3b8', fontWeight:'bold' }}>전체 리포트 기준</span>
-          </div>
-          {brandRank.length === 0 ? <EmptyState text="배포된 기사가 없습니다." /> : (
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              {brandRank.map(([name, cnt], i) => (
-                <div key={name} style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <div style={{ width:18, fontSize:12, fontWeight:900, color: i<3 ? brandColors[i] : '#94a3b8', textAlign:'center' }}>{i+1}</div>
-                  <div style={{ width:80, fontSize:13, fontWeight:'bold', color:'#334155', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }} title={name}>{name}</div>
-                  <div style={{ flex:1, background:'#f1f5f9', borderRadius:6, height:24, overflow:'hidden' }}>
-                    <div style={{ width:`${Math.round((cnt/brandMax)*100)}%`, height:'100%', background:brandColors[i%brandColors.length], borderRadius:6, transition:'width 0.6s', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight:8 }}>
-                      <span style={{ color:'white', fontSize:10, fontWeight:900 }}>{cnt}건</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      <section style={{ display:'grid', gridTemplateColumns:'1.1fr 1fr 1fr 1fr', gap:16, marginBottom:20 }}>
+        <StatusCard
+          label="최신 발행"
+          value={latestReport?.issueName || latestReport?.id || '없음'}
+          meta={latestDate ? `${latestDate}${daysSinceLatest !== null ? ` · ${daysSinceLatest}일 전` : ''}` : '발행 이력 없음'}
+          accent="#2563eb"
+        />
+        <StatusCard
+          label="발행 대기 기사"
+          value={`${draftsTotal}건`}
+          meta={draftCounts.main ? '1면 지정 완료' : '1면 미지정'}
+          accent={draftsTotal > 0 ? '#059669' : '#dc2626'}
+        />
+        <StatusCard
+          label="구독자"
+          value={`${stats.subscribers}명`}
+          meta={`${stats.policies}개 추적 정책 운영 중`}
+          accent="#7c3aed"
+        />
+        <StatusCard
+          label="발송 준비"
+          value={mailConfigured ? '가능' : '확인 필요'}
+          meta={`${mailConfigured ? '메일 URL 연결됨' : '메일 URL 없음'} · ${apiConfigured ? 'AI 키 있음' : 'AI 키 없음'}`}
+          accent={mailConfigured ? '#0f766e' : '#ea580c'}
+        />
+      </section>
 
-        <div className="card" style={{ border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.06)' }}>
-          <div className="card-title" style={{ marginBottom: 15 }}>
-            <div><i className="fas fa-chart-bar" style={{ color:'#8b5cf6' }}></i> 카테고리별 기사 분포</div>
-            <span style={{ fontSize:11, color:'#94a3b8', fontWeight:'bold' }}>전체 누적</span>
+      <section style={{ display:'grid', gridTemplateColumns:'1.05fr 1fr', gap:20, marginBottom:20 }}>
+        <Panel title="오늘의 운영 체크" icon="fas fa-clipboard-check" subText={lastLoadedAt ? `${lastLoadedAt} 기준` : ''}>
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {actionItems.map((item, index) => (
+              <ActionItem key={`${item.title}-${index}`} {...item} />
+            ))}
           </div>
-          {catData.length === 0 || stats.totalArticles === 0 ? <EmptyState text="배포된 기사가 없습니다." /> : (
-            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-              {catData.map(c => (
-                <div key={c.key}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-                    <span style={{ fontSize:12, fontWeight:'bold', color:'#475569' }}>{c.label}</span>
-                    <span style={{ fontSize:12, fontWeight:900, color:c.color }}>{c.count}건 ({c.pct}%)</span>
-                  </div>
-                  <div style={{ width:'100%', background:'#f1f5f9', borderRadius:6, height:20, overflow:'hidden' }}>
-                    <div style={{ width:`${c.pct}%`, height:'100%', background:c.color, borderRadius:6, transition:'width 0.6s' }}></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+        </Panel>
 
-      {/* Row 3: Top Articles + Timeline */}
-      <div style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:20 }}>
-        <div className="card" style={{ border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.06)', padding:0, overflow:'hidden' }}>
-          <div className="card-title" style={{ padding:'20px 25px 15px', marginBottom:0 }}>
-            <div><i className="fas fa-fire" style={{ color:'#ef4444' }}></i> 다빈출 기사 랭킹 TOP 10</div>
+        <Panel title="대기열 구성" icon="fas fa-layer-group" subText={`${draftReadyCategories.length}/5개 카테고리 채움`}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(6, minmax(0, 1fr))', gap:8 }}>
+            {Object.keys(CATEGORY_META).map(key => (
+              <MiniCategory key={key} meta={CATEGORY_META[key]} count={draftCounts[key] || 0} />
+            ))}
           </div>
+          <div style={{ marginTop:16, fontSize:12, color:'#64748b', lineHeight:1.6 }}>
+            메일 발송은 구독자 관심 카테고리별로 필터링됩니다. 관심 항목이 없는 구독자는 전체 카테고리를 받습니다.
+          </div>
+        </Panel>
+      </section>
+
+      <section style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20, marginBottom:20 }}>
+        <Panel title="누적 기사 카테고리" icon="fas fa-chart-bar" subText={`${stats.totalArticles}건`}>
+          <MetricBars items={categoryData} emptyText="아직 발행된 기사가 없습니다." />
+        </Panel>
+
+        <Panel title="구독자 관심 분포" icon="fas fa-users" subText={`${stats.subscribers}명`}>
+          <MetricBars items={interestData} emptyText="아직 구독자가 없습니다." />
+        </Panel>
+      </section>
+
+      <section style={{ display:'grid', gridTemplateColumns:'1.25fr 1fr', gap:20 }}>
+        <Panel title="최근 발행 리포트" icon="fas fa-history" subText="최신순 6개">
           <div style={{ overflowX:'auto' }}>
             <table>
-              <thead><tr><th style={{ width:40 }}>#</th><th>기업</th><th>기사 제목</th><th style={{ width:60 }}>출현수</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>발행일</th>
+                  <th>호수</th>
+                  <th>기사</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
               <tbody>
-                {titleRank.length === 0 ? (
-                  <tr><td colSpan="4" style={{ textAlign:'center', color:'#cbd5e1', padding:30 }}>배포된 기사가 없습니다.</td></tr>
-                ) : titleRank.map(([title, info], i) => (
-                  <tr key={i}>
-                    <td style={{ fontWeight:900, textAlign:'center', fontSize: i<3?16:13 }}>{i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</td>
-                    <td><span className="badge badge-blue">{info.brand}</span></td>
-                    <td style={{ fontSize:13, fontWeight:600, color:'#334155', maxWidth:300, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }} title={title}>{title}</td>
-                    <td style={{ textAlign:'center' }}>
-                      <span style={{ background: i<3?'#ef4444':'#64748b', color:'white', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:900 }}>{info.count}</span>
+                {recentReports.length === 0 ? (
+                  <tr><td colSpan="4" style={{ textAlign:'center', color:'#94a3b8', padding:28 }}>발행 이력이 없습니다.</td></tr>
+                ) : recentReports.map((report, index) => (
+                  <tr key={report.id}>
+                    <td style={{ fontWeight:800 }}>{getReportDate(report) || report.id}</td>
+                    <td>{report.issueName || report.id}</td>
+                    <td>{report.articles?.length || 0}건</td>
+                    <td>
+                      <span className={index === 0 ? 'badge badge-blue' : 'badge'} style={index === 0 ? undefined : { background:'#f1f5f9', color:'#64748b' }}>
+                        {index === 0 ? 'LATEST' : 'ARCHIVE'}
+                      </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </Panel>
 
-        <div className="card" style={{ border:'none', boxShadow:'0 4px 20px rgba(0,0,0,0.06)' }}>
-          <div className="card-title" style={{ marginBottom: 15 }}>
-            <div><i className="fas fa-history" style={{ color:'#06b6d4' }}></i> 최근 발행 타임라인</div>
-          </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:0, maxHeight:380, overflowY:'auto' }}>
-            {timeline.length === 0 ? <EmptyState text="발행된 리포트가 없습니다." /> :
-              timeline.map((m, i) => {
-                const dateObj = m.publishDate ? new Date(m.publishDate) : null;
-                const dateStr = dateObj ? `${dateObj.getMonth()+1}/${dateObj.getDate()}` : m.id;
-                const timeStr = dateObj ? `${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}` : '';
-                const isFirst = i === 0;
-                return (
-                  <div key={m.id} style={{ display:'flex', gap:15, padding:'14px 0', borderBottom:'1px solid #f1f5f9', alignItems:'flex-start' }}>
-                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2, minWidth:40 }}>
-                      <div style={{ width:10, height:10, borderRadius:'50%', background: isFirst?'#3b82f6':'#cbd5e1', border:`2px solid ${isFirst?'#93c5fd':'#e2e8f0'}`, flexShrink:0 }}></div>
-                    </div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
-                        <span style={{ fontSize:14, fontWeight:900, color: isFirst?'#1e293b':'#475569' }}>{m.issueName}</span>
-                        {isFirst && <span style={{ background:'#dbeafe', color:'#2563eb', padding:'2px 8px', borderRadius:10, fontSize:10, fontWeight:900 }}>LATEST</span>}
-                      </div>
-                      <div style={{ fontSize:11, color:'#94a3b8', fontWeight:'bold' }}>{dateStr} {timeStr} · {m.articles?.length || 0}건 수록</div>
-                    </div>
-                  </div>
-                );
-              })
-            }
-          </div>
-        </div>
+        <Panel title="상위 언급 기업" icon="fas fa-building" subText="누적 기사 기준">
+          {brandRank.length === 0 ? (
+            <EmptyState text="집계할 기업 데이터가 없습니다." />
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              {brandRank.map(([brand, count], index) => (
+                <BrandRow key={brand} rank={index + 1} brand={brand} count={count} max={brandRank[0][1]} />
+              ))}
+            </div>
+          )}
+        </Panel>
+      </section>
+    </div>
+  );
+}
+
+function StatusCard({ label, value, meta, accent }) {
+  return (
+    <div className="card" style={{ border:'1px solid #e2e8f0', boxShadow:'0 8px 24px rgba(15,23,42,0.05)', padding:20 }}>
+      <div style={{ fontSize:12, fontWeight:900, color:accent, marginBottom:8 }}>{label}</div>
+      <div style={{ fontSize:24, fontWeight:900, color:'#0f172a', lineHeight:1.25, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }} title={value}>
+        {value}
+      </div>
+      <div style={{ fontSize:12, color:'#64748b', marginTop:8, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }} title={meta}>
+        {meta}
       </div>
     </div>
   );
 }
 
-function KpiCard({ icon, label, value, unit, gradient, color, valueColor }) {
+function Panel({ title, icon, subText, children }) {
   return (
-    <div className="card" style={{ textAlign:'center', background:`linear-gradient(${gradient})`, border:'none', position:'relative', overflow:'hidden' }}>
-      <div style={{ position:'absolute', top:-15, right:-15, width:70, height:70, background:`${color}15`, borderRadius:'50%' }}></div>
-      <div style={{ fontSize:12, color, fontWeight:900, marginBottom:8, letterSpacing:1 }}>{icon} {label}</div>
-      <div style={{ fontSize:42, fontWeight:900, color:valueColor }}>{value}<span style={{ fontSize:16, marginLeft:3, color }}>{unit}</span></div>
+    <div className="card" style={{ border:'1px solid #e2e8f0', boxShadow:'0 8px 24px rgba(15,23,42,0.05)' }}>
+      <div className="card-title" style={{ marginBottom:16 }}>
+        <div><i className={icon} style={{ color:'#3b82f6' }} /> {title}</div>
+        {subText && <span style={{ fontSize:11, color:'#94a3b8', fontWeight:900 }}>{subText}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ActionItem({ tone, title, desc }) {
+  const palette = {
+    success: ['#ecfdf5', '#047857', 'fa-circle-check'],
+    danger: ['#fef2f2', '#b91c1c', 'fa-circle-exclamation'],
+    warning: ['#fffbeb', '#b45309', 'fa-triangle-exclamation'],
+    info: ['#eff6ff', '#1d4ed8', 'fa-circle-info'],
+  }[tone] || ['#f8fafc', '#475569', 'fa-circle-info'];
+
+  return (
+    <div style={{ display:'flex', gap:12, padding:12, borderRadius:8, background:palette[0], color:palette[1] }}>
+      <i className={`fas ${palette[2]}`} style={{ marginTop:2 }} />
+      <div style={{ minWidth:0 }}>
+        <div style={{ fontSize:13, fontWeight:900 }}>{title}</div>
+        <div style={{ fontSize:12, lineHeight:1.5, opacity:0.86 }}>{desc}</div>
+      </div>
+    </div>
+  );
+}
+
+function MiniCategory({ meta, count }) {
+  return (
+    <div style={{ border:'1px solid #e2e8f0', borderRadius:8, padding:'12px 8px', textAlign:'center', background: count > 0 ? '#ffffff' : '#f8fafc' }}>
+      <div style={{ width:10, height:10, borderRadius:'50%', background: count > 0 ? meta.color : '#cbd5e1', margin:'0 auto 8px' }} />
+      <div style={{ fontSize:11, color:'#64748b', fontWeight:900, marginBottom:4 }}>{meta.label}</div>
+      <div style={{ fontSize:20, color:'#0f172a', fontWeight:900 }}>{count}</div>
+    </div>
+  );
+}
+
+function MetricBars({ items, emptyText }) {
+  const total = items.reduce((sum, item) => sum + item.count, 0);
+  if (!total) return <EmptyState text={emptyText} />;
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+      {items.map(item => (
+        <div key={item.key}>
+          <div style={{ display:'flex', justifyContent:'space-between', gap:12, marginBottom:5 }}>
+            <span style={{ fontSize:12, fontWeight:900, color:'#334155' }}>{item.title}</span>
+            <span style={{ fontSize:12, fontWeight:900, color:item.color }}>{item.count}건 · {item.pct}%</span>
+          </div>
+          <div style={{ height:10, background:'#f1f5f9', borderRadius:8, overflow:'hidden' }}>
+            <div style={{ width:`${Math.max(item.pct, item.count ? 3 : 0)}%`, height:'100%', background:item.color, borderRadius:8 }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BrandRow({ rank, brand, count, max }) {
+  const width = Math.max(8, Math.round((count / max) * 100));
+
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'28px minmax(80px, 120px) 1fr 36px', gap:10, alignItems:'center' }}>
+      <span style={{ fontSize:12, fontWeight:900, color: rank <= 3 ? '#2563eb' : '#94a3b8', textAlign:'center' }}>{rank}</span>
+      <span style={{ fontSize:13, fontWeight:900, color:'#334155', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={brand}>{brand}</span>
+      <div style={{ height:22, background:'#f1f5f9', borderRadius:8, overflow:'hidden' }}>
+        <div style={{ width:`${width}%`, height:'100%', background:'#3b82f6', borderRadius:8 }} />
+      </div>
+      <span style={{ fontSize:12, fontWeight:900, color:'#475569', textAlign:'right' }}>{count}</span>
     </div>
   );
 }
 
 function EmptyState({ text }) {
-  return <div style={{ textAlign:'center', padding:30, color:'#cbd5e1', fontSize:13 }}>{text}</div>;
+  return <div style={{ textAlign:'center', padding:28, color:'#94a3b8', fontSize:13, fontWeight:800 }}>{text}</div>;
 }
