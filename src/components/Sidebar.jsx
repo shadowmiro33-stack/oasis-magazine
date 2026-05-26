@@ -4,7 +4,8 @@ const menuItems = [
   { id: 'dashboard', icon: 'fas fa-chart-pie', label: '종합 대시보드' },
   { id: 'news', icon: 'fas fa-robot', label: '뉴스 수집 & AI' },
   { id: 'deploy', icon: 'fas fa-paper-plane', label: '리포트 배포 및 관리' },
-  { id: 'company', icon: 'fas fa-building', label: '수집 업체 리스트' },
+  // 자동 수집 기능으로 오해될 수 있어 업체 리스트 메뉴는 숨김 처리합니다.
+  // { id: 'company', icon: 'fas fa-building', label: '수집 업체 리스트' },
   { id: 'campaign', icon: 'fas fa-mobile-alt', label: '숏츠/릴스 큐레이션 관리' },
   { id: 'security', icon: 'fas fa-shield-alt', label: '보안 캠페인 배너 관리' },
   { id: 'subscribe', icon: 'fas fa-users', label: '뉴스레터 구독자 관리' },

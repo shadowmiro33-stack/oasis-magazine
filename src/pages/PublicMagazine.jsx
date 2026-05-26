@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, getDocs, query, setDoc } from 'firebase/firestore';
 import { db } from '../api/firebase';
 import { getAnalyticsSettings } from '../services/dataService';
@@ -28,11 +28,34 @@ const getReportDate = (report) => {
   return getDateToken(report.id) || getDateToken(report.publishDateId) || getDateToken(report.publishDate) || getDateToken(report.date);
 };
 
+const parseDateId = (value) => {
+  const token = getDateToken(value);
+  if (!token) return null;
+  const [year, month, day] = token.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 const formatLocalDate = (date = new Date()) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+const WEEK_DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+const getCalendarCells = (year, monthIndex) => {
+  const firstDay = new Date(year, monthIndex, 1);
+  const startOffset = firstDay.getDay();
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(year, monthIndex, 1 - startOffset + index);
+    return {
+      date,
+      id: formatLocalDate(date),
+      day: date.getDate(),
+      currentMonth: date.getMonth() === monthIndex,
+    };
+  });
 };
 
 const getSafeImageUrl = (url, fallback = fallbackArticleImage) => {
@@ -44,15 +67,6 @@ const getSafeArticleUrl = (url) => {
 };
 
 const getArticleSource = (article = {}) => article.source || article.brand || 'OASIS';
-
-const openNativeDatePicker = (event) => {
-  if (typeof event.currentTarget.showPicker !== 'function') return;
-  try {
-    event.currentTarget.showPicker();
-  } catch (_) {
-    // Some browsers throw if the native picker is already opening.
-  }
-};
 
 const getYoutubeEmbed = (url) => {
   if (!url) return '';
@@ -167,6 +181,113 @@ function SubscribeModal({ onClose }) {
         <input type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="이메일 주소를 입력해주세요" />
         <button type="button" className="pm-primary" onClick={submit} disabled={submitting}>{submitting ? '저장 중...' : '구독 완료하기'}</button>
       </div>
+    </div>
+  );
+}
+
+function MagazineDatePicker({ value, reports, onChange }) {
+  const wrapperRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const selectedDate = parseDateId(value) || new Date();
+  const [viewDate, setViewDate] = useState(selectedDate);
+  const reportDateList = useMemo(() => (reports || []).map(getReportDate).filter(Boolean).sort(), [reports]);
+  const availableDates = useMemo(() => new Set(reportDateList), [reportDateList]);
+  const year = viewDate.getFullYear();
+  const monthIndex = viewDate.getMonth();
+  const calendarCells = getCalendarCells(year, monthIndex);
+  const firstReportMonth = parseDateId(reportDateList[0]);
+  const lastReportMonth = parseDateId(reportDateList[reportDateList.length - 1]);
+  const canMovePrev = firstReportMonth ? new Date(year, monthIndex, 1) > new Date(firstReportMonth.getFullYear(), firstReportMonth.getMonth(), 1) : true;
+  const canMoveNext = lastReportMonth ? new Date(year, monthIndex, 1) < new Date(lastReportMonth.getFullYear(), lastReportMonth.getMonth(), 1) : true;
+
+  useEffect(() => {
+    const nextDate = parseDateId(value);
+    if (nextDate) setViewDate(nextDate);
+  }, [value]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handlePointerDown = (event) => {
+      if (!wrapperRef.current?.contains(event.target)) setOpen(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  const moveMonth = (offset) => {
+    setViewDate(prev => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
+  };
+
+  const selectDate = (dateId) => {
+    if (!availableDates.has(dateId)) return;
+    onChange(dateId);
+    setOpen(false);
+  };
+
+  return (
+    <div className="pm-date-picker" ref={wrapperRef}>
+      <button
+        type="button"
+        className={`pm-date-button ${open ? 'active' : ''}`}
+        onClick={() => setOpen(prev => !prev)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        {value || formatLocalDate()}
+      </button>
+      {open && (
+        <div className="pm-calendar-popover" role="dialog" aria-label="발행일 선택">
+          <div className="pm-calendar-head">
+            <button type="button" className="pm-calendar-nav" onClick={() => moveMonth(-1)} disabled={!canMovePrev} aria-label="이전 달">
+              <i className="fas fa-chevron-left" />
+            </button>
+            <div className="pm-calendar-title">
+              <span>{monthIndex + 1}월</span>
+              <i className="fas fa-chevron-down" />
+              <span>{year}</span>
+            </div>
+            <button type="button" className="pm-calendar-nav" onClick={() => moveMonth(1)} disabled={!canMoveNext} aria-label="다음 달">
+              <i className="fas fa-chevron-right" />
+            </button>
+          </div>
+
+          <div className="pm-calendar-weekdays">
+            {WEEK_DAYS.map(day => <span key={day}>{day}</span>)}
+          </div>
+
+          <div className="pm-calendar-grid">
+            {calendarCells.map(cell => {
+              const selected = cell.id === value;
+              const available = availableDates.has(cell.id);
+              return (
+                <button
+                  key={cell.id}
+                  type="button"
+                  className={[
+                    'pm-calendar-day',
+                    cell.currentMonth ? 'current' : 'outside',
+                    selected ? 'selected' : '',
+                    available ? 'available' : 'disabled',
+                  ].filter(Boolean).join(' ')}
+                  onClick={() => selectDate(cell.id)}
+                  disabled={!available}
+                  aria-pressed={selected}
+                  aria-label={cell.id}
+                >
+                  {cell.day}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -322,12 +443,10 @@ export default function PublicMagazine() {
             <strong>OASIS</strong>
           </button>
           <div className="pm-nav-actions">
-            <input
-              className="pm-date-input"
-              type="date"
+            <MagazineDatePicker
               value={currentIssueDate || selectedDate || formatLocalDate()}
-              onClick={openNativeDatePicker}
-              onChange={event => { setSelectedDate(event.target.value); setActiveCategory(''); }}
+              reports={reports}
+              onChange={(dateId) => { setSelectedDate(dateId); setActiveCategory(''); }}
             />
             <span>{issueName}</span>
             <button type="button" onClick={() => setSubscribeOpen(true)}>구독하기 <i className="far fa-envelope" /></button>
