@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { getAllMagazines, getAllSubscribers, getPolicies } from '../services/dataService';
+import { getAllMagazines, getAllSubscribers } from '../services/dataService';
 
 const CATEGORY_META = {
-  main: { label: '1면', title: 'FIRST DIVE', color: '#ef4444' },
-  macro: { label: '경제', title: 'MACRO VIEW', color: '#3b82f6' },
-  platform: { label: '비즈', title: 'BIZ & PLATFORM', color: '#f59e0b' },
-  auto: { label: '산업', title: 'AUTO TRACK', color: '#10b981' },
-  ai: { label: 'AI', title: 'AI STRATEGY', color: '#8b5cf6' },
-  security: { label: '보안', title: 'INFO-SECURE', color: '#06b6d4' },
+  main: { label: '1면', title: '핸지 돋보기', color: '#ef4444' },
+  macro: { label: '경제', title: '경제·비즈니스', color: '#3b82f6' },
+  platform: { label: '산업', title: '산업·플랫폼', color: '#f59e0b' },
+  auto: { label: '자동차', title: '자동차·모빌리티', color: '#10b981' },
+  ai: { label: 'AI', title: 'AI·테크', color: '#8b5cf6' },
+  security: { label: '보안', title: '보안·리스크', color: '#06b6d4' },
 };
 
 const LIST_CATEGORIES = ['macro', 'platform', 'auto', 'ai', 'security'];
@@ -24,7 +24,6 @@ const emptyStats = {
   reports: 0,
   subscribers: 0,
   totalArticles: 0,
-  policies: 0,
   missingImages: 0,
   missingLinks: 0,
   missingInsights: 0,
@@ -40,6 +39,27 @@ const countDrafts = (draftArticles = {}) => ({
 });
 
 const sumValues = (values) => Object.values(values).reduce((sum, value) => sum + value, 0);
+
+const getDraftArticleList = (draftArticles = {}) => ([
+  draftArticles.main ? { ...draftArticles.main, category: draftArticles.main.category || 'main' } : null,
+  ...LIST_CATEGORIES.flatMap(key => (draftArticles[key] || []).map(article => ({ ...article, category: article.category || key }))),
+]).filter(article => article?.title);
+
+const getUniqueArticles = (articles = []) => {
+  const seen = new Set();
+  return articles.filter(article => {
+    const key = [article?.link, article?.title].filter(Boolean).join('|');
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const getExcerpt = (value = '', maxLength = 80) => {
+  const normalized = String(value || '').replace(/\s+/g, ' ').trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength).trim()}...`;
+};
 
 const getReportDate = (report) => {
   if (!report) return '';
@@ -78,6 +98,7 @@ export default function Dashboard({ draftArticles }) {
   const [recentReports, setRecentReports] = useState([]);
 
   const draftCounts = useMemo(() => countDrafts(draftArticles), [draftArticles]);
+  const draftArticleList = useMemo(() => getDraftArticleList(draftArticles), [draftArticles]);
   const draftsTotal = sumValues(draftCounts);
   const draftReadyCategories = LIST_CATEGORIES.filter(key => draftCounts[key] > 0);
   const draftMissingCategories = LIST_CATEGORIES.filter(key => draftCounts[key] === 0);
@@ -86,15 +107,41 @@ export default function Dashboard({ draftArticles }) {
   const apiConfigured = typeof window !== 'undefined' && !!window.localStorage?.getItem('GEMINI_API_KEY');
   const latestDate = getReportDate(latestReport);
   const daysSinceLatest = getDaysSince(latestDate);
+  const hookSourceArticles = draftArticleList.length ? draftArticleList : (latestReport?.articles || []);
+  const hookTopStories = getUniqueArticles([...hookSourceArticles])
+    .sort((a, b) => Number(!!b.isImportant) - Number(!!a.isImportant))
+    .slice(0, 3);
+  const customerHooks = [
+    {
+      title: '오늘의 3줄 브리핑',
+      desc: hookTopStories.length
+        ? hookTopStories.map((article, index) => `${index + 1}. ${article.title}`).join(' / ')
+        : '대표 기사 3개를 먼저 구성하면 메일 상단에서 바로 읽히는 요약으로 노출됩니다.',
+      color: '#2563eb',
+    },
+    {
+      title: '비즈니스 온도',
+      desc: draftReadyCategories.length
+        ? `${draftReadyCategories.map(key => CATEGORY_META[key].label).join(', ')} 이슈가 준비됐습니다. 고객에게 오늘 시장 분위기를 한눈에 보여줄 수 있습니다.`
+        : '카테고리별 기사 흐름을 관심·주의·리스크 톤으로 보여주면 구독자가 빠르게 훑어볼 수 있습니다.',
+      color: '#ea580c',
+    },
+    {
+      title: '핸지의 한 줄 시선',
+      desc: hookTopStories[0]?.insight
+        ? getExcerpt(hookTopStories[0].insight, 96)
+        : '단순 기사 링크보다 “그래서 우리 고객에게 왜 중요한가”를 한 줄로 붙이면 클릭 이유가 생깁니다.',
+      color: '#0f766e',
+    },
+  ];
 
   const loadStats = async () => {
     setLoading(true);
     setLoadError('');
     try {
-      const [magazines, subscribers, policies] = await Promise.all([
+      const [magazines, subscribers] = await Promise.all([
         getAllMagazines(),
         getAllSubscribers(),
-        getPolicies(),
       ]);
 
       const allArticles = magazines.flatMap(report => (
@@ -129,7 +176,6 @@ export default function Dashboard({ draftArticles }) {
         reports: magazines.length,
         subscribers: subscribers.length,
         totalArticles: allArticles.length,
-        policies: policies.length,
         missingImages: allArticles.filter(article => !article.img).length,
         missingLinks: allArticles.filter(article => !article.link).length,
         missingInsights: allArticles.filter(article => !article.insight).length,
@@ -193,7 +239,7 @@ export default function Dashboard({ draftArticles }) {
         </div>
       )}
 
-      <section style={{ display:'grid', gridTemplateColumns:'1.1fr 1fr 1fr 1fr', gap:16, marginBottom:20 }}>
+      <section style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:16, marginBottom:20 }}>
         <StatusCard
           label="최신 발행"
           value={latestReport?.issueName || latestReport?.id || '없음'}
@@ -209,7 +255,7 @@ export default function Dashboard({ draftArticles }) {
         <StatusCard
           label="구독자"
           value={`${stats.subscribers}명`}
-          meta={`${stats.policies}개 추적 정책 운영 중`}
+          meta="관심사 기반 선택 발송 대상"
           accent="#7c3aed"
         />
         <StatusCard
@@ -220,7 +266,7 @@ export default function Dashboard({ draftArticles }) {
         />
       </section>
 
-      <section style={{ display:'grid', gridTemplateColumns:'1.05fr 1fr', gap:20, marginBottom:20 }}>
+      <section style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:20, marginBottom:20 }}>
         <Panel title="오늘의 운영 체크" icon="fas fa-clipboard-check" subText={lastLoadedAt ? `${lastLoadedAt} 기준` : ''}>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {actionItems.map((item, index) => (
@@ -241,7 +287,17 @@ export default function Dashboard({ draftArticles }) {
         </Panel>
       </section>
 
-      <section style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20, marginBottom:20 }}>
+      <section style={{ marginBottom:20 }}>
+        <Panel title="고객 호기심 포인트" icon="fas fa-lightbulb" subText="웹/메일에서 구독을 당길 요소">
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:12 }}>
+            {customerHooks.map(item => (
+              <HookCard key={item.title} {...item} />
+            ))}
+          </div>
+        </Panel>
+      </section>
+
+      <section style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:20, marginBottom:20 }}>
         <Panel title="누적 기사 카테고리" icon="fas fa-chart-bar" subText={`${stats.totalArticles}건`}>
           <MetricBars items={categoryData} emptyText="아직 발행된 기사가 없습니다." />
         </Panel>
@@ -251,7 +307,7 @@ export default function Dashboard({ draftArticles }) {
         </Panel>
       </section>
 
-      <section style={{ display:'grid', gridTemplateColumns:'1.25fr 1fr', gap:20 }}>
+      <section style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(320px, 1fr))', gap:20 }}>
         <Panel title="최근 발행 리포트" icon="fas fa-history" subText="최신순 6개">
           <div style={{ overflowX:'auto' }}>
             <table>
@@ -350,6 +406,18 @@ function MiniCategory({ meta, count }) {
       <div style={{ width:10, height:10, borderRadius:'50%', background: count > 0 ? meta.color : '#cbd5e1', margin:'0 auto 8px' }} />
       <div style={{ fontSize:11, color:'#64748b', fontWeight:900, marginBottom:4 }}>{meta.label}</div>
       <div style={{ fontSize:20, color:'#0f172a', fontWeight:900 }}>{count}</div>
+    </div>
+  );
+}
+
+function HookCard({ title, desc, color }) {
+  return (
+    <div style={{ border:'1px solid #e2e8f0', borderRadius:8, background:'#ffffff', padding:16, minHeight:142, display:'flex', flexDirection:'column', gap:10 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <span style={{ width:10, height:10, borderRadius:'50%', background:color, flex:'0 0 auto' }} />
+        <strong style={{ color:'#0f172a', fontSize:14, fontWeight:900 }}>{title}</strong>
+      </div>
+      <p style={{ margin:0, color:'#475569', fontSize:13, lineHeight:1.6, fontWeight:800, wordBreak:'keep-all' }}>{desc}</p>
     </div>
   );
 }

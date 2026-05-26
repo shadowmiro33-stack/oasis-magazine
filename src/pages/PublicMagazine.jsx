@@ -68,6 +68,30 @@ const getSafeArticleUrl = (url) => {
 
 const getArticleSource = (article = {}) => article.source || article.brand || 'OASIS';
 
+const getArticleExcerpt = (value = '', maxLength = 72) => {
+  const normalized = String(value || '').replace(/\s+/g, ' ').trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength).trim()}...`;
+};
+
+const getUniqueArticles = (articles = []) => {
+  const seen = new Set();
+  return articles.filter(article => {
+    const key = [article?.link, article?.title].filter(Boolean).join('|');
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const getTemperatureTone = (key) => ({
+  macro: '주의',
+  platform: '관심',
+  auto: '관심',
+  ai: '가속',
+  security: '리스크',
+}[key] || '확인');
+
 const getYoutubeEmbed = (url) => {
   if (!url) return '';
   let id = '';
@@ -338,7 +362,7 @@ export default function PublicMagazine() {
   }, [activeCategory]);
 
   const currentReport = reports.find(report => report.id === selectedDate || report.id.startsWith(`${selectedDate}_`)) || reports[0];
-  const currentArticles = currentReport?.articles || [];
+  const currentArticles = useMemo(() => currentReport?.articles || [], [currentReport]);
   const mainArticle = currentArticles.find(article => article.category === 'main');
   const issueName = currentReport?.issueName || currentReport?.id?.split('_')[1] || 'NO. --';
   const videoEmbed = getYoutubeEmbed(currentReport?.video?.url);
@@ -347,6 +371,23 @@ export default function PublicMagazine() {
   const activeCategoryMeta = getCategoryMeta(activeCategory);
   const coveredCategoryCount = categories.filter(category => currentArticles.some(article => article.category === category.key)).length;
   const topSource = currentArticles.find(article => article.source)?.source || 'OASIS';
+  const briefItems = useMemo(() => (
+    getUniqueArticles([
+      mainArticle,
+      ...currentArticles
+        .filter(article => article.category !== 'main')
+        .sort((a, b) => Number(!!b.isImportant) - Number(!!a.isImportant)),
+    ]).slice(0, 3)
+  ), [currentArticles, mainArticle]);
+  const temperatureItems = useMemo(() => (
+    categories
+      .map(category => ({
+        ...category,
+        count: currentArticles.filter(article => article.category === category.key).length,
+        tone: getTemperatureTone(category.key),
+      }))
+      .filter(item => item.count > 0)
+  ), [currentArticles]);
 
   useEffect(() => {
     if (loading) return;
@@ -493,6 +534,51 @@ export default function PublicMagazine() {
                 <div><dt>대표 출처</dt><dd>{topSource}</dd></div>
               </dl>
             </section>
+
+            {briefItems.length > 0 && (
+              <section className="pm-brief-panel">
+                <div className="pm-brief-copy">
+                  <span>TODAY'S PICK</span>
+                  <h2>오늘의 3줄 브리핑</h2>
+                  <p>핸지가 먼저 봐야 할 이슈만 짧게 골랐어요.</p>
+                </div>
+                <ol className="pm-brief-list">
+                  {briefItems.map((article, index) => {
+                    const category = getCategoryMeta(article.category);
+                    return (
+                      <li key={`${article.title}-${index}`}>
+                        <button type="button" onClick={() => openArticle(article)} style={{ '--accent': category.accent }}>
+                          <span>{index + 1}</span>
+                          <div>
+                            <small>{category.label} · 출처: {getArticleSource(article)}</small>
+                            <strong>{article.title}</strong>
+                            {(article.desc || article.insight) && <em>{getArticleExcerpt(article.desc || article.insight)}</em>}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
+            )}
+
+            {temperatureItems.length > 0 && (
+              <section className="pm-temperature-strip" aria-label="오늘의 비즈니스 온도">
+                <div>
+                  <strong>오늘의 비즈니스 온도</strong>
+                  <span>카테고리별 흐름을 빠르게 훑어보세요.</span>
+                </div>
+                <div className="pm-temperature-items">
+                  {temperatureItems.map(item => (
+                    <button key={item.key} type="button" onClick={() => setActiveCategory(item.key)} style={{ '--accent': item.accent, '--accent-soft': item.soft }}>
+                      <b>{item.tone}</b>
+                      <span>{item.label}</span>
+                      <small>{item.count}건</small>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {videoEmbed && (
               <section className="pm-video">

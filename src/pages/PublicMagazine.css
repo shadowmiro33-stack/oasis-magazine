@@ -440,6 +440,196 @@
   white-space: nowrap;
 }
 
+.pm-brief-panel {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.36fr) 1fr;
+  gap: 24px;
+  align-items: stretch;
+  margin-bottom: 22px;
+  border: 1px solid #dbe4ee;
+  border-radius: 12px;
+  background: #fff;
+  padding: 24px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.pm-brief-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-right: 1px solid #e2e8f0;
+  padding-right: 22px;
+}
+
+.pm-brief-copy span {
+  margin-bottom: 8px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.pm-brief-copy h2 {
+  margin-bottom: 8px;
+  color: #0f172a;
+  font-size: 26px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.pm-brief-copy p {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+  font-weight: 800;
+}
+
+.pm-brief-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pm-brief-list button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 14px;
+  align-items: start;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 14px;
+  text-align: left;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.pm-brief-list button:hover {
+  border-color: var(--accent, #2563eb);
+  background: #fff;
+  transform: translateY(-2px);
+}
+
+.pm-brief-list button > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--accent, #2563eb);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.pm-brief-list small {
+  display: block;
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.pm-brief-list strong {
+  display: block;
+  color: #111827;
+  font-size: 17px;
+  line-height: 1.42;
+  font-weight: 900;
+  word-break: keep-all;
+}
+
+.pm-brief-list em {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+  font-style: normal;
+  font-weight: 800;
+  word-break: keep-all;
+}
+
+.pm-temperature-strip {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.28fr) 1fr;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 44px;
+  border: 1px solid #dbe4ee;
+  border-radius: 12px;
+  background: #eef4fb;
+  padding: 18px;
+}
+
+.pm-temperature-strip > div:first-child strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.pm-temperature-strip > div:first-child span {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 800;
+}
+
+.pm-temperature-items {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pm-temperature-items button {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  column-gap: 9px;
+  align-items: center;
+  border: 1px solid #dbe4ee;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px 12px;
+  color: #0f172a;
+  text-align: left;
+}
+
+.pm-temperature-items button:hover {
+  background: var(--accent-soft, #eff6ff);
+}
+
+.pm-temperature-items b {
+  grid-row: 1 / 3;
+  min-width: 48px;
+  border-radius: 8px;
+  background: var(--accent, #2563eb);
+  color: #fff;
+  padding: 7px 8px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.pm-temperature-items span {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.pm-temperature-items small {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .pm-video {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -1027,8 +1217,21 @@
 
   .pm-video,
   .pm-main-article,
+  .pm-brief-panel,
+  .pm-temperature-strip,
   .pm-subscribe-band {
     grid-template-columns: 1fr;
+  }
+
+  .pm-brief-copy {
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+    padding-right: 0;
+    padding-bottom: 18px;
+  }
+
+  .pm-temperature-items {
+    justify-content: flex-start;
   }
 
   .pm-issue-strip {
@@ -1245,6 +1448,49 @@
 
   .pm-video {
     margin-bottom: 42px;
+  }
+
+  .pm-brief-panel {
+    gap: 16px;
+    margin-bottom: 18px;
+    padding: 18px;
+  }
+
+  .pm-brief-copy h2 {
+    font-size: 23px;
+  }
+
+  .pm-brief-list button {
+    grid-template-columns: 36px 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .pm-brief-list button > span {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .pm-brief-list strong {
+    font-size: 16px;
+  }
+
+  .pm-temperature-strip {
+    gap: 14px;
+    margin-bottom: 36px;
+    padding: 15px;
+  }
+
+  .pm-temperature-items {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .pm-temperature-items button {
+    width: 100%;
   }
 
   .pm-video h2 {

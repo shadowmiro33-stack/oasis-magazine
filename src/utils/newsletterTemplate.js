@@ -96,6 +96,14 @@ const pickFeaturedArticle = (items = []) => (
     .sort((a, b) => Number(!!b.isImportant) - Number(!!a.isImportant))[0]
 );
 
+const getBusinessTemperatureItems = ({ macro, platform, auto, ai, security }) => ([
+  { key: 'macro', tone: '주의', count: macro.length },
+  { key: 'platform', tone: '관심', count: platform.length },
+  { key: 'auto', tone: '관심', count: auto.length },
+  { key: 'ai', tone: '가속', count: ai.length },
+  { key: 'security', tone: '리스크', count: security.length },
+]).filter(item => item.count > 0);
+
 export function getPremiumNewsletterHTML(issueName, today, campaignData, articlesSource, webMagazineUrl) {
   const managedWebMagazineUrl = normalizeWebMagazineUrl(webMagazineUrl || getStoredWebMagazineUrl());
   const main = articlesSource?.main || (Array.isArray(articlesSource) ? articlesSource.find(a => a.category === 'main') : null);
@@ -117,6 +125,7 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
   }
 
   const topStories = getTopStories({ main, macro, platform, auto, ai, security });
+  const temperatureItems = getBusinessTemperatureItems({ macro, platform, auto, ai, security });
 
   const linkOpen = (url) => {
     const safeUrl = getSafeExternalUrl(url);
@@ -146,6 +155,27 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
             </div>`;
           return safeUrl ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:block; color:inherit; text-decoration:none;">${row}</a>` : row;
         }).join('')}
+      </div>`;
+  };
+
+  const renderBusinessTemperature = () => {
+    if (!temperatureItems.length) return '';
+
+    return `
+      <div style="background-color:#ffffff; border:1px solid #dbe4ee; border-radius:20px; padding:22px; margin-bottom:28px; box-sizing:border-box;">
+        <div style="font-size:13px; color:#2563eb; font-weight:900; letter-spacing:1px; margin-bottom:7px;">BUSINESS TEMP</div>
+        <div style="font-size:22px; color:#0f172a; font-weight:900; line-height:1.35; word-break:keep-all; margin-bottom:14px;">오늘의 비즈니스 온도</div>
+        <div style="font-size:0;">
+          ${temperatureItems.map(item => {
+            const meta = CATEGORY_META[item.key] || { label: '브리핑', accent: '#2563eb' };
+            return `
+              <div style="display:inline-block; vertical-align:top; width:31%; min-width:150px; margin:0 1% 10px 0; border:1px solid #e2e8f0; border-radius:14px; padding:13px; box-sizing:border-box; background-color:#f8fafc;">
+                <div style="display:inline-block; background-color:${meta.accent}; color:#ffffff; border-radius:8px; padding:6px 8px; font-size:12px; font-weight:900; margin-bottom:9px;">${escapeHtml(item.tone)}</div>
+                <div style="font-size:14px; color:#0f172a; font-weight:900; line-height:1.35; word-break:keep-all;">${escapeHtml(meta.label)}</div>
+                <div style="font-size:12px; color:#64748b; font-weight:900; margin-top:4px;">${item.count}건 확인</div>
+              </div>`;
+          }).join('')}
+        </div>
       </div>`;
   };
 
@@ -199,7 +229,8 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
         <div style="background-color:#0f172a; border-radius:18px; padding:22px 22px; margin-bottom:22px; box-sizing:border-box;">
           <div style="font-size:20px; color:#ffffff; font-weight:900; line-height:1.55; word-break:keep-all;">오늘 챙겨볼 경제·비즈니스·투자·자동차 이슈를 핸지가 골라 정리했어요.</div>
         </div>
-        ${renderTopStories()}`;
+        ${renderTopStories()}
+        ${renderBusinessTemperature()}`;
 
   if (main) {
     html += `
