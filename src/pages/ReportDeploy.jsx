@@ -7,6 +7,7 @@ import { readJsonResponse } from '../utils/apiEndpoints';
 import MagazineWebPreview from '../components/MagazineWebPreview';
 import CollapsibleCard from '../components/CollapsibleCard';
 import { normalizeExternalUrl, normalizeImageUrl, sanitizeArticleUrls } from '../utils/urlSanitizer';
+import { buildNewsletterSendPlan, filterNewsletterArticles, hasNewsletterArticles } from '../utils/newsletterRecipients';
 
 const CATEGORY_OPTIONS = [
   { value: 'main', label: '🔥 1면' },
@@ -35,136 +36,6 @@ const getReportDateId = (reportId = '') => reportId.match(/^\d{4}-\d{2}-\d{2}/)?
 const formatKoreanDateId = (dateId = formatLocalDate()) => {
   const [year, month, day] = dateId.split('-');
   return `${year}.${Number(month)}.${Number(day)}`;
-};
-
-const NEWSLETTER_CATEGORY_KEYS = ['macro', 'platform', 'auto', 'ai', 'security'];
-const NEWSLETTER_CATEGORY_LABELS = {
-  macro: '경제·비즈니스',
-  platform: '산업·플랫폼',
-  auto: '자동차·모빌리티',
-  ai: 'AI·테크',
-  security: '보안·리스크',
-};
-const INTEREST_ALIASES = {
-  macro: ['macro', 'economy', '\uacbd\uc81c'],
-  platform: ['platform', 'biz', 'business', '\ube44\uc988'],
-  auto: ['auto', 'mobility', 'industry', '\uc0b0\uc5c5'],
-  ai: ['ai', 'artificial intelligence'],
-  security: ['security', 'secure', 'info-secure', '\ubcf4\uc548'],
-};
-
-const getSubscriberCategoryKeys = (subscriber) => {
-  const interests = Array.isArray(subscriber?.interests) ? subscriber.interests : [];
-  if (interests.length === 0) return NEWSLETTER_CATEGORY_KEYS;
-
-  const normalized = interests.map(interest => String(interest || '').trim().toLowerCase()).filter(Boolean);
-  const keys = NEWSLETTER_CATEGORY_KEYS.filter(key => (
-    normalized.some(interest => interest === key || INTEREST_ALIASES[key].some(alias => interest.includes(alias)))
-  ));
-
-  return keys.length > 0 ? keys : NEWSLETTER_CATEGORY_KEYS;
-};
-
-const makeCategoryGroupKey = (keys) => NEWSLETTER_CATEGORY_KEYS.filter(key => keys.includes(key)).join('|');
-const hasAllNewsletterCategories = (keys) => keys.length === NEWSLETTER_CATEGORY_KEYS.length;
-const formatCategoryGroup = (keys) => hasAllNewsletterCategories(keys)
-  ? '전체 카테고리'
-  : keys.map(key => NEWSLETTER_CATEGORY_LABELS[key] || key).join(', ');
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const normalizeEmail = (email = '') => String(email || '').trim().toLowerCase();
-const isActiveSubscriber = (subscriber) => {
-  const status = String(subscriber?.status || 'active').trim().toLowerCase();
-  return !['inactive', 'blocked', 'deleted', 'unsubscribed', 'paused'].includes(status);
-};
-
-const filterNewsletterArticles = (articlesSource, keys) => {
-  const includeAll = hasAllNewsletterCategories(keys);
-
-  if (Array.isArray(articlesSource)) {
-    return articlesSource
-      .map(sanitizeArticleUrls)
-      .filter(article => article.category === 'main' ? includeAll : keys.includes(article.category));
-  }
-
-  return {
-    main: includeAll && articlesSource?.main ? sanitizeArticleUrls(articlesSource.main) : null,
-    macro: keys.includes('macro') ? (articlesSource?.macro || []).map(sanitizeArticleUrls) : [],
-    platform: keys.includes('platform') ? (articlesSource?.platform || []).map(sanitizeArticleUrls) : [],
-    auto: keys.includes('auto') ? (articlesSource?.auto || []).map(sanitizeArticleUrls) : [],
-    ai: keys.includes('ai') ? (articlesSource?.ai || []).map(sanitizeArticleUrls) : [],
-    security: keys.includes('security') ? (articlesSource?.security || []).map(sanitizeArticleUrls) : [],
-  };
-};
-
-const hasNewsletterArticles = (articlesSource) => {
-  if (Array.isArray(articlesSource)) return articlesSource.length > 0;
-  return !!articlesSource?.main || NEWSLETTER_CATEGORY_KEYS.some(key => (articlesSource?.[key] || []).length > 0);
-};
-
-const countNewsletterArticles = (articlesSource) => {
-  if (Array.isArray(articlesSource)) return articlesSource.length;
-  return (articlesSource?.main ? 1 : 0)
-    + NEWSLETTER_CATEGORY_KEYS.reduce((sum, key) => sum + (articlesSource?.[key] || []).length, 0);
-};
-
-const buildNewsletterSendPlan = (subscribers = [], articlesSource) => {
-  const groups = {};
-  const seenEmails = new Set();
-  const stats = {
-    totalSubscribers: subscribers.length,
-    inactiveCount: 0,
-    invalidEmailCount: 0,
-    duplicateCount: 0,
-    skippedNoContentCount: 0,
-    deliverableCount: 0,
-  };
-
-  subscribers.forEach(subscriber => {
-    if (!isActiveSubscriber(subscriber)) {
-      stats.inactiveCount += 1;
-      return;
-    }
-
-    const email = normalizeEmail(subscriber.email || subscriber.id);
-    if (!EMAIL_RE.test(email)) {
-      stats.invalidEmailCount += 1;
-      return;
-    }
-    if (seenEmails.has(email)) {
-      stats.duplicateCount += 1;
-      return;
-    }
-    seenEmails.add(email);
-
-    const keys = getSubscriberCategoryKeys(subscriber);
-    const filteredArticles = filterNewsletterArticles(articlesSource, keys);
-    const articleCount = countNewsletterArticles(filteredArticles);
-
-    if (!hasNewsletterArticles(filteredArticles)) {
-      stats.skippedNoContentCount += 1;
-      return;
-    }
-
-    const groupKey = makeCategoryGroupKey(keys);
-    if (!groups[groupKey]) {
-      groups[groupKey] = {
-        key: groupKey,
-        keys,
-        label: formatCategoryGroup(keys),
-        emails: [],
-        articleCount,
-        includesSecurity: keys.includes('security'),
-      };
-    }
-    groups[groupKey].emails.push(email);
-    stats.deliverableCount += 1;
-  });
-
-  return {
-    ...stats,
-    groups: Object.values(groups).sort((a, b) => b.emails.length - a.emails.length),
-  };
 };
 
 export default function ReportDeploy({ draftArticles, setDraftArticles, issueName, setIssueName, selCampaign, setSelCampaign, selSecurity, setSelSecurity, video, setVideo, campaigns, secBanners }) {

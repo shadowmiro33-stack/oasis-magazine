@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getAllMagazines, getAllSubscribers } from '../services/dataService';
+import { getSubscriberCategoryKeys } from '../utils/newsletterRecipients';
 
 const CATEGORY_META = {
   main: { label: '1면', title: '핸지 돋보기', color: '#ef4444' },
@@ -11,14 +12,6 @@ const CATEGORY_META = {
 };
 
 const LIST_CATEGORIES = ['macro', 'platform', 'auto', 'ai', 'security'];
-
-const INTEREST_ALIASES = {
-  macro: ['macro', 'economy', '경제'],
-  platform: ['platform', 'biz', 'business', '비즈'],
-  auto: ['auto', 'mobility', 'industry', '산업'],
-  ai: ['ai', '인공지능'],
-  security: ['security', 'secure', '보안'],
-};
 
 const emptyStats = {
   reports: 0,
@@ -75,15 +68,6 @@ const getDaysSince = (dateId) => {
   const today = new Date();
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   return Math.max(0, Math.floor((todayStart - published) / 86400000));
-};
-
-const normalizeInterestKeys = (interests = []) => {
-  if (!Array.isArray(interests) || interests.length === 0) return LIST_CATEGORIES;
-  const raw = interests.map(item => String(item || '').trim().toLowerCase()).filter(Boolean);
-  const keys = LIST_CATEGORIES.filter(key => raw.some(value => (
-    value === key || INTEREST_ALIASES[key].some(alias => value.includes(alias.toLowerCase()))
-  )));
-  return keys.length ? keys : LIST_CATEGORIES;
 };
 
 export default function Dashboard({ draftArticles }) {
@@ -164,7 +148,7 @@ export default function Dashboard({ draftArticles }) {
 
       const interestMap = {};
       subscribers.forEach(subscriber => {
-        normalizeInterestKeys(subscriber.interests).forEach(key => {
+        getSubscriberCategoryKeys(subscriber).forEach(key => {
           interestMap[key] = (interestMap[key] || 0) + 1;
         });
       });

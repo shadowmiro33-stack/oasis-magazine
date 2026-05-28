@@ -84,14 +84,6 @@ const getUniqueArticles = (articles = []) => {
   });
 };
 
-const getTemperatureTone = (key) => ({
-  macro: '주의',
-  platform: '관심',
-  auto: '관심',
-  ai: '가속',
-  security: '리스크',
-}[key] || '확인');
-
 const getYoutubeEmbed = (url) => {
   if (!url) return '';
   let id = '';
@@ -157,11 +149,11 @@ function EmptyState({ onSubscribe }) {
 
 function SubscribeModal({ onClose }) {
   const [email, setEmail] = useState('');
-  const [interests, setInterests] = useState(categories.map(category => category.label));
+  const [interestKeys, setInterestKeys] = useState(categories.map(category => category.key));
   const [submitting, setSubmitting] = useState(false);
 
-  const toggle = (label) => {
-    setInterests(prev => prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label]);
+  const toggle = (key) => {
+    setInterestKeys(prev => prev.includes(key) ? prev.filter(item => item !== key) : [...prev, key]);
   };
 
   const submit = async () => {
@@ -170,10 +162,17 @@ function SubscribeModal({ onClose }) {
       alert('올바른 이메일 주소를 입력해주세요.');
       return;
     }
+    if (interestKeys.length === 0) {
+      alert('관심 카테고리를 1개 이상 선택해주세요.');
+      return;
+    }
     setSubmitting(true);
     try {
+      const selectedInterestKeys = categories.map(category => category.key).filter(key => interestKeys.includes(key));
+      const interests = selectedInterestKeys.map(key => categoryLookup[key]?.label || key);
       await setDoc(doc(db, 'subscribers', cleanEmail), {
         email: cleanEmail,
+        interestKeys: selectedInterestKeys,
         interests,
         subscribeDate: new Date().toISOString(),
         status: 'active'
@@ -196,7 +195,7 @@ function SubscribeModal({ onClose }) {
         </div>
         <div className="pm-interest-grid">
           {categories.map(category => (
-            <button key={category.key} type="button" className={interests.includes(category.label) ? 'active' : ''} onClick={() => toggle(category.label)}>
+            <button key={category.key} type="button" className={interestKeys.includes(category.key) ? 'active' : ''} onClick={() => toggle(category.key)}>
               <span>{category.icon}</span>
               {category.label}
             </button>
@@ -384,7 +383,6 @@ export default function PublicMagazine() {
       .map(category => ({
         ...category,
         count: currentArticles.filter(article => article.category === category.key).length,
-        tone: getTemperatureTone(category.key),
       }))
       .filter(item => item.count > 0)
   ), [currentArticles]);
@@ -563,17 +561,17 @@ export default function PublicMagazine() {
             )}
 
             {temperatureItems.length > 0 && (
-              <section className="pm-temperature-strip" aria-label="오늘의 비즈니스 온도">
+              <section className="pm-temperature-strip" aria-label="이번 호 카테고리별 기사 수">
                 <div>
-                  <strong>오늘의 비즈니스 온도</strong>
-                  <span>카테고리별 흐름을 빠르게 훑어보세요.</span>
+                  <strong>이번 호 기사 구성</strong>
+                  <span>카테고리별로 담긴 기사 수를 정리했습니다.</span>
                 </div>
                 <div className="pm-temperature-items">
                   {temperatureItems.map(item => (
                     <button key={item.key} type="button" onClick={() => setActiveCategory(item.key)} style={{ '--accent': item.accent, '--accent-soft': item.soft }}>
-                      <b>{item.tone}</b>
+                      <b>{item.count}건</b>
                       <span>{item.label}</span>
-                      <small>{item.count}건</small>
+                      <small>{item.title}</small>
                     </button>
                   ))}
                 </div>
