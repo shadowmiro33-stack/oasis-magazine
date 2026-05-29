@@ -49,6 +49,65 @@ const normalizeAttrUrl = (url) => String(url || '').replace(/"/g, '%22');
 
 const getSafeExternalUrl = (url) => normalizeAttrUrl(normalizeExternalUrl(url, { fallback: '' }));
 
+const getVideoSourceUrl = (videoData) => {
+  if (!videoData) return '';
+  if (typeof videoData === 'string') return videoData;
+  return videoData.shortsUrl || videoData.url || videoData.videoUrl || videoData.link || '';
+};
+
+const getYoutubeVideoId = (url) => {
+  const safeUrl = normalizeExternalUrl(url, { fallback: '', forceHttps: false });
+  if (!safeUrl) return '';
+
+  try {
+    const parsed = new URL(safeUrl);
+    const host = parsed.hostname.replace(/^(www|m)\./, '');
+    const parts = parsed.pathname.split('/').filter(Boolean);
+
+    if (host === 'youtu.be') return parts[0] || '';
+    if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
+      if (parts[0] === 'shorts' || parts[0] === 'embed' || parts[0] === 'live') return parts[1] || '';
+      if (parts[0] === 'watch') return parsed.searchParams.get('v') || '';
+    }
+  } catch (_) {
+    return '';
+  }
+
+  return '';
+};
+
+const getVideoClickUrl = (url) => {
+  const videoId = getYoutubeVideoId(url);
+  if (videoId) return normalizeAttrUrl(`https://www.youtube.com/watch?v=${videoId}`);
+  return getSafeExternalUrl(url);
+};
+
+const getYoutubeThumbnailUrl = (url) => {
+  const videoId = getYoutubeVideoId(url);
+  return videoId ? normalizeAttrUrl(`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`) : '';
+};
+
+const getNewsletterVideoBlock = (campaignData, videoData) => {
+  const source = campaignData?.shortsUrl ? campaignData : videoData;
+  const sourceUrl = getVideoSourceUrl(source);
+  const safeUrl = getVideoClickUrl(sourceUrl);
+  if (!source || !safeUrl) return null;
+
+  const thumbnail = normalizeImageUrl(
+    source.emailUrl || source.emailImg || source.securityImg || source.img || source.thumbnail || getYoutubeThumbnailUrl(sourceUrl),
+    { fallback: '' }
+  );
+  if (!thumbnail) return null;
+
+  return {
+    safeUrl,
+    thumbnail,
+    title: source.title || '',
+    platform: source.platform || source.source || (getYoutubeVideoId(sourceUrl) ? 'YouTube' : ''),
+    desc: source.desc || source.description || '',
+  };
+};
+
 const getPublicAssetUrl = (pathname) => {
   const assetPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
   if (typeof window !== 'undefined' && window.location?.origin) {
@@ -104,8 +163,10 @@ const getBusinessTemperatureItems = ({ macro, platform, auto, ai, security }) =>
   { key: 'security', tone: '리스크', count: security.length },
 ]).filter(item => item.count > 0);
 
-export function getPremiumNewsletterHTML(issueName, today, campaignData, articlesSource, webMagazineUrl) {
-  const managedWebMagazineUrl = normalizeWebMagazineUrl(webMagazineUrl || getStoredWebMagazineUrl());
+export function getPremiumNewsletterHTML(issueName, today, campaignData, articlesSource, webMagazineUrl, videoData) {
+  const passedWebMagazineUrl = typeof webMagazineUrl === 'string' ? webMagazineUrl : '';
+  const passedVideoData = videoData || (webMagazineUrl && typeof webMagazineUrl === 'object' ? webMagazineUrl : null);
+  const managedWebMagazineUrl = normalizeWebMagazineUrl(passedWebMagazineUrl || getStoredWebMagazineUrl());
   const main = articlesSource?.main || (Array.isArray(articlesSource) ? articlesSource.find(a => a.category === 'main') : null);
 
   let macro = [], platform = [], auto = [], ai = [], security = [];
@@ -261,38 +322,33 @@ export function getPremiumNewsletterHTML(issueName, today, campaignData, article
   html += `      </div>`;
 
   html += `<div style="background-color:#ffffff; padding:38px 24px; text-align:center; border-top:1px solid #e2e8f0; box-sizing:border-box;">`;
-  if (campaignData) {
-    const isShorts = !!campaignData.shortsUrl;
-    const imgUrl = normalizeImageUrl(isShorts ? campaignData.securityImg : (campaignData.emailUrl || campaignData.emailImg || campaignData.url || campaignData.securityImg || campaignData), { fallback: '' });
+  const videoBlock = getNewsletterVideoBlock(campaignData, passedVideoData);
+  const campaignImgUrl = campaignData && !campaignData.shortsUrl
+    ? normalizeImageUrl(campaignData.emailUrl || campaignData.emailImg || campaignData.url || campaignData.securityImg || campaignData, { fallback: '' })
+    : '';
 
-    const getDeepLinkUrl = (url) => {
-      if (!url) return '';
-      if (url.includes('youtube.com/shorts/')) return `https://www.youtube.com/watch?v=${url.split('/shorts/')[1].split('?')[0]}`;
-      if (url.includes('youtu.be/')) return `https://www.youtube.com/watch?v=${url.split('youtu.be/')[1].split('?')[0]}`;
-      return getSafeExternalUrl(url);
-    };
-    const safeUrl = getDeepLinkUrl(campaignData.shortsUrl);
-
-    if (isShorts && imgUrl && safeUrl) {
-      html += `
+  if (videoBlock) {
+    html += `
         <div style="margin-bottom:34px; text-align:left; background:#f8fafc; border-radius:20px; overflow:hidden; border:1px solid #dbeafe; box-sizing:border-box;">
           <div style="padding:18px 22px; border-bottom:1px solid #e2e8f0;">
-            <div style="font-size:16px; font-weight:900; color:#2563eb;">핸지가 고른 핫한 숏츠</div>
+            <div style="font-size:16px; font-weight:900; color:#2563eb;">OASIS SHORTS</div>
           </div>
           <div style="padding:22px; box-sizing:border-box;">
-            <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:block; text-decoration:none;">
-              <img src="${normalizeAttrUrl(imgUrl)}" style="width:100%; max-width:100%; height:auto; border-radius:12px; display:block;" alt="추천 영상 썸네일">
+            <a href="${videoBlock.safeUrl}" target="_blank" rel="noopener noreferrer" style="display:block; text-decoration:none;">
+              <img src="${normalizeAttrUrl(videoBlock.thumbnail)}" style="width:100%; max-width:100%; height:auto; border-radius:12px; display:block;" alt="OASIS shorts thumbnail">
             </a>
             <div style="padding-top:16px;">
-              <div style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:14px; line-height:1.4; word-break:keep-all;">${escapeHtml(campaignData.title || '')}</div>
-              ${campaignData.platform ? `<div style="font-size:12px; color:#64748b; font-weight:900; margin-bottom:14px;">출처: ${escapeHtml(campaignData.platform)}</div>` : ''}
-              <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; background:#0f172a; color:white; text-decoration:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:14px;">영상 바로보기</a>
+              ${videoBlock.title ? `<div style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:10px; line-height:1.4; word-break:keep-all;">${escapeHtml(videoBlock.title)}</div>` : ''}
+              ${videoBlock.desc ? `<div style="font-size:14px; color:#475569; line-height:1.65; word-break:keep-all; margin-bottom:12px;">${escapeHtml(getExcerpt(videoBlock.desc, 90))}</div>` : ''}
+              ${videoBlock.platform ? `<div style="font-size:12px; color:#64748b; font-weight:900; margin-bottom:14px;">Source: ${escapeHtml(videoBlock.platform)}</div>` : ''}
+              <a href="${videoBlock.safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; background:#0f172a; color:white; text-decoration:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:14px;">&#50689;&#49345; &#48148;&#47196;&#48372;&#44592;</a>
             </div>
           </div>
         </div>`;
-    } else if (imgUrl) {
-      html += `<div style="margin-bottom:28px; padding:14px; border-radius:14px; overflow:hidden; border:1px solid #e2e8f0; box-sizing:border-box; background-color:#ffffff; text-align:center;"><img src="${normalizeAttrUrl(imgUrl)}" width="560" style="width:100%; max-width:560px; height:auto; display:block; margin:0 auto;" alt="캠페인 배너"></div>`;
-    }
+  }
+
+  if (campaignImgUrl) {
+    html += `<div style="margin-bottom:28px; padding:14px; border-radius:14px; overflow:hidden; border:1px solid #e2e8f0; box-sizing:border-box; background-color:#ffffff; text-align:center;"><img src="${normalizeAttrUrl(campaignImgUrl)}" width="560" style="width:100%; max-width:560px; height:auto; display:block; margin:0 auto;" alt="campaign banner"></div>`;
   }
 
   html += `

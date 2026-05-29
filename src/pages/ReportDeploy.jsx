@@ -233,8 +233,8 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
           continue;
         }
 
-        const groupCampaign = group.keys.includes('security') ? emailCampaign : null;
-        const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', formatKoreanDateId(mag.publishDateId || getReportDateId(mag.id) || publishDate), groupCampaign, filteredArticles);
+        const groupCampaign = (emailCampaign?.shortsUrl || group.keys.includes('security')) ? emailCampaign : null;
+        const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', formatKoreanDateId(mag.publishDateId || getReportDateId(mag.id) || publishDate), groupCampaign, filteredArticles, undefined, mag.video);
         await fetch(appsScriptUrl, {
           method: 'POST',
           mode: 'no-cors',
@@ -262,13 +262,13 @@ export default function ReportDeploy({ draftArticles, setDraftArticles, issueNam
     if (allDrafts.length === 0) return alert('배포할 기사가 없습니다.');
     const campaignData = selCampaign ? campaigns.find(v => v.id === selCampaign) || null : null;
     const emailCampaign = await buildEmailCampaign(campaignData);
-    const htmlContent = getPremiumNewsletterHTML(issueName || '임시 호수', formatKoreanDateId(publishDate), emailCampaign, draftArticles);
+    const htmlContent = getPremiumNewsletterHTML(issueName || '임시 호수', formatKoreanDateId(publishDate), emailCampaign, draftArticles, undefined, video);
     setEmailPreview({ title: '핸지가 보는 세상 미리보기', html: htmlContent });
   };
 
   const previewPastEmail = async (mag) => {
     const emailCampaign = await buildEmailCampaign(mag.campaign);
-    const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', formatKoreanDateId(getReportDateId(mag.id)), emailCampaign, mag.articles);
+    const htmlContent = getPremiumNewsletterHTML(mag.issueName || '', formatKoreanDateId(getReportDateId(mag.id)), emailCampaign, mag.articles, undefined, mag.video);
     setEmailPreview({ title: `핸지가 보는 세상 과거호 미리보기 - ${mag.issueName}`, html: htmlContent });
   };
 
