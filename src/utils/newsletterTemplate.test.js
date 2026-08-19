@@ -1,4 +1,5 @@
 import { getPremiumNewsletterHTML } from './newsletterTemplate';
+import { filterNewsletterArticles } from './newsletterRecipients';
 
 const articles = {
   main: {
@@ -58,5 +59,40 @@ describe('newsletterTemplate video block', () => {
     expect(html).toContain('https://cdn.example.com/thumb.jpg');
     expect(html).toContain('Campaign short');
     expect(html).not.toContain('https://www.youtube.com/watch?v=report1');
+  });
+});
+
+describe('newsletterTemplate filtered recipient content', () => {
+  it('renders the Hangi spotlight together with summary blocks for an interest-filtered recipient', () => {
+    const filteredArticles = filterNewsletterArticles({
+      main: {
+        category: 'main',
+        title: 'Hangi spotlight article',
+        link: 'https://example.com/spotlight',
+        desc: 'Spotlight summary',
+      },
+      macro: [],
+      platform: [],
+      auto: [{
+        category: 'auto',
+        title: 'Mobility article',
+        link: 'https://example.com/mobility',
+        desc: 'Mobility summary',
+      }],
+      ai: [{
+        category: 'ai',
+        title: 'AI article',
+        link: 'https://example.com/ai',
+        desc: 'AI summary',
+      }],
+      security: [],
+    }, ['auto', 'ai']);
+
+    const html = getPremiumNewsletterHTML('1', '2026.8.19', null, filteredArticles);
+
+    expect(html).toContain("TODAY'S PICK");
+    expect(html).toContain('BUSINESS TEMP');
+    expect(html).toContain('핸지 돋보기');
+    expect(html).toContain('Hangi spotlight article');
   });
 });
