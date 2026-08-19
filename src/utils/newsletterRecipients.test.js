@@ -1,5 +1,6 @@
 import {
   buildNewsletterSendPlan,
+  filterNewsletterArticles,
   getSubscriberCategoryKeys,
 } from './newsletterRecipients';
 
@@ -40,5 +41,32 @@ describe('newsletter recipient category mapping', () => {
     expect(plan.deliverableCount).toBe(2);
     expect(plan.groups.map(group => group.key).sort()).toEqual(['ai', 'auto']);
     expect(plan.groups.find(group => group.key === 'auto').emails).toEqual(['car@example.com']);
+  });
+
+  it('keeps the main Hangi spotlight for category-filtered recipients', () => {
+    const articles = {
+      main: { category: 'main', title: 'Hangi spotlight' },
+      macro: [{ category: 'macro', title: 'Macro story' }],
+      platform: [],
+      auto: [{ category: 'auto', title: 'Auto story' }],
+      ai: [],
+      security: [],
+    };
+
+    expect(filterNewsletterArticles(articles, ['auto'])).toMatchObject({
+      main: { title: 'Hangi spotlight' },
+      macro: [],
+      auto: [{ title: 'Auto story' }],
+    });
+  });
+
+  it('keeps an array-form main article while filtering category stories', () => {
+    const filtered = filterNewsletterArticles([
+      { category: 'main', title: 'Hangi spotlight' },
+      { category: 'macro', title: 'Macro story' },
+      { category: 'auto', title: 'Auto story' },
+    ], ['auto']);
+
+    expect(filtered.map(article => article.title)).toEqual(['Hangi spotlight', 'Auto story']);
   });
 });

@@ -75,16 +75,14 @@ export const isActiveSubscriber = (subscriber) => {
 };
 
 export const filterNewsletterArticles = (articlesSource, keys) => {
-  const includeAll = hasAllNewsletterCategories(keys);
-
   if (Array.isArray(articlesSource)) {
     return articlesSource
       .map(sanitizeArticleUrls)
-      .filter(article => article.category === 'main' ? includeAll : keys.includes(article.category));
+      .filter(article => article.category === 'main' || keys.includes(article.category));
   }
 
   return {
-    main: includeAll && articlesSource?.main ? sanitizeArticleUrls(articlesSource.main) : null,
+    main: articlesSource?.main ? sanitizeArticleUrls(articlesSource.main) : null,
     macro: keys.includes('macro') ? (articlesSource?.macro || []).map(sanitizeArticleUrls) : [],
     platform: keys.includes('platform') ? (articlesSource?.platform || []).map(sanitizeArticleUrls) : [],
     auto: keys.includes('auto') ? (articlesSource?.auto || []).map(sanitizeArticleUrls) : [],
